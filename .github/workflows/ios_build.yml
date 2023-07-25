@@ -11,11 +11,8 @@ jobs:
   build_ios:
     runs-on: macos-latest
     env:
-      SHEME: Runner
+      SCHEME: Runner
       BUILD_CONFIGURATION: Release
-      TEAM_ID: 64H5U3LG67
-      PROVISIONING_PROFILE: 471e1388-37bb-4b51-a69c-e555ec425b51
-      CODE_SIGN_IDENTITY: "Apple Distribution: JiHua Lai (64H5U3LG67)"
 
     steps:
       - name: Checkout the code
