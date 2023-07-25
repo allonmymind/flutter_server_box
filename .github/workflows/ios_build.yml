@@ -9,7 +9,14 @@ on:
 
 jobs:
   build_ios:
-    runs-on: macos-latese
+    runs-on: macos-latest
+
+    env:
+      SHEME: Runner
+      BUILD_CONFIGURATION: Release
+      TEAM_ID: 64H5U3LG67
+      PROVISIONING_PROFILE: 471e1388-37bb-4b51-a69c-e555ec425b51
+      CODE_SIGN_IDENTITY: "" # Set CODE_SIGN_IDENTITY to an empty string to disable code signing
 
     steps:
       - name: Checkout the code
@@ -67,14 +74,6 @@ jobs:
           xcodebuild -workspace ios/Runner.xcworkspace -scheme ${{ env.SHEME }} -configuration ${{ env.BUILD_CONFIGURATION }} DEVELOPMENT_TEAM=${{ env.TEAM_ID }} -sdk 'iphoneos' -destination 'generic/platform=iOS' -archivePath build-output/app.xcarchive PROVISIONING_PROFILE=${{ env.PROVISIONING_PROFILE }} clean archive CODE_SIGN_IDENTITY="${{ env.CODE_SIGN_IDENTITY }}"
       - name: Export ipa
         run: xcodebuild -exportArchive -archivePath build-output/app.xcarchive -exportPath build-output/ios -exportOptionsPlist ios/ExportOptions.plist
-
-      - name: Upload PGYER File
-        id: pgyer
-        uses: xtayga/upload-pgyer-action@master
-        with:
-            url: https://www.pgyer.com/apiv2/app/upload
-            forms: '{"_api_key":"${{ secrets.PGY_KEY }}","buildName":"RSS"}'
-            fileForms: '{"file":"build-output/ios/flutter_best_practice.ipa"}' # ipa 的名字为 info.plist 中的 CFBundleName
 
       - name: Publish iOS Artefacts
         uses: actions/upload-artifact@v1
