@@ -7,6 +7,7 @@ import 'package:intl/intl.dart' as intl;
 
 import 'l10n_de.dart';
 import 'l10n_en.dart';
+import 'l10n_id.dart';
 import 'l10n_zh.dart';
 
 /// Callers can lookup localized strings with an instance of S
@@ -92,6 +93,7 @@ abstract class S {
   static const List<Locale> supportedLocales = <Locale>[
     Locale('de'),
     Locale('en'),
+    Locale('id'),
     Locale('zh'),
     Locale('zh', 'TW')
   ];
@@ -143,6 +145,12 @@ abstract class S {
   /// In en, this message translates to:
   /// **'Already in last directory.'**
   String get alreadyLastDir;
+
+  /// No description provided for @alterUrl.
+  ///
+  /// In en, this message translates to:
+  /// **'Alter url'**
+  String get alterUrl;
 
   /// No description provided for @attention.
   ///
@@ -311,6 +319,12 @@ abstract class S {
   /// In en, this message translates to:
   /// **'Delete'**
   String get delete;
+
+  /// No description provided for @deleteServers.
+  ///
+  /// In en, this message translates to:
+  /// **'Batch delete servers'**
+  String get deleteServers;
 
   /// No description provided for @disabled.
   ///
@@ -1320,6 +1334,18 @@ abstract class S {
   /// **'See error'**
   String get viewErr;
 
+  /// No description provided for @virtKeyHelpClipboard.
+  ///
+  /// In en, this message translates to:
+  /// **'Copy to the clipboard if terminal selected is not empty, otherwise paste the contents of the clipboard to the terminal.'**
+  String get virtKeyHelpClipboard;
+
+  /// No description provided for @virtKeyHelpSFTP.
+  ///
+  /// In en, this message translates to:
+  /// **'Open current directory in SFTP.'**
+  String get virtKeyHelpSFTP;
+
   /// No description provided for @waitConnection.
   ///
   /// In en, this message translates to:
@@ -1348,7 +1374,7 @@ class _SDelegate extends LocalizationsDelegate<S> {
   }
 
   @override
-  bool isSupported(Locale locale) => <String>['de', 'en', 'zh'].contains(locale.languageCode);
+  bool isSupported(Locale locale) => <String>['de', 'en', 'id', 'zh'].contains(locale.languageCode);
 
   @override
   bool shouldReload(_SDelegate old) => false;
@@ -1370,6 +1396,7 @@ S lookupS(Locale locale) {
   switch (locale.languageCode) {
     case 'de': return SDe();
     case 'en': return SEn();
+    case 'id': return SId();
     case 'zh': return SZh();
   }
 

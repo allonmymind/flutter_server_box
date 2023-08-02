@@ -30,11 +30,13 @@ class ServerEditPage extends StatefulWidget {
 class _ServerEditPageState extends State<ServerEditPage> with AfterLayoutMixin {
   final _nameController = TextEditingController();
   final _ipController = TextEditingController();
+  final _alterUrlController = TextEditingController();
   final _portController = TextEditingController();
   final _usernameController = TextEditingController();
   final _passwordController = TextEditingController();
   final _nameFocus = FocusNode();
   final _ipFocus = FocusNode();
+  final _alterUrlFocus = FocusNode();
   final _portFocus = FocusNode();
   final _usernameFocus = FocusNode();
 
@@ -121,7 +123,7 @@ class _ServerEditPageState extends State<ServerEditPage> with AfterLayoutMixin {
         onSubmitted: (_) => _focusScope.requestFocus(_portFocus),
         node: _ipFocus,
         label: _s.host,
-        icon: Icons.storage,
+        icon: Icons.computer,
         hint: 'example.com',
       ),
       Input(
@@ -137,9 +139,18 @@ class _ServerEditPageState extends State<ServerEditPage> with AfterLayoutMixin {
         controller: _usernameController,
         type: TextInputType.text,
         node: _usernameFocus,
+        onSubmitted: (_) => _focusScope.requestFocus(_alterUrlFocus),
         label: _s.user,
         icon: Icons.account_box,
         hint: 'root',
+      ),
+      Input(
+        controller: _alterUrlController,
+        type: TextInputType.text,
+        node: _alterUrlFocus,
+        label: _s.alterUrl,
+        icon: Icons.computer,
+        hint: 'user@ip:port',
       ),
       TagEditor(
         tags: _tags,
@@ -280,6 +291,8 @@ class _ServerEditPageState extends State<ServerEditPage> with AfterLayoutMixin {
           pwd: authorization,
           pubKeyId: usePublicKey ? _keyInfo!.id : null,
           tags: _tags,
+          alterUrl:
+              _alterUrlController.text == '' ? null : _alterUrlController.text,
         );
 
         if (widget.spi == null) {
@@ -321,6 +334,7 @@ class _ServerEditPageState extends State<ServerEditPage> with AfterLayoutMixin {
       if (widget.spi?.tags != null) {
         _tags = widget.spi!.tags!;
       }
+      _alterUrlController.text = widget.spi?.alterUrl ?? '';
       setState(() {});
     }
   }

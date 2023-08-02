@@ -29,6 +29,9 @@ class SEn extends S {
   String get alreadyLastDir => 'Already in last directory.';
 
   @override
+  String get alterUrl => 'Alter url';
+
+  @override
   String get attention => 'Attention';
 
   @override
@@ -111,6 +114,9 @@ class SEn extends S {
 
   @override
   String get delete => 'Delete';
+
+  @override
+  String get deleteServers => 'Batch delete servers';
 
   @override
   String get disabled => 'Disabled';
@@ -659,6 +665,12 @@ class SEn extends S {
 
   @override
   String get viewErr => 'See error';
+
+  @override
+  String get virtKeyHelpClipboard => 'Copy to the clipboard if terminal selected is not empty, otherwise paste the contents of the clipboard to the terminal.';
+
+  @override
+  String get virtKeyHelpSFTP => 'Open current directory in SFTP.';
 
   @override
   String get waitConnection => 'Please wait for the connection to be established.';

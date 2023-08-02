@@ -25,7 +25,7 @@ import 'convert.dart';
 import 'debug.dart';
 import 'private_key/list.dart';
 import 'setting.dart';
-import 'sftp/local.dart';
+import 'storage/local.dart';
 
 class HomePage extends StatefulWidget {
   const HomePage({Key? key}) : super(key: key);
@@ -41,6 +41,7 @@ class _HomePageState extends State<HomePage>
         WidgetsBindingObserver {
   final _serverProvider = locator<ServerProvider>();
   final _setting = locator<SettingStore>();
+  final _app = locator<AppProvider>();
 
   late final PageController _pageController;
 
@@ -90,7 +91,7 @@ class _HomePageState extends State<HomePage>
       case AppLifecycleState.paused:
         // Keep running in background on Android device
         if (isAndroid && _setting.bgRun.fetch()!) {
-          if (locator<AppProvider>().moveBg) {
+          if (_app.moveBg) {
             bgRunChannel.invokeMethod('sendToBackground');
           }
         } else {
@@ -219,7 +220,7 @@ class _HomePageState extends State<HomePage>
                   leading: const Icon(Icons.download),
                   title: Text(_s.download),
                   onTap: () => AppRoute(
-                    const SFTPDownloadedPage(),
+                    const LocalStoragePage(),
                     'sftp local page',
                   ).go(context),
                 ),

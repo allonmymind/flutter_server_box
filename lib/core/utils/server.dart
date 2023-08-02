@@ -31,36 +31,57 @@ enum GenSSHClientStatus {
   pwd,
 }
 
+String getPrivateKey(String id) {
+  final key = locator<PrivateKeyStore>().get(id);
+  if (key == null) {
+    throw SSHErr(
+      type: SSHErrType.noPrivateKey,
+      message: 'key [$id] not found',
+    );
+  }
+  return key.privateKey;
+}
+
 Future<SSHClient> genClient(
   ServerPrivateInfo spi, {
   void Function(GenSSHClientStatus)? onStatus,
+  String? privateKey,
 }) async {
-  final onStatus_ = onStatus ?? (_) {};
-  onStatus_(GenSSHClientStatus.socket);
-  final socket = await SSHSocket.connect(
-    spi.ip,
-    spi.port,
-    timeout: const Duration(seconds: 5),
-  );
+  onStatus?.call(GenSSHClientStatus.socket);
+  late SSHSocket socket;
+  try {
+    socket = await SSHSocket.connect(
+      spi.ip,
+      spi.port,
+      timeout: const Duration(seconds: 5),
+    );
+  } catch (e) {
+    try {
+      spi.fromStringUrl();
+      socket = await SSHSocket.connect(
+        spi.ip,
+        spi.port,
+        timeout: const Duration(seconds: 5),
+      );
+    } catch (e) {
+      rethrow;
+    }
+  }
+
   if (spi.pubKeyId == null) {
-    onStatus_(GenSSHClientStatus.pwd);
+    onStatus?.call(GenSSHClientStatus.pwd);
     return SSHClient(
       socket,
       username: spi.user,
       onPasswordRequest: () => spi.pwd,
     );
   }
-  final key = locator<PrivateKeyStore>().get(spi.pubKeyId!);
-  if (key == null) {
-    throw SSHErr(
-      type: SSHErrType.noPrivateKey,
-      message: 'key [${spi.pubKeyId}] not found',
-    );
-  }
-  onStatus_(GenSSHClientStatus.key);
+  privateKey ??= getPrivateKey(spi.pubKeyId!);
+
+  onStatus?.call(GenSSHClientStatus.key);
   return SSHClient(
     socket,
     username: spi.user,
-    identities: await compute(loadIndentity, key.privateKey),
+    identities: await compute(loadIndentity, privateKey),
   );
 }

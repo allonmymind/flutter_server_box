@@ -9,7 +9,7 @@ import 'package:toolbox/data/provider/sftp.dart';
 import 'package:toolbox/data/res/misc.dart';
 import 'package:toolbox/locator.dart';
 import 'package:toolbox/view/page/editor.dart';
-import 'package:toolbox/view/page/sftp/remote.dart';
+import 'package:toolbox/view/page/storage/sftp.dart';
 import 'package:toolbox/view/widget/input_field.dart';
 import 'package:toolbox/view/widget/picker.dart';
 import 'package:toolbox/view/widget/round_rect_card.dart';
@@ -23,20 +23,20 @@ import '../../../data/model/app/path_with_prefix.dart';
 import '../../../data/res/path.dart';
 import '../../../data/res/ui.dart';
 import '../../widget/fade_in.dart';
-import 'mission.dart';
+import 'sftp_mission.dart';
 
-class SFTPDownloadedPage extends StatefulWidget {
+class LocalStoragePage extends StatefulWidget {
   final bool isPickFile;
-  const SFTPDownloadedPage({Key? key, this.isPickFile = false})
+  final String? initDir;
+  const LocalStoragePage({Key? key, this.isPickFile = false, this.initDir})
       : super(key: key);
 
   @override
-  State<SFTPDownloadedPage> createState() => _SFTPDownloadedPageState();
+  State<LocalStoragePage> createState() => _LocalStoragePageState();
 }
 
-class _SFTPDownloadedPageState extends State<SFTPDownloadedPage> {
+class _LocalStoragePageState extends State<LocalStoragePage> {
   PathWithPrefix? _path;
-  String? _prefixPath;
   late S _s;
 
   @override
@@ -44,7 +44,9 @@ class _SFTPDownloadedPageState extends State<SFTPDownloadedPage> {
     super.initState();
     sftpDir.then((dir) {
       _path = PathWithPrefix(dir.path);
-      _prefixPath = '${dir.path}/';
+      if (widget.initDir != null) {
+        _path!.update(widget.initDir!.replaceFirst('${dir.path}/', ''));
+      }
       setState(() {});
     });
   }
@@ -64,7 +66,7 @@ class _SFTPDownloadedPageState extends State<SFTPDownloadedPage> {
           IconButton(
             icon: const Icon(Icons.downloading),
             onPressed: () =>
-                AppRoute(const SFTPDownloadingPage(), 'sftp downloading')
+                AppRoute(const SftpMissionPage(), 'sftp downloading')
                     .go(context),
           )
         ],
@@ -75,18 +77,6 @@ class _SFTPDownloadedPageState extends State<SFTPDownloadedPage> {
       ),
       bottomNavigationBar: SafeArea(
         child: _buildPath(),
-      ),
-      floatingActionButtonLocation: FloatingActionButtonLocation.centerFloat,
-      floatingActionButton: FloatingActionButton(
-        onPressed: (() {
-          if (_path!.path == _prefixPath) {
-            showSnackBar(context, Text(_s.alreadyLastDir));
-            return;
-          }
-          _path!.update('..');
-          setState(() {});
-        }),
-        child: const Icon(Icons.keyboard_arrow_left),
       ),
     );
   }
@@ -112,10 +102,22 @@ class _SFTPDownloadedPageState extends State<SFTPDownloadedPage> {
     }
     final dir = Directory(_path!.path);
     final files = dir.listSync();
+    final canGoBack = _path!.canBack;
     return ListView.builder(
-      itemCount: files.length,
+      itemCount: canGoBack ? files.length + 1 : files.length,
       padding: const EdgeInsets.symmetric(vertical: 3, horizontal: 7),
       itemBuilder: (context, index) {
+        if (index == 0 && canGoBack) {
+          return RoundRectCard(ListTile(
+            leading: const Icon(Icons.keyboard_arrow_left),
+            title: const Text('..'),
+            onTap: () {
+              _path!.update('..');
+              setState(() {});
+            },
+          ));
+        }
+        index = canGoBack ? index - 1 : index;
         var file = files[index];
         var fileName = file.path.split('/').last;
         var stat = file.statSync();
@@ -126,7 +128,7 @@ class _SFTPDownloadedPageState extends State<SFTPDownloadedPage> {
               ? const Icon(Icons.folder)
               : const Icon(Icons.insert_drive_file),
           title: Text(fileName),
-          subtitle: isDir ? null : Text(stat.size.convertBytes),
+          subtitle: isDir ? null : Text(stat.size.convertBytes, style: grey),
           trailing: Text(
             stat.modified
                 .toString()
@@ -266,24 +268,24 @@ class _SFTPDownloadedPageState extends State<SFTPDownloadedPage> {
               final id = ids[idx];
               final spi = serverProvider.servers[id]?.spi;
               if (spi == null) {
-                showSnackBar(context, Text(_s.noResult));
                 return;
               }
               final remotePath = await AppRoute(
-                SFTPPage(
+                SftpPage(
                   spi,
                   selectPath: true,
                 ),
                 'SFTP page (select)',
               ).go<String>(context);
               if (remotePath == null) {
-                showSnackBar(context, Text(_s.fieldMustNotEmpty));
                 return;
               }
-              locator<SftpProvider>().add(
-                SftpReqItem(spi, remotePath, file.absolute.path),
+              locator<SftpProvider>().add(SftpReq(
+                spi,
+                remotePath,
+                file.absolute.path,
                 SftpReqType.upload,
-              );
+              ));
               showSnackBar(context, Text(_s.added2List));
             },
           ),

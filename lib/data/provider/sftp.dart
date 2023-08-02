@@ -8,29 +8,30 @@ class SftpProvider extends ProviderBase {
   final List<SftpReqStatus> _status = [];
   List<SftpReqStatus> get status => _status;
 
-  Iterable<SftpReqStatus> gets({int? id, String? fileName}) {
-    Iterable<SftpReqStatus> found = [];
-    if (id != null) {
-      found = _status.where((e) => e.id == id);
-    }
-    if (fileName != null) {
-      found = found.where((e) => e.item.localPath.split('/').last == fileName);
-    }
-    return found;
+  SftpReqStatus? get(int id) {
+    return _status.singleWhere((element) => element.id == id);
   }
 
-  SftpReqStatus? get({int? id, String? name}) {
-    final found = gets(id: id, fileName: name);
-    if (found.isEmpty) return null;
-    return found.first;
-  }
-
-  void add(SftpReqItem item, SftpReqType type, {Completer? completer}) {
+  void add(SftpReq req, {Completer? completer}) {
     _status.add(SftpReqStatus(
-      item: item,
       notifyListeners: notifyListeners,
-      type: type,
       completer: completer,
+      req: req,
     ));
+  }
+
+  @override
+  void dispose() {
+    for (final item in _status) {
+      item.worker.dispose();
+    }
+    super.dispose();
+  }
+
+  void cancel(int id) {
+    final idx = _status.indexWhere((element) => element.id == id);
+    _status[idx].worker.dispose();
+    _status.removeAt(idx);
+    notifyListeners();
   }
 }

@@ -109,14 +109,14 @@ class _SettingPageState extends State<SettingPage> {
         children: [
           _buildTitle('App'),
           _buildApp(),
-          _buildTitle(_s.fullScreen),
-          _buildFullScreen(),
           _buildTitle(_s.server),
           _buildServer(),
           _buildTitle('SSH'),
           _buildSSH(),
           _buildTitle(_s.editor),
           _buildEditor(),
+          _buildTitle(_s.fullScreen),
+          _buildFullScreen(),
           const SizedBox(height: 37),
         ],
       ),
@@ -173,6 +173,7 @@ class _SettingPageState extends State<SettingPage> {
         _buildUpdateInterval(),
         _buildMaxRetry(),
         _buildDiskIgnorePath(),
+        _buildDeleteServers(),
       ].map((e) => RoundRectCard(e)).toList(),
     );
   }
@@ -801,6 +802,7 @@ class _SettingPageState extends State<SettingPage> {
       'none',
     ];
     if (names.length != TextInputType.values.length) {
+      // This notify me to update the code
       throw Exception('names.length != TextInputType.values.length');
     }
     final items = TextInputType.values.map(
@@ -839,7 +841,7 @@ class _SettingPageState extends State<SettingPage> {
   Widget _buildSSHVirtKeys() {
     return ListTile(
       title: Text(_s.editVirtKeys),
-      trailing: const Icon(Icons.arrow_forward_ios, size: 13),
+      trailing: const Icon(Icons.keyboard_arrow_right),
       onTap: () => AppRoute(
         const SSHVirtKeySettingPage(),
         'ssh virt key edit',
@@ -867,7 +869,7 @@ class _SettingPageState extends State<SettingPage> {
   Widget _buildAndroidWidgetSharedPreference() {
     return ListTile(
       title: Text(_s.homeWidgetUrlConfig),
-      trailing: const Icon(Icons.arrow_forward_ios, size: 13),
+      trailing: const Icon(Icons.keyboard_arrow_right),
       onTap: () {
         final data = <String, String>{};
         _sp.getKeys().forEach((key) {
@@ -878,23 +880,24 @@ class _SettingPageState extends State<SettingPage> {
         });
         final ctrl = TextEditingController(text: json.encode(data));
         showRoundDialog(
-            context: context,
-            title: Text(_s.homeWidgetUrlConfig),
-            child: Input(
-              controller: ctrl,
-              label: 'JSON',
-              type: TextInputType.visiblePassword,
-              maxLines: 7,
-              onSubmitted: (p0) => _saveWidgetSP(p0, data),
+          context: context,
+          title: Text(_s.homeWidgetUrlConfig),
+          child: Input(
+            controller: ctrl,
+            label: 'JSON',
+            type: TextInputType.visiblePassword,
+            maxLines: 7,
+            onSubmitted: (p0) => _saveWidgetSP(p0, data),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () {
+                _saveWidgetSP(ctrl.text, data);
+              },
+              child: Text(_s.ok),
             ),
-            actions: [
-              TextButton(
-                onPressed: () {
-                  _saveWidgetSP(ctrl.text, data);
-                },
-                child: Text(_s.ok),
-              ),
-            ]);
+          ],
+        );
       },
     );
   }
@@ -935,6 +938,39 @@ class _SettingPageState extends State<SettingPage> {
       title: Text(_s.autoUpdateHomeWidget),
       subtitle: Text(_s.whenOpenApp, style: grey),
       trailing: buildSwitch(context, _setting.autoUpdateHomeWidget),
+    );
+  }
+
+  Widget _buildDeleteServers() {
+    return ListTile(
+      title: Text(_s.deleteServers),
+      trailing: const Icon(Icons.delete_forever),
+      onTap: () async {
+        final all = _serverProvider.servers.keys.map(
+          (e) => TextButton(
+            onPressed: () => showRoundDialog(
+              context: context,
+              title: Text(_s.attention),
+              child: Text(_s.sureDelete(e)),
+              actions: [
+                TextButton(
+                  onPressed: () => _serverProvider.delServer(e),
+                  child: Text(_s.ok),
+                )
+              ],
+            ),
+            child: Text(e),
+          ),
+        );
+        showRoundDialog<List<String>>(
+          context: context,
+          title: Text(_s.choose),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: all.toList(),
+          ),
+        );
+      },
     );
   }
 }

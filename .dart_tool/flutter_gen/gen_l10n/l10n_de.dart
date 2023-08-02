@@ -29,6 +29,9 @@ class SDe extends S {
   String get alreadyLastDir => 'Bereits im letzten Verzeichnis.';
 
   @override
+  String get alterUrl => 'Url ändern';
+
+  @override
   String get attention => 'Achtung';
 
   @override
@@ -111,6 +114,9 @@ class SDe extends S {
 
   @override
   String get delete => 'Löschen';
+
+  @override
+  String get deleteServers => 'Batch-Löschung von Servern';
 
   @override
   String get disabled => 'Behinderte';
@@ -659,6 +665,12 @@ class SDe extends S {
 
   @override
   String get viewErr => 'Fehler anzeigen';
+
+  @override
+  String get virtKeyHelpClipboard => 'In die Zwischenablage kopieren, wenn das ausgewählte Terminal nicht leer ist, andernfalls den Inhalt der Zwischenablage in das Terminal einfügen.';
+
+  @override
+  String get virtKeyHelpSFTP => 'Aktuelles Verzeichnis in SFTP öffnen.';
 
   @override
   String get waitConnection => 'Bitte warte, bis die Verbindung hergestellt wurde.';
