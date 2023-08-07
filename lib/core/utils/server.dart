@@ -32,14 +32,14 @@ enum GenSSHClientStatus {
 }
 
 String getPrivateKey(String id) {
-  final key = locator<PrivateKeyStore>().get(id);
-  if (key == null) {
+  final pki = locator<PrivateKeyStore>().get(id);
+  if (pki == null) {
     throw SSHErr(
       type: SSHErrType.noPrivateKey,
       message: 'key [$id] not found',
     );
   }
-  return key.privateKey;
+  return pki.key;
 }
 
 Future<SSHClient> genClient(
@@ -56,6 +56,7 @@ Future<SSHClient> genClient(
       timeout: const Duration(seconds: 5),
     );
   } catch (e) {
+    if (spi.alterUrl == null) rethrow;
     try {
       spi.fromStringUrl();
       socket = await SSHSocket.connect(

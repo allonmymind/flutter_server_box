@@ -76,6 +76,15 @@ class _SftpPageState extends State<SftpPage> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
+        leading: IconButton(
+          icon: const BackButtonIcon(),
+          onPressed: () {
+            if (_status.path != null) {
+              _status.path!.update('/');
+            }
+            context.pop();
+          },
+        ),
         centerTitle: true,
         title: TwoLineText(up: 'SFTP', down: widget.spi.name),
         actions: [
@@ -88,8 +97,21 @@ class _SftpPageState extends State<SftpPage> {
           ),
         ],
       ),
-      body: _buildFileView(),
+      body: _buildBody(),
       bottomNavigationBar: _buildBottom(),
+    );
+  }
+
+  Widget _buildBody() {
+    return WillPopScope(
+      onWillPop: () async {
+        if (_status.path == null || _status.path?.path == '/') {
+          return true;
+        }
+        await _backward();
+        return false;
+      },
+      child: _buildFileView(),
     );
   }
 
@@ -262,6 +284,12 @@ class _SftpPageState extends State<SftpPage> {
       _status.path = AbsolutePath(p_);
       _listDir(path: p_, client: _client);
       return centerLoading;
+    }
+
+    if (_status.files!.isEmpty) {
+      return const Center(
+        child: Text('~'),
+      );
     }
 
     return RefreshIndicator(
@@ -619,10 +647,24 @@ class _SftpPageState extends State<SftpPage> {
       _status.client = sftpc;
     }
     try {
-      final fs =
-          await _status.client!.listdir(path ?? _status.path?.path ?? '/');
+      final listPath = path ?? _status.path?.path ?? '/';
+      final fs = await _status.client!.listdir(listPath);
       fs.sort((a, b) => a.filename.compareTo(b.filename));
-      fs.removeAt(0);
+
+      /// Issue #97
+      /// In order to compatible with the Synology NAS
+      /// which not has '.' and '..' in listdir
+      if (fs.isNotEmpty && fs.first.filename == '.') {
+        fs.removeAt(0);
+      }
+
+      /// Issue #96
+      /// Due to [WillPopScope] added in this page
+      /// There is no need to keep '..' folder in listdir
+      /// So remove it
+      if (fs.isNotEmpty && fs.first.filename == '..') {
+        fs.removeAt(0);
+      }
       if (mounted) {
         setState(() {
           _status.files = fs;

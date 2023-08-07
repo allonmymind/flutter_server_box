@@ -22,9 +22,9 @@ import '../../../locator.dart';
 const _format = 'text/plain';
 
 class PrivateKeyEditPage extends StatefulWidget {
-  const PrivateKeyEditPage({Key? key, this.info}) : super(key: key);
+  const PrivateKeyEditPage({Key? key, this.pki}) : super(key: key);
 
-  final PrivateKeyInfo? info;
+  final PrivateKeyInfo? pki;
 
   @override
   _PrivateKeyEditPageState createState() => _PrivateKeyEditPageState();
@@ -68,13 +68,13 @@ class _PrivateKeyEditPageState extends State<PrivateKeyEditPage>
   }
 
   PreferredSizeWidget _buildAppBar() {
-    final actions = widget.info == null
+    final actions = widget.pki == null
         ? null
         : [
             IconButton(
                 tooltip: _s.delete,
                 onPressed: () {
-                  _provider.delInfo(widget.info!);
+                  _provider.delete(widget.pki!);
                   context.pop();
                 },
                 icon: const Icon(Icons.delete))
@@ -100,9 +100,14 @@ class _PrivateKeyEditPageState extends State<PrivateKeyEditPage>
         setState(() {
           _loading = centerSizedLoading;
         });
-        final info = PrivateKeyInfo(name, key, '');
         try {
-          info.privateKey = await compute(decyptPem, [key, pwd]);
+          final decrypted = await compute(decyptPem, [key, pwd]);
+          final pki = PrivateKeyInfo(id: name, key: decrypted);
+          if (widget.pki != null) {
+            _provider.update(widget.pki!, pki);
+          } else {
+            _provider.add(pki);
+          }
         } catch (e) {
           showSnackBar(context, Text(e.toString()));
           rethrow;
@@ -110,11 +115,6 @@ class _PrivateKeyEditPageState extends State<PrivateKeyEditPage>
           setState(() {
             _loading = nil;
           });
-        }
-        if (widget.info != null) {
-          _provider.updateInfo(widget.info!, info);
-        } else {
-          _provider.addInfo(info);
         }
         context.pop();
       },
@@ -192,10 +192,9 @@ class _PrivateKeyEditPageState extends State<PrivateKeyEditPage>
 
   @override
   Future<void> afterFirstLayout(BuildContext context) async {
-    if (widget.info != null) {
-      _nameController.text = widget.info!.id;
-      _keyController.text = widget.info!.privateKey;
-      _pwdController.text = widget.info!.password;
+    if (widget.pki != null) {
+      _nameController.text = widget.pki!.id;
+      _keyController.text = widget.pki!.key;
     } else {
       final clipdata = ((await Clipboard.getData(_format))?.text ?? '').trim();
       if (clipdata.startsWith('-----BEGIN') && clipdata.endsWith('-----')) {

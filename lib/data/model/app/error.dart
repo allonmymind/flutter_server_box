@@ -36,7 +36,11 @@ enum DockerErrType {
   noClient,
   notInstalled,
   invalidVersion,
-  cmdNoPrefix
+  cmdNoPrefix,
+  segmentsNotMatch,
+  parsePsItem,
+  parseImages,
+  parseStats,
 }
 
 class DockerErr extends Err<DockerErrType> {

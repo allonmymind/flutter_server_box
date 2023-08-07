@@ -1,29 +1,13 @@
 import '../model/app/shell_func.dart';
 import 'build_data.dart';
 
-const seperator = 'SrvBox';
+const seperator = 'SrvBoxSep';
 const serverBoxDir = r'$HOME/.config/server_box';
 const shellPath = '$serverBoxDir/mobile_app.sh';
 
 const echoPWD = 'echo \$PWD';
 
-enum CmdType {
-  export,
-  net,
-  sys,
-  cpu,
-  uptime,
-  conn,
-  disk,
-  mem,
-  tempType,
-  tempVal,
-  host,
-  sysRhel,
-}
-
-const _cmdList = [
-  'export LANG=en_US.utf-8',
+const statusCmds = [
   'cat /proc/net/dev && date +%s',
   'cat /etc/os-release | grep PRETTY_NAME',
   'cat /proc/stat | grep cpu',
@@ -37,37 +21,20 @@ const _cmdList = [
   'cat /etc/redhat-release',
 ];
 
-final shellFuncStatus = AppShellFunc(
-  'status',
-  _cmdList.join('\necho $seperator\n'),
-  's',
-);
-
-// Check if `htop` is installed.
-// Then app open SSH term and use `htop` or `ps` to see process.
-const shellFuncProcess = AppShellFunc(
-  'process',
-  '''
-if command -v htop &> /dev/null
-then
-  htop
-else
-  top 
-fi
-''',
-  'p',
-);
-
-final _generated = [
-  shellFuncStatus,
-  shellFuncProcess,
-].generate;
+const dockerCmds = [
+  'docker version',
+  'docker ps -a',
+  'docker stats --no-stream',
+  'docker image ls',
+];
 
 final shellCmd = """
 # Script for app `${BuildData.name} v1.0.${BuildData.build}`
 # Delete this file while app is running will cause app crash
 
-$_generated
+export LANG=en_US.utf-8
+
+${AppShellFuncType.shellScript}
 """;
 
 final installShellCmd = "mkdir -p $serverBoxDir && "
