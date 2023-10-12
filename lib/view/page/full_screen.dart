@@ -4,16 +4,15 @@ import 'dart:math';
 import 'package:after_layout/after_layout.dart';
 import 'package:circle_chart/circle_chart.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter_gen/gen_l10n/l10n.dart';
 import 'package:get_it/get_it.dart';
-import 'package:nil/nil.dart';
 import 'package:provider/provider.dart';
+import 'package:toolbox/core/extension/context/locale.dart';
 import 'package:toolbox/core/route.dart';
 import 'package:toolbox/data/model/server/disk.dart';
 import 'package:toolbox/data/provider/server.dart';
+import 'package:toolbox/data/res/provider.dart';
+import 'package:toolbox/data/res/store.dart';
 import 'package:toolbox/data/res/ui.dart';
-import 'package:toolbox/data/store/setting.dart';
-import 'package:toolbox/locator.dart';
 
 import '../../core/analysis.dart';
 import '../../core/update.dart';
@@ -23,9 +22,6 @@ import '../../data/model/server/server.dart';
 import '../../data/model/server/server_private_info.dart';
 import '../../data/model/server/server_status.dart';
 import '../../data/res/color.dart';
-import 'server/detail.dart';
-import 'server/edit.dart';
-import 'setting.dart';
 
 class FullScreenPage extends StatefulWidget {
   const FullScreenPage({Key? key}) : super(key: key);
@@ -35,21 +31,18 @@ class FullScreenPage extends StatefulWidget {
 }
 
 class _FullScreenPageState extends State<FullScreenPage> with AfterLayoutMixin {
-  late S _s;
   late MediaQueryData _media;
   late ThemeData _theme;
   late Timer _timer;
   late int _rotateQuarter;
 
   final _pageController = PageController(initialPage: 0);
-  final _serverProvider = locator<ServerProvider>();
-  final _setting = locator<SettingStore>();
 
   @override
   void initState() {
     super.initState();
     switchStatusBar(hide: true);
-    _rotateQuarter = _setting.fullScreenRotateQuarter.fetch()!;
+    _rotateQuarter = Stores.setting.fullScreenRotateQuarter.fetch();
     _timer = Timer.periodic(const Duration(minutes: 1), (_) {
       if (mounted) {
         setState(() {});
@@ -63,12 +56,12 @@ class _FullScreenPageState extends State<FullScreenPage> with AfterLayoutMixin {
   void dispose() {
     super.dispose();
     _timer.cancel();
+    _pageController.dispose();
   }
 
   @override
   void didChangeDependencies() {
     super.didChangeDependencies();
-    _s = S.of(context)!;
     _media = MediaQuery.of(context);
     _theme = Theme.of(context);
   }
@@ -86,8 +79,13 @@ class _FullScreenPageState extends State<FullScreenPage> with AfterLayoutMixin {
     final offset = Offset(_offset, _offset);
     return Scaffold(
       body: SafeArea(
-        child: ValueListenableBuilder<int>(
-            valueListenable: _setting.fullScreenRotateQuarter.listenable(),
+        child: Padding(
+          // Avoid display cutout
+          // `_screenWidth * 0.03` is the offset value
+          padding: EdgeInsets.all(_screenWidth * 0.03),
+          child: ValueListenableBuilder<int>(
+            valueListenable:
+                Stores.setting.fullScreenRotateQuarter.listenable(),
             builder: (_, val, __) {
               _rotateQuarter = val;
               return RotatedBox(
@@ -106,7 +104,9 @@ class _FullScreenPageState extends State<FullScreenPage> with AfterLayoutMixin {
                   ),
                 ),
               );
-            }),
+            },
+          ),
+        ),
       ),
     );
   }
@@ -118,10 +118,7 @@ class _FullScreenPageState extends State<FullScreenPage> with AfterLayoutMixin {
 
   Widget _buildSettingBtn() {
     return IconButton(
-        onPressed: () => AppRoute(
-              const SettingPage(),
-              'Setting',
-            ).go(context),
+        onPressed: () => AppRoute.settings().go(context),
         icon: const Icon(Icons.settings, color: Colors.grey));
   }
 
@@ -130,24 +127,20 @@ class _FullScreenPageState extends State<FullScreenPage> with AfterLayoutMixin {
       if (pro.serverOrder.isEmpty) {
         return Center(
           child: TextButton(
-              onPressed: () => AppRoute(
-                    const ServerEditPage(),
-                    'Add server info page',
-                  ).go(context),
+              onPressed: () => AppRoute.serverEdit().go(context),
               child: Text(
-                _s.addAServer,
+                l10n.addAServer,
                 style: const TextStyle(fontSize: 27),
               )),
         );
       }
       return PageView.builder(
         controller: _pageController,
-        itemCount: pro.servers.length,
+        itemCount: pro.serverOrder.length,
         itemBuilder: (_, idx) {
-          final id = pro.serverOrder[idx];
-          final s = pro.servers[id];
+          final s = pro.pick(id: pro.serverOrder[idx]);
           if (s == null) {
-            return nil;
+            return Center(child: Text(l10n.noClient));
           }
           return _buildRealServerCard(s.status, s.state, s.spi);
         },
@@ -163,10 +156,7 @@ class _FullScreenPageState extends State<FullScreenPage> with AfterLayoutMixin {
     final rootDisk = findRootDisk(ss.disk);
 
     return InkWell(
-      onTap: () => AppRoute(
-        ServerDetailPage(spi.id),
-        'server detail page',
-      ).go(context),
+      onTap: () => AppRoute.serverDetail(spi: spi).go(context),
       child: Stack(
         children: [
           Positioned(
@@ -219,7 +209,7 @@ class _FullScreenPageState extends State<FullScreenPage> with AfterLayoutMixin {
         mainAxisSize: MainAxisSize.min,
         crossAxisAlignment: CrossAxisAlignment.center,
         children: [
-          height13,
+          UIs.height13,
           Row(
             mainAxisSize: MainAxisSize.min,
             mainAxisAlignment: MainAxisAlignment.center,
@@ -238,7 +228,7 @@ class _FullScreenPageState extends State<FullScreenPage> with AfterLayoutMixin {
               )
             ],
           ),
-          height13,
+          UIs.height13,
           _buildTopRightText(ss, cs),
         ],
       ),
@@ -254,7 +244,7 @@ class _FullScreenPageState extends State<FullScreenPage> with AfterLayoutMixin {
     );
     return Text(
       topRightStr,
-      style: textSize12Grey,
+      style: UIs.textSize11Grey,
       textScaleFactor: 1.0,
     );
   }
@@ -279,31 +269,31 @@ class _FullScreenPageState extends State<FullScreenPage> with AfterLayoutMixin {
   ) {
     switch (cs) {
       case ServerState.disconnected:
-        return _s.disconnected;
+        return l10n.disconnected;
       case ServerState.connected:
         final tempStr = temp == null ? '' : '${temp.toStringAsFixed(1)}°C';
         final items = [tempStr, upTime];
         final str = items.where((element) => element.isNotEmpty).join(' | ');
-        if (str.isEmpty) return _s.serverTabLoading;
+        if (str.isEmpty) return l10n.serverTabLoading;
         return str;
       case ServerState.connecting:
-        return _s.serverTabConnecting;
+        return l10n.serverTabConnecting;
       case ServerState.failed:
         if (failedInfo == null) {
-          return _s.serverTabFailed;
+          return l10n.serverTabFailed;
         }
         if (failedInfo.contains('encypted')) {
-          return _s.serverTabPlzSave;
+          return l10n.serverTabPlzSave;
         }
         return failedInfo;
       default:
-        return _s.serverTabUnkown;
+        return l10n.serverTabUnkown;
     }
   }
 
   Widget _buildNet(ServerStatus ss) {
     return ValueListenableBuilder<NetViewType>(
-      valueListenable: _setting.netViewType.listenable(),
+      valueListenable: Stores.setting.netViewType.listenable(),
       builder: (_, val, __) {
         final data = val.build(ss);
         return AnimatedSwitcher(
@@ -374,10 +364,12 @@ class _FullScreenPageState extends State<FullScreenPage> with AfterLayoutMixin {
 
   @override
   Future<void> afterFirstLayout(BuildContext context) async {
-    doUpdate(context);
+    if (Stores.setting.autoCheckAppUpdate.fetch()) {
+      doUpdate(context);
+    }
     await GetIt.I.allReady();
-    await _serverProvider.loadLocalData();
-    await _serverProvider.refreshData();
+    await Pros.server.load();
+    await Pros.server.refreshData();
     if (!Analysis.enabled) {
       await Analysis.init();
     }

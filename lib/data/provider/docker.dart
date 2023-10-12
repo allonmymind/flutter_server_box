@@ -1,18 +1,14 @@
 import 'dart:async';
-import 'dart:typed_data';
 
 import 'package:dartssh2/dartssh2.dart';
-import 'package:logging/logging.dart';
+import 'package:flutter/material.dart';
 import 'package:toolbox/core/extension/ssh_client.dart';
-import 'package:toolbox/core/extension/stringx.dart';
-import 'package:toolbox/core/provider_base.dart';
 import 'package:toolbox/data/model/app/shell_func.dart';
 import 'package:toolbox/data/model/docker/image.dart';
 import 'package:toolbox/data/model/docker/ps.dart';
 import 'package:toolbox/data/model/app/error.dart';
-import 'package:toolbox/data/res/server_cmd.dart';
-import 'package:toolbox/data/store/docker.dart';
-import 'package:toolbox/locator.dart';
+import 'package:toolbox/data/res/logger.dart';
+import 'package:toolbox/data/res/store.dart';
 
 final _dockerNotFound = RegExp(r'command not found|Unknown command');
 final _versionReg = RegExp(r'(Version:)\s+([0-9]+\.[0-9]+\.[0-9]+)');
@@ -20,11 +16,7 @@ final _versionReg = RegExp(r'(Version:)\s+([0-9]+\.[0-9]+\.[0-9]+)');
 final _editionReg = RegExp(r'Docker Engine - [a-zA-Z]+');
 final _dockerPrefixReg = RegExp(r'(sudo )?docker ');
 
-final _logger = Logger('DOCKER');
-
-class DockerProvider extends BusyProvider {
-  final _dockerStore = locator<DockerStore>();
-
+class DockerProvider extends ChangeNotifier {
   SSHClient? client;
   String? userName;
   List<DockerPsItem>? items;
@@ -32,51 +24,48 @@ class DockerProvider extends BusyProvider {
   String? version;
   String? edition;
   DockerErr? error;
-  PwdRequestFunc? onPwdReq;
   String? hostId;
   String? runLog;
-  bool isRequestingPwd = false;
+  BuildContext? context;
 
   void init(
     SSHClient client,
     String userName,
     PwdRequestFunc onPwdReq,
     String hostId,
+    BuildContext context,
   ) {
     this.client = client;
     this.userName = userName;
-    this.onPwdReq = onPwdReq;
+    this.context = context;
     this.hostId = hostId;
   }
 
   void clear() {
-    client = userName = error = items = version = edition = onPwdReq = null;
-    isRequestingPwd = false;
+    client = userName = error = items = version = edition = context = null;
     hostId = runLog = images = null;
   }
 
   Future<void> refresh() async {
-    if (isBusy) return;
-    setBusyState();
-
     var raw = '';
-    await client!.exec(
-      AppShellFuncType.docker.exec,
-      onStderr: _onPwd,
+    await client!.execWithPwd(
+      ShellFunc.docker.exec,
+      context: context,
       onStdout: (data, _) => raw = '$raw$data',
     );
 
     if (raw.contains(_dockerNotFound)) {
       error = DockerErr(type: DockerErrType.notInstalled);
-      setBusyState(false);
+      notifyListeners();
       return;
     }
 
     // Check result segments count
     final segments = raw.split(seperator);
-    if (segments.length != dockerCmds.length) {
+    if (segments.length != DockerCmdType.values.length) {
       error = DockerErr(type: DockerErrType.segmentsNotMatch);
-      setBusyState(false);
+      Loggers.parse.warning('Docker segments: ${segments.length}');
+      notifyListeners();
       return;
     }
 
@@ -92,15 +81,14 @@ class DockerProvider extends BusyProvider {
       lines.removeWhere((element) => element.isEmpty);
       if (lines.isNotEmpty) lines.removeAt(0);
       items = lines.map((e) => DockerPsItem.fromRawString(e)).toList();
-    } catch (e) {
+    } catch (e, trace) {
       error = DockerErr(
         type: DockerErrType.parsePsItem,
         message: '$psRaw\n-\n$e',
       );
-      _logger.warning('parse docker ps: $psRaw', e);
-      rethrow;
+      Loggers.parse.warning('Docker ps failed', e, trace);
     } finally {
-      setBusyState(false);
+      notifyListeners();
     }
 
     // Parse docker images
@@ -110,56 +98,39 @@ class DockerProvider extends BusyProvider {
       imageLines.removeWhere((element) => element.isEmpty);
       if (imageLines.isNotEmpty) imageLines.removeAt(0);
       images = imageLines.map((e) => DockerImage.fromRawStr(e)).toList();
-    } catch (e) {
+    } catch (e, trace) {
       error = DockerErr(
         type: DockerErrType.parseImages,
         message: '$imageRaw\n-\n$e',
       );
-      _logger.warning('parse docker images: $imageRaw', e);
-      rethrow;
+      Loggers.parse.warning('Docker images failed', e, trace);
     } finally {
-      setBusyState(false);
+      notifyListeners();
     }
 
     // Parse docker stats
-    final statsRaw = DockerCmdType.stats.find(segments);
-    try {
-      final statsLines = statsRaw.split('\n');
-      statsLines.removeWhere((element) => element.isEmpty);
-      statsLines.removeAt(0);
-      for (var item in items!) {
-        final statsLine = statsLines.firstWhere(
-          (element) => element.contains(item.containerId),
-          orElse: () => '',
-        );
-        if (statsLine.isEmpty) continue;
-        item.parseStats(statsLine);
-      }
-    } catch (e) {
-      error = DockerErr(
-        type: DockerErrType.parseStats,
-        message: '$statsRaw\n-\n$e',
-      );
-      _logger.warning('parse docker stats: $statsRaw', e);
-      rethrow;
-    } finally {
-      setBusyState(false);
-    }
-  }
-
-  Future<void> _onPwd(String event, StreamSink<Uint8List> stdin) async {
-    if (isRequestingPwd) return;
-    isRequestingPwd = true;
-    if (event.contains('[sudo] password for ')) {
-      _logger.info('sudo password request for $userName');
-      final pwd = await onPwdReq!();
-      if (pwd.isEmpty) {
-        _logger.info('sudo password request cancelled');
-        return;
-      }
-      stdin.add('$pwd\n'.uint8List);
-    }
-    isRequestingPwd = false;
+    // final statsRaw = DockerCmdType.stats.find(segments);
+    // try {
+    //   final statsLines = statsRaw.split('\n');
+    //   statsLines.removeWhere((element) => element.isEmpty);
+    //   if (statsLines.isNotEmpty) statsLines.removeAt(0);
+    //   for (var item in items!) {
+    //     final statsLine = statsLines.firstWhere(
+    //       (element) => element.contains(item.containerId),
+    //       orElse: () => '',
+    //     );
+    //     if (statsLine.isEmpty) continue;
+    //     item.parseStats(statsLine);
+    //   }
+    // } catch (e, trace) {
+    //   error = DockerErr(
+    //     type: DockerErrType.parseStats,
+    //     message: '$statsRaw\n-\n$e',
+    //   );
+    //   _logger.warning('Parse docker stats: $statsRaw', e, trace);
+    // } finally {
+    //   notifyListeners();
+    // }
   }
 
   Future<DockerErr?> stop(String id) async => await run('docker stop $id');
@@ -175,41 +146,38 @@ class DockerProvider extends BusyProvider {
     if (!cmd.startsWith(_dockerPrefixReg)) {
       return DockerErr(type: DockerErrType.cmdNoPrefix);
     }
-    setBusyState();
 
     runLog = '';
     final errs = <String>[];
-    final code = await client!.exec(
+    final code = await client!.execWithPwd(
       _wrap(cmd),
-      onStderr: (data, sink) {
-        _onPwd(data, sink);
-        errs.add(data);
-      },
+      context: context,
       onStdout: (data, _) {
         runLog = '$runLog$data';
         notifyListeners();
       },
+      onStderr: (data, _) => errs.add(data),
     );
     runLog = null;
+    notifyListeners();
 
     if (code != 0) {
-      setBusyState(false);
       return DockerErr(
         type: DockerErrType.unknown,
         message: errs.join('\n').trim(),
       );
     }
     await refresh();
-    setBusyState(false);
     return null;
   }
 
   // judge whether to use DOCKER_HOST
   String _wrap(String cmd) {
-    final dockerHost = _dockerStore.getDockerHost(hostId!);
+    final dockerHost = Stores.docker.fetch(hostId!);
+    cmd = 'export LANG=en_US.UTF-8 && $cmd';
     if (dockerHost == null || dockerHost.isEmpty) {
-      return cmd.withLangExport;
+      return cmd;
     }
-    return 'export DOCKER_HOST=$dockerHost && $cmd'.withLangExport;
+    return 'export DOCKER_HOST=$dockerHost && $cmd';
   }
 }

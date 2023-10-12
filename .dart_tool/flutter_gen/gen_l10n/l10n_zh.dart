@@ -35,10 +35,24 @@ class SZh extends S {
   String get alterUrl => '备选链接';
 
   @override
+  String askContinue(Object msg) {
+    return '$msg，继续吗？';
+  }
+
+  @override
   String get attention => '注意';
 
   @override
+  String get authRequired => '需要认证';
+
+  @override
   String get auto => '自动';
+
+  @override
+  String get autoCheckUpdate => '自动检查更新';
+
+  @override
+  String get autoConnect => '自动连接';
 
   @override
   String get autoUpdateHomeWidget => '自动更新桌面小部件';
@@ -57,6 +71,9 @@ class SZh extends S {
 
   @override
   String get bgRun => '后台运行';
+
+  @override
+  String get bioAuth => '生物认证';
 
   @override
   String get canPullRefresh => '可以下拉刷新';
@@ -84,6 +101,9 @@ class SZh extends S {
 
   @override
   String get conn => '连接';
+
+  @override
+  String get connected => '已连接';
 
   @override
   String get containerName => '容器名';
@@ -116,10 +136,16 @@ class SZh extends S {
   String get decode => '解码';
 
   @override
+  String get decompress => '解压缩';
+
+  @override
   String get delete => '删除';
 
   @override
   String get deleteServers => '批量删除服务器';
+
+  @override
+  String get dirEmpty => '请确保文件夹为空';
 
   @override
   String get disabled => '已禁用';
@@ -160,12 +186,10 @@ class SZh extends S {
   }
 
   @override
-  String get download => '下载';
+  String get doubleColumnMode => '双列模式';
 
   @override
-  String downloadStatus(Object percent, Object size) {
-    return '$size 的 $percent%';
-  }
+  String get download => '下载';
 
   @override
   String get edit => '编辑';
@@ -223,6 +247,9 @@ class SZh extends S {
   String get finished => '已完成';
 
   @override
+  String get followSystem => '跟随系统';
+
+  @override
   String get font => '字体';
 
   @override
@@ -249,6 +276,9 @@ class SZh extends S {
   String get gettingToken => '正在获取Token...';
 
   @override
+  String get goBackQ => '返回？';
+
+  @override
   String get goto => '前往';
 
   @override
@@ -261,6 +291,9 @@ class SZh extends S {
   String httpFailedWithCode(Object code) {
     return '请求失败, 状态码: $code';
   }
+
+  @override
+  String get icloudSynced => 'iCloud已同步，某些设置可能需要重启才能生效。';
 
   @override
   String get image => '镜像';
@@ -357,6 +390,12 @@ class SZh extends S {
   String get mission => '任务';
 
   @override
+  String get moveOutServerFuncBtns => '服务器功能按钮位置';
+
+  @override
+  String get moveOutServerFuncBtnsHelp => '开启：可以在服务器 Tab 页的每个卡片下方显示。关闭：在服务器详情页顶部显示。';
+
+  @override
   String get ms => '毫秒';
 
   @override
@@ -393,10 +432,16 @@ class SZh extends S {
   String get noServerAvailable => '没有可用的服务器。';
 
   @override
+  String get noTask => '没有任务';
+
+  @override
   String get noUpdateAvailable => '没有可用更新';
 
   @override
   String get notSelected => '未选择';
+
+  @override
+  String get note => '备注';
 
   @override
   String get nullToken => '无Token';
@@ -415,6 +460,11 @@ class SZh extends S {
 
   @override
   String get path => '路径';
+
+  @override
+  String percentOfSize(Object percent, Object size) {
+    return '$size 的 $percent%';
+  }
 
   @override
   String get pickFile => '选择文件';
@@ -447,7 +497,7 @@ class SZh extends S {
   String get preview => '预览';
 
   @override
-  String get primaryColor => '主题色';
+  String get primaryColorSeed => '主题色种子';
 
   @override
   String get privateKey => '私钥';
@@ -460,6 +510,9 @@ class SZh extends S {
 
   @override
   String get pwd => '密码';
+
+  @override
+  String get reboot => '重启';
 
   @override
   String get remotePath => '远端路径';
@@ -482,11 +535,6 @@ class SZh extends S {
   String get restoreSuccess => '恢复成功，需要重启App来应用更改';
 
   @override
-  String restoreSureWithDate(Object date) {
-    return '确定恢复 $date 的备份吗？';
-  }
-
-  @override
   String get result => '结果';
 
   @override
@@ -506,6 +554,12 @@ class SZh extends S {
 
   @override
   String get server => '服务器';
+
+  @override
+  String get serverDetailOrder => '详情页部件顺序';
+
+  @override
+  String get serverOrder => '服务器顺序';
 
   @override
   String get serverTabConnecting => '连接中...';
@@ -532,13 +586,16 @@ class SZh extends S {
   String get sftpDlPrepare => '准备连接至服务器...';
 
   @override
-  String get sftpNoDownloadTask => '没有下载任务';
+  String get sftpRmrDirSummary => '在 SFTP 中使用 `rm -r` 来删除文件夹';
 
   @override
-  String get sftpSSHConnected => 'SFTP 已连接，即将开始下载...';
+  String get sftpSSHConnected => 'SFTP 已连接...';
 
   @override
   String get showDistLogo => '显示发行版 Logo';
+
+  @override
+  String get shutdown => '关机';
 
   @override
   String get snippet => '代码片段';
@@ -572,20 +629,13 @@ class SZh extends S {
   String get success => '成功';
 
   @override
-  String sureDelete(Object name) {
-    return '确定删除 [$name]？';
-  }
+  String get suspend => '挂起';
 
   @override
-  String get sureDirEmpty => '请确保文件夹为空';
+  String get suspendTip => 'suspend 功能需要 root 权限及 systemd 支持。';
 
   @override
-  String get sureNoPwd => '确认使用无密码？';
-
-  @override
-  String sureToDeleteServer(Object server) {
-    return '你确定要删除服务器 [$server] 吗？';
-  }
+  String get syncTip => '在自动同步后，可能需要重新启动，某些更改才能生效。';
 
   @override
   String get system => '系统';
@@ -652,6 +702,9 @@ class SZh extends S {
   String get urlOrJson => '链接或JSON';
 
   @override
+  String get useNoPwd => '将会使用无密码。';
+
+  @override
   String get user => '用户';
 
   @override
@@ -661,7 +714,7 @@ class SZh extends S {
 
   @override
   String versionUnknownUpdate(Object build) {
-    return '当前：v1.0.$build';
+    return '当前：v1.0.$build，点击检查更新';
   }
 
   @override
@@ -680,6 +733,9 @@ class SZh extends S {
 
   @override
   String get waitConnection => '请等待连接建立';
+
+  @override
+  String get watchNotPaired => '没有已配对的 Apple Watch';
 
   @override
   String get whenOpenApp => '当打开 App 时';
@@ -723,10 +779,24 @@ class SZhTw extends SZh {
   String get alterUrl => '備選鏈接';
 
   @override
+  String askContinue(Object msg) {
+    return '$msg，繼續嗎？';
+  }
+
+  @override
   String get attention => '注意';
 
   @override
+  String get authRequired => '需要認證';
+
+  @override
   String get auto => '自動';
+
+  @override
+  String get autoCheckUpdate => '自動檢查更新';
+
+  @override
+  String get autoConnect => '自動連接';
 
   @override
   String get autoUpdateHomeWidget => '自動更新桌面小部件';
@@ -745,6 +815,9 @@ class SZhTw extends SZh {
 
   @override
   String get bgRun => '背景運行';
+
+  @override
+  String get bioAuth => '生物認證';
 
   @override
   String get canPullRefresh => '可以下拉更新';
@@ -772,6 +845,9 @@ class SZhTw extends SZh {
 
   @override
   String get conn => '連接';
+
+  @override
+  String get connected => '已連接';
 
   @override
   String get containerName => '容器名稱';
@@ -804,10 +880,16 @@ class SZhTw extends SZh {
   String get decode => '解碼';
 
   @override
+  String get decompress => '解壓縮';
+
+  @override
   String get delete => '刪除';
 
   @override
   String get deleteServers => '批量刪除服務器';
+
+  @override
+  String get dirEmpty => '請確保文件夾為空';
 
   @override
   String get disabled => '已禁用';
@@ -848,12 +930,10 @@ class SZhTw extends SZh {
   }
 
   @override
-  String get download => '下載';
+  String get doubleColumnMode => '雙列模式';
 
   @override
-  String downloadStatus(Object percent, Object size) {
-    return '$size 的 $percent%';
-  }
+  String get download => '下載';
 
   @override
   String get edit => '編輯';
@@ -911,6 +991,9 @@ class SZhTw extends SZh {
   String get finished => '已完成';
 
   @override
+  String get followSystem => '跟隨系統';
+
+  @override
   String get font => '字體';
 
   @override
@@ -937,6 +1020,9 @@ class SZhTw extends SZh {
   String get gettingToken => '正在獲取Token...';
 
   @override
+  String get goBackQ => '返回？';
+
+  @override
   String get goto => '前往';
 
   @override
@@ -949,6 +1035,9 @@ class SZhTw extends SZh {
   String httpFailedWithCode(Object code) {
     return '請求失敗, 狀態碼: $code';
   }
+
+  @override
+  String get icloudSynced => 'iCloud已同步，某些設置可能需要重啟才能生效。';
 
   @override
   String get image => '鏡像';
@@ -1045,6 +1134,12 @@ class SZhTw extends SZh {
   String get mission => '任務';
 
   @override
+  String get moveOutServerFuncBtns => '服務器功能按鈕位置';
+
+  @override
+  String get moveOutServerFuncBtnsHelp => '開啟：可以在服務器 Tab 頁的每個卡片下方顯示。關閉：在服務器詳情頁頂部顯示。';
+
+  @override
   String get ms => '毫秒';
 
   @override
@@ -1081,10 +1176,16 @@ class SZhTw extends SZh {
   String get noServerAvailable => '沒有可用的服務器。';
 
   @override
+  String get noTask => '沒有任務';
+
+  @override
   String get noUpdateAvailable => '沒有可用更新';
 
   @override
   String get notSelected => '未選擇';
+
+  @override
+  String get note => '備註';
 
   @override
   String get nullToken => '無Token';
@@ -1103,6 +1204,11 @@ class SZhTw extends SZh {
 
   @override
   String get path => '路徑';
+
+  @override
+  String percentOfSize(Object percent, Object size) {
+    return '$size 的 $percent%';
+  }
 
   @override
   String get pickFile => '選擇文件';
@@ -1135,7 +1241,7 @@ class SZhTw extends SZh {
   String get preview => '預覽';
 
   @override
-  String get primaryColor => '主要色調';
+  String get primaryColorSeed => '主要色調種子';
 
   @override
   String get privateKey => '私鑰';
@@ -1148,6 +1254,9 @@ class SZhTw extends SZh {
 
   @override
   String get pwd => '密碼';
+
+  @override
+  String get reboot => '重启';
 
   @override
   String get remotePath => '遠端路徑';
@@ -1170,11 +1279,6 @@ class SZhTw extends SZh {
   String get restoreSuccess => '恢復成功，需要重啓App來應用更改';
 
   @override
-  String restoreSureWithDate(Object date) {
-    return '確定恢復 $date 的備份嗎？';
-  }
-
-  @override
   String get result => '結果';
 
   @override
@@ -1194,6 +1298,12 @@ class SZhTw extends SZh {
 
   @override
   String get server => '服務器';
+
+  @override
+  String get serverDetailOrder => '詳情頁部件順序';
+
+  @override
+  String get serverOrder => '服務器順序';
 
   @override
   String get serverTabConnecting => '連接中...';
@@ -1220,13 +1330,16 @@ class SZhTw extends SZh {
   String get sftpDlPrepare => '準備連接至服務器...';
 
   @override
-  String get sftpNoDownloadTask => '沒有下載任務';
+  String get sftpRmrDirSummary => '在 SFTP 中使用 `rm -r` 來刪除文件夾';
 
   @override
-  String get sftpSSHConnected => 'SFTP 已連接，即將開始下載...';
+  String get sftpSSHConnected => 'SFTP 已連接...';
 
   @override
   String get showDistLogo => '顯示發行版 Logo';
+
+  @override
+  String get shutdown => '关机';
 
   @override
   String get snippet => '程式片段';
@@ -1260,20 +1373,13 @@ class SZhTw extends SZh {
   String get success => '成功';
 
   @override
-  String sureDelete(Object name) {
-    return '確定刪除 [$name]？';
-  }
+  String get suspend => '挂起';
 
   @override
-  String get sureDirEmpty => '請確保文件夾為空';
+  String get suspendTip => 'suspend 功能需要 root 權限及 systemd 支持。';
 
   @override
-  String get sureNoPwd => '確認使用無密碼？';
-
-  @override
-  String sureToDeleteServer(Object server) {
-    return '你確定要刪除服務器 [$server] 嗎？';
-  }
+  String get syncTip => '在自動同步後，可能需要重新啟動，某些更改才能生效。';
 
   @override
   String get system => '系統';
@@ -1340,6 +1446,9 @@ class SZhTw extends SZh {
   String get urlOrJson => '鏈接或JSON';
 
   @override
+  String get useNoPwd => '将使用無密碼。';
+
+  @override
   String get user => '用戶';
 
   @override
@@ -1349,7 +1458,7 @@ class SZhTw extends SZh {
 
   @override
   String versionUnknownUpdate(Object build) {
-    return '當前：v1.0.$build';
+    return '當前：v1.0.$build，點擊檢查更新';
   }
 
   @override
@@ -1368,6 +1477,9 @@ class SZhTw extends SZh {
 
   @override
   String get waitConnection => '請等待連接建立';
+
+  @override
+  String get watchNotPaired => '沒有已配對的 Apple Watch';
 
   @override
   String get whenOpenApp => '當打開 App 時';

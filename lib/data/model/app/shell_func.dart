@@ -1,49 +1,141 @@
-import '../../res/server_cmd.dart';
+import '../../res/build_data.dart';
+import '../server/system.dart';
 
-const _cmdDivider = '\necho $seperator\n';
+const seperator = 'SrvBoxSep';
 
-enum AppShellFuncType {
+const _cmdDivider = '\necho $seperator\n\t';
+
+const _serverBoxDir = r'$HOME/.config/server_box';
+
+/// Issue #159
+/// Use script commit count as version of shell script.
+/// So different version of app can run at the same time.
+const installShellPath = '$_serverBoxDir/mobile_v${BuildData.script}.sh';
+
+enum ShellFunc {
   status,
-  docker;
+  docker,
+  process,
+  shutdown,
+  reboot,
+  suspend,
+  ;
 
   String get flag {
     switch (this) {
-      case AppShellFuncType.status:
+      case ShellFunc.status:
         return 's';
-      case AppShellFuncType.docker:
+      case ShellFunc.docker:
         return 'd';
+      case ShellFunc.process:
+        return 'p';
+      case ShellFunc.shutdown:
+        return 'sd';
+      case ShellFunc.reboot:
+        return 'r';
+      case ShellFunc.suspend:
+        return 'sp';
     }
   }
 
-  String get exec => 'sh $shellPath -$flag';
+  String get exec => 'sh $installShellPath -$flag';
 
   String get name {
     switch (this) {
-      case AppShellFuncType.status:
+      case ShellFunc.status:
         return 'status';
-      case AppShellFuncType.docker:
+      case ShellFunc.docker:
         // `dockeR` -> avoid conflict with `docker` command
         // 以防止循环递归
         return 'dockeR';
+      case ShellFunc.process:
+        return 'process';
+      case ShellFunc.shutdown:
+        return 'ShutDown';
+      case ShellFunc.reboot:
+        return 'Reboot';
+      case ShellFunc.suspend:
+        return 'Suspend';
     }
   }
 
-  String get cmd {
+  String get _cmd {
     switch (this) {
-      case AppShellFuncType.status:
-        return statusCmds.join(_cmdDivider);
-      case AppShellFuncType.docker:
-        return dockerCmds.join(_cmdDivider);
+      case ShellFunc.status:
+        return '''
+if [ "\$macSign" = "" ] && [ "\$bsdSign" = "" ]; then
+\t${_statusCmds.join(_cmdDivider)}
+else
+\t${_bsdStatusCmd.join(_cmdDivider)}
+fi''';
+      case ShellFunc.docker:
+        return '''
+result=\$(docker version 2>&1 | grep "permission denied")
+if [ "\$result" != "" ]; then
+\t${_dockerCmds.join(_cmdDivider)}
+else
+\t${_dockerCmds.map((e) => "sudo -S $e").join(_cmdDivider)}
+fi''';
+      case ShellFunc.process:
+        return '''
+if [ "\$macSign" = "" ] && [ "\$bsdSign" = "" ]; then
+\tif [ "\$isBusybox" != "" ]; then
+\t\tps w
+\telse
+\t\tps -aux
+\tfi
+else
+\tps -ax
+fi
+''';
+      case ShellFunc.shutdown:
+        return '''
+if [ "\$userId" = "0" ]; then
+\tshutdown -h now
+else
+\tsudo -S shutdown -h now
+fi''';
+      case ShellFunc.reboot:
+        return '''
+if [ "\$userId" = "0" ]; then
+\treboot
+else
+\tsudo -S reboot
+fi''';
+      case ShellFunc.suspend:
+        return '''
+if [ "\$userId" = "0" ]; then
+\tsystemctl suspend
+else
+\tsudo -S systemctl suspend
+fi''';
     }
   }
 
-  static String get shellScript {
+  static final String allScript = () {
     final sb = StringBuffer();
+    sb.write('''
+#!/bin/sh
+# Script for ServerBox app v1.0.${BuildData.build}
+# DO NOT delete this file while app is running
+
+export LANG=en_US.UTF-8
+
+# If macSign & bsdSign are both empty, then it's linux
+macSign=\$(uname 2>&1 | grep "Darwin")
+bsdSign=\$(uname 2>&1 | grep "BSD")
+
+# Link /bin/sh to busybox?
+isBusybox=\$(ls -l /bin/sh | grep "busybox")
+
+userId=\$(id -u)
+
+''');
     // Write each func
     for (final func in values) {
       sb.write('''
 ${func.name}() {
-${func.cmd}
+${func._cmd.split('\n').map((e) => '\t$e').join('\n')}
 }
 
 ''');
@@ -64,15 +156,19 @@ ${func.cmd}
     ;;
 esac''');
     return sb.toString();
+  }();
+}
+
+extension EnumX on Enum {
+  /// Find out the required segment from [segments]
+  String find(List<String> segments) {
+    return segments[index];
   }
 }
 
-abstract class _CmdType {
-  /// Find out the required segment from [segments]
-  String find(List<String> segments);
-}
-
-enum StatusCmdType implements _CmdType {
+enum StatusCmdType {
+  echo,
+  time,
   net,
   sys,
   cpu,
@@ -83,22 +179,74 @@ enum StatusCmdType implements _CmdType {
   tempType,
   tempVal,
   host,
-  sysRhel;
-
-  @override
-  String find(List<String> segments) {
-    return segments[index];
-  }
+  ;
 }
 
-enum DockerCmdType implements _CmdType {
+/// Cmds for linux server
+const _statusCmds = [
+  'echo $linuxSign',
+  'date +%s',
+  'cat /proc/net/dev',
+  'cat /etc/*-release | grep PRETTY_NAME',
+  'cat /proc/stat | grep cpu',
+  'uptime',
+  'cat /proc/net/snmp',
+  'df -h',
+  'cat /proc/meminfo',
+  'cat /sys/class/thermal/thermal_zone*/type',
+  'cat /sys/class/thermal/thermal_zone*/temp',
+  'hostname',
+];
+
+enum DockerCmdType {
   version,
   ps,
-  stats,
-  images;
-
-  @override
-  String find(List<String> segments) {
-    return segments[index];
-  }
+  //stats,
+  images,
+  ;
 }
+
+const _dockerCmds = [
+  'docker version',
+  'docker ps -a',
+  //'docker stats --no-stream',
+  'docker image ls',
+];
+
+enum BSDStatusCmdType {
+  echo,
+  time,
+  net,
+  sys,
+  cpu,
+  uptime,
+  disk,
+  mem,
+  //temp,
+  host,
+  ;
+}
+
+/// Cmds for BSD server
+const _bsdStatusCmd = [
+  'echo $bsdSign',
+  'date +%s',
+  'netstat -ibn',
+  'uname -or',
+  'top -l 1 | grep "CPU usage"',
+  'uptime',
+  'df -h',
+  'top -l 1 | grep PhysMem',
+  //'sysctl -a | grep temperature',
+  'hostname',
+];
+
+/// Issue #168
+/// Use `sh` for compatibility
+final installShellCmd = """
+mkdir -p $_serverBoxDir
+cat << 'EOF' > $installShellPath
+${ShellFunc.allScript}
+EOF
+chmod +x $installShellPath
+""";

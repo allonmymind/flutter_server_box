@@ -1,39 +1,31 @@
 import 'package:after_layout/after_layout.dart';
 import 'package:circle_chart/circle_chart.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter_gen/gen_l10n/l10n.dart';
 import 'package:get_it/get_it.dart';
-import 'package:nil/nil.dart';
 import 'package:provider/provider.dart';
-import 'package:toolbox/core/extension/order.dart';
-import 'package:toolbox/core/utils/misc.dart';
-import 'package:toolbox/data/model/app/net_view.dart';
-import 'package:toolbox/data/model/server/snippet.dart';
-import 'package:toolbox/data/provider/snippet.dart';
-import 'package:toolbox/view/page/process.dart';
-import 'package:toolbox/view/widget/tag/picker.dart';
-import 'package:toolbox/view/widget/tag/switcher.dart';
+import 'package:toolbox/core/extension/context/common.dart';
+import 'package:toolbox/core/extension/context/dialog.dart';
+import 'package:toolbox/core/extension/context/locale.dart';
+import 'package:toolbox/core/extension/media_queryx.dart';
+import 'package:toolbox/core/extension/ssh_client.dart';
+import 'package:toolbox/core/utils/platform/base.dart';
+import 'package:toolbox/data/model/app/shell_func.dart';
+import 'package:toolbox/data/res/provider.dart';
+import 'package:toolbox/data/res/store.dart';
 
 import '../../../core/route.dart';
-import '../../../core/utils/ui.dart';
+import '../../../core/utils/misc.dart';
+import '../../../data/model/app/net_view.dart';
 import '../../../data/model/server/disk.dart';
 import '../../../data/model/server/server.dart';
 import '../../../data/model/server/server_private_info.dart';
 import '../../../data/model/server/server_status.dart';
 import '../../../data/provider/server.dart';
 import '../../../data/res/color.dart';
-import '../../../data/model/app/menu.dart';
 import '../../../data/res/ui.dart';
-import '../../../data/store/setting.dart';
-import '../../../locator.dart';
-import '../../widget/popup_menu.dart';
 import '../../widget/round_rect_card.dart';
-import '../docker.dart';
-import '../pkg.dart';
-import '../storage/sftp.dart';
-import '../ssh/term.dart';
-import 'detail.dart';
-import 'edit.dart';
+import '../../widget/server_func_btns.dart';
+import '../../widget/tag.dart';
 
 class ServerPage extends StatefulWidget {
   const ServerPage({Key? key}) : super(key: key);
@@ -45,26 +37,17 @@ class ServerPage extends StatefulWidget {
 class _ServerPageState extends State<ServerPage>
     with AutomaticKeepAliveClientMixin, AfterLayoutMixin {
   late MediaQueryData _media;
-  late ThemeData _theme;
-  late ServerProvider _serverProvider;
-  late SettingStore _settingStore;
-  late S _s;
+
+  final _flipedCardIds = <String>{};
 
   String? _tag;
-
-  @override
-  void initState() {
-    super.initState();
-    _serverProvider = locator<ServerProvider>();
-    _settingStore = locator<SettingStore>();
-  }
+  bool _useDoubleColumn = false;
 
   @override
   void didChangeDependencies() {
     super.didChangeDependencies();
     _media = MediaQuery.of(context);
-    _theme = Theme.of(context);
-    _s = S.of(context)!;
+    _useDoubleColumn = _media.useDoubleColumn;
   }
 
   @override
@@ -73,11 +56,8 @@ class _ServerPageState extends State<ServerPage>
     return Scaffold(
       body: _buildBody(),
       floatingActionButton: FloatingActionButton(
-        onPressed: () => AppRoute(
-          const ServerEditPage(),
-          'Add server info page',
-        ).go(context),
-        tooltip: _s.addAServer,
+        onPressed: () => AppRoute.serverEdit().go(context),
+        tooltip: l10n.addAServer,
         heroTag: 'server',
         child: const Icon(Icons.add),
       ),
@@ -85,114 +65,268 @@ class _ServerPageState extends State<ServerPage>
   }
 
   Widget _buildBody() {
-    return RefreshIndicator(
-      onRefresh: () async =>
-          await _serverProvider.refreshData(onlyFailed: true),
-      child: Consumer<ServerProvider>(
-        builder: (_, pro, __) {
-          if (!pro.tags.contains(_tag)) {
-            _tag = null;
-          }
-          if (pro.serverOrder.isEmpty) {
-            return Center(
-              child: Text(
-                _s.serverTabEmpty,
-                textAlign: TextAlign.center,
-              ),
-            );
-          }
-          final filtered = pro.serverOrder
-              .where((e) => pro.servers.containsKey(e))
-              .where((e) =>
-                  _tag == null ||
-                  (pro.servers[e]?.spi.tags?.contains(_tag) ?? false))
-              .toList();
-          return ReorderableListView.builder(
-            header: TagSwitcher(
-              tags: pro.tags,
-              width: _media.size.width,
-              onTagChanged: (p0) => setState(() {
-                _tag = p0;
-              }),
-              initTag: _tag,
-              all: _s.all,
+    final child = Consumer<ServerProvider>(
+      builder: (_, pro, __) {
+        if (!pro.tags.contains(_tag)) {
+          _tag = null;
+        }
+        if (pro.serverOrder.isEmpty) {
+          return Center(
+            child: Text(
+              l10n.serverTabEmpty,
+              textAlign: TextAlign.center,
             ),
-            padding: const EdgeInsets.fromLTRB(7, 10, 7, 7),
-            onReorder: (oldIndex, newIndex) => setState(() {
-              pro.serverOrder.moveByItem(
-                filtered,
-                oldIndex,
-                newIndex,
-                property: _settingStore.serverOrder,
-              );
-            }),
-            buildDefaultDragHandles: false,
-            itemBuilder: (_, index) => ReorderableDelayedDragStartListener(
-              key: ValueKey('$_tag${filtered[index]}'),
-              index: index,
-              child: _buildEachServerCard(pro.servers[filtered[index]]),
-            ),
-            itemCount: filtered.length,
           );
-        },
-      ),
+        }
+
+        final filtered = _filterServers(pro);
+        if (_useDoubleColumn &&
+            Stores.setting.doubleColumnServersPage.fetch()) {
+          return _buildBodyMedium(pro);
+        }
+        return _buildBodySmall(provider: pro, filtered: filtered);
+      },
+    );
+
+    // Desktop doesn't support pull to refresh
+    if (isDesktop) {
+      return child;
+    }
+    return RefreshIndicator(
+      onRefresh: () async => await Pros.server.refreshData(onlyFailed: true),
+      child: child,
+    );
+  }
+
+  Widget _buildTagsSwitcher(ServerProvider provider) {
+    return TagSwitcher(
+      tags: provider.tags,
+      width: _media.size.width,
+      onTagChanged: (p0) => setState(() {
+        _tag = p0;
+      }),
+      initTag: _tag,
+      all: l10n.all,
+    );
+  }
+
+  Widget _buildBodySmall({
+    required ServerProvider provider,
+    required List<String> filtered,
+    EdgeInsets? padding = const EdgeInsets.fromLTRB(7, 0, 7, 7),
+    bool buildTags = true,
+  }) {
+    final count = buildTags ? filtered.length + 2 : filtered.length + 1;
+    return ListView.builder(
+      padding: padding,
+      itemCount: count,
+      itemBuilder: (_, index) {
+        if (index == 0 && buildTags) return _buildTagsSwitcher(provider);
+
+        // Issue #130
+        if (index == count - 1) return UIs.height77;
+
+        if (buildTags) index--;
+        return _buildEachServerCard(provider.pick(id: filtered[index]));
+      },
+    );
+  }
+
+  Widget _buildBodyMedium(ServerProvider pro) {
+    final filtered = _filterServers(pro);
+    final left = filtered.where((e) => filtered.indexOf(e) % 2 == 0).toList();
+    final right = filtered.where((e) => filtered.indexOf(e) % 2 == 1).toList();
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 7),
+          child: _buildTagsSwitcher(pro),
+        ),
+        Expanded(
+            child: Row(
+          children: [
+            Expanded(
+              child: _buildBodySmall(
+                provider: pro,
+                filtered: left,
+                padding: const EdgeInsets.fromLTRB(7, 0, 0, 7),
+                buildTags: false,
+              ),
+            ),
+            Expanded(
+              child: _buildBodySmall(
+                provider: pro,
+                filtered: right,
+                padding: const EdgeInsets.fromLTRB(0, 0, 7, 7),
+                buildTags: false,
+              ),
+            ),
+          ],
+        ))
+      ],
     );
   }
 
   Widget _buildEachServerCard(Server? si) {
     if (si == null) {
-      return nil;
+      return UIs.placeholder;
     }
-    return GestureDetector(
+
+    return RoundRectCard(
       key: Key(si.spi.id + (_tag ?? '')),
-      onTap: () => AppRoute(
-        ServerDetailPage(si.spi.id),
-        'server detail page',
-      ).go(context),
-      child: RoundRectCard(
-        Padding(
+      InkWell(
+        onTap: () {
+          if (si.state.canViewDetails) {
+            AppRoute.serverDetail(spi: si.spi).go(context);
+          } else if (si.status.failedInfo != null) {
+            _showFailReason(si.status);
+          }
+        },
+        onLongPress: () {
+          if (si.state == ServerState.finished) {
+            setState(() {
+              if (_flipedCardIds.contains(si.spi.id)) {
+                _flipedCardIds.remove(si.spi.id);
+              } else {
+                _flipedCardIds.add(si.spi.id);
+              }
+            });
+          } else {
+            AppRoute.serverEdit(spi: si.spi).go(context);
+          }
+        },
+        child: Padding(
           padding: const EdgeInsets.all(13),
-          child: _buildRealServerCard(si.status, si.state, si.spi),
+          child: _buildRealServerCard(si),
         ),
       ),
     );
   }
 
-  Widget _buildRealServerCard(
-    ServerStatus ss,
-    ServerState cs,
-    ServerPrivateInfo spi,
-  ) {
-    final rootDisk = findRootDisk(ss.disk);
-
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        _buildServerCardTitle(ss, cs, spi),
-        height13,
-        Row(
-          mainAxisAlignment: MainAxisAlignment.spaceAround,
-          children: [
-            _buildPercentCircle(ss.cpu.usedPercent()),
-            _buildPercentCircle(ss.mem.usedPercent * 100),
-            _buildNet(ss),
-            _buildIOData(
-                'Total:\n${rootDisk?.size}', 'Used:\n${rootDisk?.usedPercent}%')
-          ],
-        ),
-        height13,
-        Row(
-          mainAxisAlignment: MainAxisAlignment.spaceAround,
-          children: [
-            _buildExplainText('CPU'),
-            _buildExplainText('Mem'),
-            _buildExplainText('Net'),
-            _buildExplainText('Disk'),
-          ],
-        ),
-        const SizedBox(height: 3),
-      ],
+  Widget _wrapWithSizedbox(Widget child) {
+    return SizedBox(
+      width: _useDoubleColumn
+          ? (_media.size.width - 146) / 10
+          : (_media.size.width - 74) / 5,
+      child: child,
     );
+  }
+
+  Widget _buildRealServerCard(Server srv) {
+    final title = _buildServerCardTitle(srv.status, srv.state, srv.spi);
+    final List<Widget> children = [title];
+
+    if (srv.state == ServerState.finished) {
+      if (_flipedCardIds.contains(srv.spi.id)) {
+        children.addAll(_buildFlipedCard(srv));
+      } else {
+        children.addAll(_buildNormalCard(srv.status, srv.spi));
+      }
+    }
+
+    return AnimatedContainer(
+      duration: const Duration(milliseconds: 377),
+      curve: Curves.fastEaseInToSlowEaseOut,
+      height: _calcCardHeight(srv.state, srv.spi.id),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        mainAxisAlignment: MainAxisAlignment.start,
+        crossAxisAlignment: CrossAxisAlignment.center,
+        children: children,
+      ),
+    );
+  }
+
+  List<Widget> _buildFlipedCard(Server srv) {
+    return [
+      UIs.height13,
+      Row(
+        mainAxisAlignment: MainAxisAlignment.spaceAround,
+        children: [
+          IconButton(
+            onPressed: () => _askFor(
+              func: () async {
+                if (Stores.first.showSuspendTip.fetch()) {
+                  await context.showRoundDialog(
+                    title: Text(l10n.attention),
+                    child: Text(l10n.suspendTip),
+                  );
+                  Stores.first.showSuspendTip.put(false);
+                }
+                srv.client?.execWithPwd(
+                  ShellFunc.suspend.exec,
+                  context: context,
+                );
+              },
+              typ: l10n.suspend,
+              name: srv.spi.name,
+            ),
+            icon: const Icon(Icons.stop),
+            tooltip: l10n.suspend,
+          ),
+          IconButton(
+            onPressed: () => _askFor(
+              func: () => srv.client?.execWithPwd(
+                ShellFunc.shutdown.exec,
+                context: context,
+              ),
+              typ: l10n.shutdown,
+              name: srv.spi.name,
+            ),
+            icon: const Icon(Icons.power_off),
+            tooltip: l10n.shutdown,
+          ),
+          IconButton(
+            onPressed: () => _askFor(
+              func: () => srv.client?.execWithPwd(
+                ShellFunc.reboot.exec,
+                context: context,
+              ),
+              typ: l10n.reboot,
+              name: srv.spi.name,
+            ),
+            icon: const Icon(Icons.restart_alt),
+            tooltip: l10n.reboot,
+          ),
+          IconButton(
+            onPressed: () => AppRoute.serverEdit(spi: srv.spi).go(context),
+            icon: const Icon(Icons.edit),
+            tooltip: l10n.edit,
+          )
+        ],
+      )
+    ];
+  }
+
+  List<Widget> _buildNormalCard(ServerStatus ss, ServerPrivateInfo spi) {
+    final rootDisk = findRootDisk(ss.disk);
+    return [
+      UIs.height13,
+      Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 13),
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            _wrapWithSizedbox(_buildPercentCircle(ss.cpu.usedPercent())),
+            _wrapWithSizedbox(_buildPercentCircle(ss.mem.usedPercent * 100)),
+            _wrapWithSizedbox(_buildNet(ss)),
+            _wrapWithSizedbox(_buildIOData(
+              'Total:\n${rootDisk?.size}',
+              'Used:\n${rootDisk?.usedPercent}%',
+            )),
+          ],
+        ),
+      ),
+      UIs.height13,
+      if (Stores.setting.moveOutServerTabFuncBtns.fetch() &&
+          // Discussion #146
+          !Stores.setting.serverTabUseOldUI.fetch())
+        SizedBox(
+          height: 27,
+          child: ServerFuncBtns(spi: spi),
+        ),
+    ];
   }
 
   Widget _buildServerCardTitle(
@@ -200,6 +334,22 @@ class _ServerPageState extends State<ServerPage>
     ServerState cs,
     ServerPrivateInfo spi,
   ) {
+    Widget? rightCorner;
+    if (!(spi.autoConnect ?? true) && cs == ServerState.disconnected) {
+      rightCorner = InkWell(
+        onTap: () => Pros.server.refreshData(spi: spi),
+        child: const Padding(
+          padding: EdgeInsets.symmetric(horizontal: 7),
+          child: Icon(
+            Icons.link,
+            size: 21,
+            color: Colors.grey,
+          ),
+        ),
+      );
+    } else if (Stores.setting.serverTabUseOldUI.fetch()) {
+      rightCorner = ServerFuncBtnsTopRight(spi: spi);
+    }
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 7),
       child: Row(
@@ -209,8 +359,7 @@ class _ServerPageState extends State<ServerPage>
             children: [
               Text(
                 spi.name,
-                style:
-                    const TextStyle(fontWeight: FontWeight.bold, fontSize: 12),
+                style: UIs.textSize13Bold,
                 textScaleFactor: 1.0,
               ),
               const Icon(
@@ -223,9 +372,7 @@ class _ServerPageState extends State<ServerPage>
           Row(
             children: [
               _buildTopRightText(ss, cs),
-              width13,
-              _buildSSHBtn(spi),
-              _buildMoreBtn(spi),
+              if (rightCorner != null) rightCorner,
             ],
           )
         ],
@@ -242,101 +389,39 @@ class _ServerPageState extends State<ServerPage>
     );
     if (cs == ServerState.failed && ss.failedInfo != null) {
       return GestureDetector(
-        onTap: () => showRoundDialog(
-          context: context,
-          title: Text(_s.error),
-          child: SingleChildScrollView(
-            child: Text(ss.failedInfo!),
-          ),
-          actions: [
-            TextButton(
-              onPressed: () => copy2Clipboard(ss.failedInfo!),
-              child: Text(_s.copy),
-            )
-          ],
-        ),
+        onTap: () => _showFailReason(ss),
         child: Text(
-          _s.viewErr,
-          style: textSize12Grey,
+          l10n.viewErr,
+          style: UIs.textSize11Grey,
           textScaleFactor: 1.0,
         ),
       );
     }
     return Text(
       topRightStr,
-      style: textSize12Grey,
+      style: UIs.textSize11Grey,
       textScaleFactor: 1.0,
     );
   }
 
-  Widget _buildSSHBtn(ServerPrivateInfo spi) {
-    return GestureDetector(
-      child: const Icon(
-        Icons.terminal,
-        size: 21,
+  void _showFailReason(ServerStatus ss) {
+    context.showRoundDialog(
+      title: Text(l10n.error),
+      child: SingleChildScrollView(
+        child: Text(ss.failedInfo ?? l10n.unknownError),
       ),
-      onTap: () => AppRoute(SSHPage(spi: spi), 'ssh page').go(context),
-    );
-  }
-
-  Widget _buildMoreBtn(ServerPrivateInfo spi) {
-    return PopupMenu(
-      items: ServerTabMenuType.values.map((e) => e.build(_s)).toList(),
-      padding: const EdgeInsets.symmetric(horizontal: 10),
-      onSelected: (ServerTabMenuType value) async {
-        switch (value) {
-          case ServerTabMenuType.pkg:
-            AppRoute(PkgManagePage(spi), 'pkg manage').go(context);
-            break;
-          case ServerTabMenuType.sftp:
-            AppRoute(SftpPage(spi), 'SFTP').go(context);
-            break;
-          case ServerTabMenuType.snippet:
-            final provider = locator<SnippetProvider>();
-            final snippets = await showDialog<List<Snippet>>(
-              context: context,
-              builder: (_) => TagPicker<Snippet>(
-                items: provider.snippets,
-                containsTag: (t, tag) => t.tags?.contains(tag) ?? false,
-                tags: provider.tags.toSet(),
-                name: (t) => t.name,
-              ),
-            );
-            if (snippets == null) {
-              return;
-            }
-            final result = await _serverProvider.runSnippets(spi.id, snippets);
-            if (result != null && result.isNotEmpty) {
-              showRoundDialog(
-                context: context,
-                title: Text(_s.result),
-                child: Text(result),
-                actions: [
-                  TextButton(
-                    onPressed: () => copy2Clipboard(result),
-                    child: Text(_s.copy),
-                  )
-                ],
-              );
-            }
-            break;
-          case ServerTabMenuType.edit:
-            AppRoute(ServerEditPage(spi: spi), 'Edit server info').go(context);
-            break;
-          case ServerTabMenuType.docker:
-            AppRoute(DockerManagePage(spi), 'Docker manage').go(context);
-            break;
-          case ServerTabMenuType.process:
-            AppRoute(ProcessPage(spi: spi), 'process page').go(context);
-            break;
-        }
-      },
+      actions: [
+        TextButton(
+          onPressed: () => copy2Clipboard(ss.failedInfo!),
+          child: Text(l10n.copy),
+        )
+      ],
     );
   }
 
   Widget _buildNet(ServerStatus ss) {
     return ValueListenableBuilder<NetViewType>(
-      valueListenable: _settingStore.netViewType.listenable(),
+      valueListenable: Stores.setting.netViewType.listenable(),
       builder: (_, val, __) {
         final data = val.build(ss);
         return AnimatedSwitcher(
@@ -347,102 +432,53 @@ class _ServerPageState extends State<ServerPage>
     );
   }
 
-  Widget _buildExplainText(String text) {
-    return SizedBox(
-      width: _media.size.width * 0.2,
-      child: Text(
-        text,
-        style: const TextStyle(fontSize: 12),
-        textAlign: TextAlign.center,
-        textScaleFactor: 1.0,
-      ),
-    );
-  }
-
-  String _getTopRightStr(
-    ServerState cs,
-    double? temp,
-    String upTime,
-    String? failedInfo,
-  ) {
-    switch (cs) {
-      case ServerState.disconnected:
-        return _s.disconnected;
-      case ServerState.connected:
-        final tempStr = temp == null ? '' : '${temp.toStringAsFixed(1)}°C';
-        final items = [tempStr, upTime];
-        final str = items.where((element) => element.isNotEmpty).join(' | ');
-        if (str.isEmpty) return _s.serverTabLoading;
-        return str;
-      case ServerState.connecting:
-        return _s.serverTabConnecting;
-      case ServerState.failed:
-        if (failedInfo == null) {
-          return _s.serverTabFailed;
-        }
-        if (failedInfo.contains('encypted')) {
-          return _s.serverTabPlzSave;
-        }
-        return failedInfo;
-      default:
-        return _s.serverTabUnkown;
-    }
-  }
-
   Widget _buildIOData(String up, String down) {
-    final statusTextStyle = TextStyle(
-        fontSize: 9, color: _theme.textTheme.bodyLarge!.color!.withAlpha(177));
-    return SizedBox(
-      width: _media.size.width * 0.2,
-      child: Column(
-        children: [
-          const SizedBox(height: 5),
-          Text(
-            up,
-            style: statusTextStyle,
-            textAlign: TextAlign.center,
-            textScaleFactor: 1.0,
-          ),
-          const SizedBox(height: 3),
-          Text(
-            down,
-            style: statusTextStyle,
-            textAlign: TextAlign.center,
-            textScaleFactor: 1.0,
-          )
-        ],
-      ),
+    return Column(
+      children: [
+        const SizedBox(height: 5),
+        Text(
+          up,
+          style: UIs.textSize9Grey,
+          textAlign: TextAlign.center,
+          textScaleFactor: 1.0,
+        ),
+        const SizedBox(height: 3),
+        Text(
+          down,
+          style: UIs.textSize9Grey,
+          textAlign: TextAlign.center,
+          textScaleFactor: 1.0,
+        )
+      ],
     );
   }
 
   Widget _buildPercentCircle(double percent) {
     if (percent <= 0) percent = 0.01;
     if (percent >= 100) percent = 99.9;
-    return SizedBox(
-      width: _media.size.width * 0.2,
-      child: Stack(
-        children: [
-          Center(
-            child: CircleChart(
-              progressColor: primaryColor,
-              progressNumber: percent,
-              maxNumber: 100,
-              width: 53,
-              height: 53,
+    return Stack(
+      children: [
+        Center(
+          child: CircleChart(
+            progressColor: primaryColor,
+            progressNumber: percent,
+            maxNumber: 100,
+            width: 53,
+            height: 53,
+            animationDuration: const Duration(milliseconds: 777),
+          ),
+        ),
+        Positioned.fill(
+          child: Center(
+            child: Text(
+              '${percent.toStringAsFixed(1)}%',
+              textAlign: TextAlign.center,
+              style: UIs.textSize11,
+              textScaleFactor: 1.0,
             ),
           ),
-          Positioned.fill(
-            child: Center(
-              child: Text(
-                '${percent.toStringAsFixed(1)}%',
-                textAlign: TextAlign.center,
-                style: const TextStyle(fontSize: 11),
-                textScaleFactor: 1.0,
-              ),
-            ),
-          ),
-        ],
-      ),
+        ),
+      ],
     );
   }
 
@@ -452,9 +488,80 @@ class _ServerPageState extends State<ServerPage>
   @override
   Future<void> afterFirstLayout(BuildContext context) async {
     await GetIt.I.allReady();
-    if (_serverProvider.servers.isEmpty) {
-      await _serverProvider.loadLocalData();
+    await Pros.server.load();
+    Pros.server.startAutoRefresh();
+  }
+
+  List<String> _filterServers(ServerProvider pro) => pro.serverOrder
+      .where((e) => pro.serverOrder.contains(e))
+      .where((e) =>
+          _tag == null || (pro.pick(id: e)?.spi.tags?.contains(_tag) ?? false))
+      .toList();
+
+  String _getTopRightStr(
+    ServerState cs,
+    double? temp,
+    String upTime,
+    String? failedInfo,
+  ) {
+    switch (cs) {
+      case ServerState.disconnected:
+        return l10n.disconnected;
+      case ServerState.finished:
+        final tempStr = temp == null ? '' : '${temp.toStringAsFixed(1)}°C';
+        final items = [tempStr, upTime];
+        final str = items.where((element) => element.isNotEmpty).join(' | ');
+        if (str.isEmpty) return l10n.noResult;
+        return str;
+      case ServerState.loading:
+        return l10n.serverTabLoading;
+      case ServerState.connected:
+        return l10n.connected;
+      case ServerState.connecting:
+        return l10n.serverTabConnecting;
+      case ServerState.failed:
+        if (failedInfo == null) {
+          return l10n.serverTabFailed;
+        }
+        if (failedInfo.contains('encypted')) {
+          return l10n.serverTabPlzSave;
+        }
+        return failedInfo;
     }
-    _serverProvider.startAutoRefresh();
+  }
+
+  double _calcCardHeight(ServerState cs, String id) {
+    if (cs != ServerState.finished) {
+      return 23.0;
+    }
+    if (_flipedCardIds.contains(id)) {
+      return 80.0;
+    }
+    if (Stores.setting.moveOutServerTabFuncBtns.fetch() &&
+        // Discussion #146
+        !Stores.setting.serverTabUseOldUI.fetch()) {
+      return 132;
+    }
+    return 107;
+  }
+
+  void _askFor({
+    required void Function() func,
+    required String typ,
+    required String name,
+  }) {
+    context.showRoundDialog(
+      title: Text(l10n.attention),
+      child: Text(l10n.askContinue('$typ ${l10n.server}($name)')),
+      actions: [
+        TextButton(
+          onPressed: () {
+            context.pop();
+            func();
+          },
+          child: Text(l10n.ok),
+        ),
+      ],
+    );
   }
 }

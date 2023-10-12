@@ -1,70 +1,63 @@
 import 'dart:io';
 
 import 'package:flutter/material.dart';
-import 'package:flutter_gen/gen_l10n/l10n.dart';
-import 'package:toolbox/core/extension/navigator.dart';
+import 'package:toolbox/core/extension/context/common.dart';
+import 'package:toolbox/core/extension/context/dialog.dart';
+import 'package:toolbox/core/extension/context/locale.dart';
+import 'package:toolbox/core/extension/context/snackbar.dart';
+import 'package:toolbox/data/model/server/server_private_info.dart';
 import 'package:toolbox/data/model/sftp/req.dart';
-import 'package:toolbox/data/provider/server.dart';
-import 'package:toolbox/data/provider/sftp.dart';
 import 'package:toolbox/data/res/misc.dart';
-import 'package:toolbox/locator.dart';
-import 'package:toolbox/view/page/editor.dart';
-import 'package:toolbox/view/page/storage/sftp.dart';
+import 'package:toolbox/data/res/provider.dart';
 import 'package:toolbox/view/widget/input_field.dart';
-import 'package:toolbox/view/widget/picker.dart';
+import 'package:toolbox/view/widget/omit_start_text.dart';
 import 'package:toolbox/view/widget/round_rect_card.dart';
 
 import '../../../core/extension/numx.dart';
-import '../../../core/extension/stringx.dart';
 import '../../../core/route.dart';
 import '../../../core/utils/misc.dart';
-import '../../../core/utils/ui.dart';
 import '../../../data/model/app/path_with_prefix.dart';
 import '../../../data/res/path.dart';
 import '../../../data/res/ui.dart';
+import '../../widget/custom_appbar.dart';
 import '../../widget/fade_in.dart';
-import 'sftp_mission.dart';
 
 class LocalStoragePage extends StatefulWidget {
   final bool isPickFile;
   final String? initDir;
-  const LocalStoragePage({Key? key, this.isPickFile = false, this.initDir})
-      : super(key: key);
+  const LocalStoragePage({
+    Key? key,
+    required this.isPickFile,
+    this.initDir,
+  }) : super(key: key);
 
   @override
   State<LocalStoragePage> createState() => _LocalStoragePageState();
 }
 
 class _LocalStoragePageState extends State<LocalStoragePage> {
-  PathWithPrefix? _path;
-  late S _s;
+  LocalPath? _path;
 
   @override
   void initState() {
     super.initState();
     if (widget.initDir != null) {
       setState(() {
-        _path = PathWithPrefix(widget.initDir!);
+        _path = LocalPath(widget.initDir!);
       });
     } else {
-      sftpDir.then((dir) {
+      Paths.sftp.then((dir) {
         setState(() {
-          _path = PathWithPrefix(dir.path);
+          _path = LocalPath(dir);
         });
       });
     }
   }
 
   @override
-  void didChangeDependencies() {
-    super.didChangeDependencies();
-    _s = S.of(context)!;
-  }
-
-  @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
+      appBar: CustomAppBar(
         leading: IconButton(
           icon: const BackButtonIcon(),
           onPressed: () {
@@ -74,14 +67,11 @@ class _LocalStoragePageState extends State<LocalStoragePage> {
             context.pop();
           },
         ),
-        title: Text(_s.download),
+        title: Text(l10n.files),
         actions: [
           IconButton(
             icon: const Icon(Icons.downloading),
-            onPressed: () => AppRoute(
-              const SftpMissionPage(),
-              'sftp downloading',
-            ).go(context),
+            onPressed: () => AppRoute.sftpMission().go(context),
           )
         ],
       ),
@@ -99,7 +89,7 @@ class _LocalStoragePageState extends State<LocalStoragePage> {
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
-          (_path?.path ?? _s.loadingFiles).omitStartStr(),
+          OmitStartText(_path?.path ?? l10n.loadingFiles),
           _buildBtns(),
         ],
       ),
@@ -168,12 +158,13 @@ class _LocalStoragePageState extends State<LocalStoragePage> {
               ? const Icon(Icons.folder)
               : const Icon(Icons.insert_drive_file),
           title: Text(fileName),
-          subtitle: isDir ? null : Text(stat.size.convertBytes, style: grey),
+          subtitle:
+              isDir ? null : Text(stat.size.convertBytes, style: UIs.textGrey),
           trailing: Text(
             stat.modified
                 .toString()
                 .substring(0, stat.modified.toString().length - 4),
-            style: grey,
+            style: UIs.textGrey,
           ),
           onLongPress: () {
             if (!isDir) return;
@@ -193,8 +184,7 @@ class _LocalStoragePageState extends State<LocalStoragePage> {
   }
 
   Future<void> _showDirActionDialog(FileSystemEntity file) async {
-    showRoundDialog(
-      context: context,
+    context.showRoundDialog(
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
@@ -203,7 +193,7 @@ class _LocalStoragePageState extends State<LocalStoragePage> {
               context.pop();
               _showRenameDialog(file);
             },
-            title: Text(_s.rename),
+            title: Text(l10n.rename),
             leading: const Icon(Icons.abc),
           ),
           ListTile(
@@ -211,7 +201,7 @@ class _LocalStoragePageState extends State<LocalStoragePage> {
               context.pop();
               _showDeleteDialog(file);
             },
-            title: Text(_s.delete),
+            title: Text(l10n.delete),
             leading: const Icon(Icons.delete),
           ),
         ],
@@ -222,9 +212,8 @@ class _LocalStoragePageState extends State<LocalStoragePage> {
   Future<void> _showFileActionDialog(FileSystemEntity file) async {
     final fileName = file.path.split('/').last;
     if (widget.isPickFile) {
-      await showRoundDialog(
-          context: context,
-          title: Text(_s.pickFile),
+      await context.showRoundDialog(
+          title: Text(l10n.pickFile),
           child: Text(fileName),
           actions: [
             TextButton(
@@ -232,47 +221,40 @@ class _LocalStoragePageState extends State<LocalStoragePage> {
                 context.pop();
                 context.pop(file.path);
               },
-              child: Text(_s.ok),
+              child: Text(l10n.ok),
             ),
           ]);
       return;
     }
-    showRoundDialog(
-      context: context,
+    context.showRoundDialog(
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
           ListTile(
             leading: const Icon(Icons.edit),
-            title: Text(_s.edit),
+            title: Text(l10n.edit),
             onTap: () async {
               context.pop();
               final stat = await file.stat();
-              if (stat.size > editorMaxSize) {
-                showRoundDialog(
-                  context: context,
-                  title: Text(_s.attention),
-                  child: Text(_s.fileTooLarge(fileName, stat.size, '1m')),
+              if (stat.size > Miscs.editorMaxSize) {
+                context.showRoundDialog(
+                  title: Text(l10n.attention),
+                  child: Text(l10n.fileTooLarge(fileName, stat.size, '1m')),
                 );
                 return;
               }
-              final result = await AppRoute(
-                EditorPage(
-                  path: file.absolute.path,
-                ),
-                'sftp dled editor',
-              ).go<String>(context);
-              final f = File(file.absolute.path);
-              if (result != null) {
-                f.writeAsString(result);
-                showSnackBar(context, Text(_s.saved));
+              final result = await AppRoute.editor(
+                path: file.absolute.path,
+              ).go<bool>(context);
+              if (result == true) {
+                context.showSnackBar(l10n.saved);
                 setState(() {});
               }
             },
           ),
           ListTile(
             leading: const Icon(Icons.abc),
-            title: Text(_s.rename),
+            title: Text(l10n.rename),
             onTap: () {
               context.pop();
               _showRenameDialog(file);
@@ -280,7 +262,7 @@ class _LocalStoragePageState extends State<LocalStoragePage> {
           ),
           ListTile(
             leading: const Icon(Icons.delete),
-            title: Text(_s.delete),
+            title: Text(l10n.delete),
             onTap: () {
               context.pop();
               _showDeleteDialog(file);
@@ -288,53 +270,40 @@ class _LocalStoragePageState extends State<LocalStoragePage> {
           ),
           ListTile(
             leading: const Icon(Icons.upload),
-            title: Text(_s.upload),
+            title: Text(l10n.upload),
             onTap: () async {
               context.pop();
-              final serverProvider = locator<ServerProvider>();
-              final ids = serverProvider.serverOrder;
-              var idx = 0;
-              await showRoundDialog(
-                context: context,
-                title: Text(_s.server),
-                child: Picker(
-                  items: ids.map((e) => Text(e)).toList(),
-                  onSelected: (idx_) => idx = idx_,
-                ),
-                actions: [
-                  TextButton(
-                      onPressed: () => context.pop(), child: Text(_s.ok)),
-                ],
+
+              final spi = await context.showPickSingleDialog<ServerPrivateInfo>(
+                items: Pros.server.serverOrder
+                    .map((e) => Pros.server.pick(id: e)?.spi)
+                    .toList(),
+                name: (e) => e.name,
               );
-              final id = ids[idx];
-              final spi = serverProvider.servers[id]?.spi;
-              if (spi == null) {
-                return;
-              }
-              final remotePath = await AppRoute(
-                SftpPage(
-                  spi,
-                  selectPath: true,
-                ),
-                'SFTP page (select)',
+              if (spi == null) return;
+
+              final remotePath = await AppRoute.sftp(
+                spi: spi,
+                isSelect: true,
               ).go<String>(context);
               if (remotePath == null) {
                 return;
               }
-              locator<SftpProvider>().add(SftpReq(
+
+              Pros.sftp.add(SftpReq(
                 spi,
-                remotePath,
+                '$remotePath/$fileName',
                 file.absolute.path,
                 SftpReqType.upload,
               ));
-              showSnackBar(context, Text(_s.added2List));
+              context.showSnackBar(l10n.added2List);
             },
           ),
           ListTile(
             leading: const Icon(Icons.open_in_new),
-            title: Text(_s.open),
+            title: Text(l10n.open),
             onTap: () {
-              shareFiles(context, [file.absolute.path]);
+              shareFiles([file.absolute.path]);
             },
           ),
         ],
@@ -344,10 +313,10 @@ class _LocalStoragePageState extends State<LocalStoragePage> {
 
   void _showRenameDialog(FileSystemEntity file) {
     final fileName = file.path.split('/').last;
-    showRoundDialog(
-      context: context,
-      title: Text(_s.rename),
+    context.showRoundDialog(
+      title: Text(l10n.rename),
       child: Input(
+        autoFocus: true,
         controller: TextEditingController(text: fileName),
         onSubmitted: (p0) {
           context.pop();
@@ -355,7 +324,7 @@ class _LocalStoragePageState extends State<LocalStoragePage> {
           try {
             file.renameSync(newPath);
           } catch (e) {
-            showSnackBar(context, Text('${_s.failed}:\n$e'));
+            context.showSnackBar('${l10n.failed}:\n$e');
             return;
           }
 
@@ -367,14 +336,13 @@ class _LocalStoragePageState extends State<LocalStoragePage> {
 
   void _showDeleteDialog(FileSystemEntity file) {
     final fileName = file.path.split('/').last;
-    showRoundDialog(
-      context: context,
-      title: Text(_s.delete),
-      child: Text(_s.sureDelete(fileName)),
+    context.showRoundDialog(
+      title: Text(l10n.delete),
+      child: Text(l10n.askContinue('${l10n.delete} $fileName')),
       actions: [
         TextButton(
           onPressed: () => context.pop(),
-          child: Text(_s.cancel),
+          child: Text(l10n.cancel),
         ),
         TextButton(
           onPressed: () {
@@ -382,12 +350,12 @@ class _LocalStoragePageState extends State<LocalStoragePage> {
             try {
               file.deleteSync(recursive: true);
             } catch (e) {
-              showSnackBar(context, Text('${_s.failed}:\n$e'));
+              context.showSnackBar('${l10n.failed}:\n$e');
               return;
             }
             setState(() {});
           },
-          child: Text(_s.ok),
+          child: Text(l10n.ok),
         ),
       ],
     );

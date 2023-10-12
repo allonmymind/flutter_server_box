@@ -158,17 +158,41 @@ abstract class S {
   /// **'Alter url'**
   String get alterUrl;
 
+  /// No description provided for @askContinue.
+  ///
+  /// In en, this message translates to:
+  /// **'{msg}, continue?'**
+  String askContinue(Object msg);
+
   /// No description provided for @attention.
   ///
   /// In en, this message translates to:
   /// **'Attention'**
   String get attention;
 
+  /// No description provided for @authRequired.
+  ///
+  /// In en, this message translates to:
+  /// **'Auth required'**
+  String get authRequired;
+
   /// No description provided for @auto.
   ///
   /// In en, this message translates to:
   /// **'Auto'**
   String get auto;
+
+  /// No description provided for @autoCheckUpdate.
+  ///
+  /// In en, this message translates to:
+  /// **'Auto check update'**
+  String get autoCheckUpdate;
+
+  /// No description provided for @autoConnect.
+  ///
+  /// In en, this message translates to:
+  /// **'Auto connect'**
+  String get autoConnect;
 
   /// No description provided for @autoUpdateHomeWidget.
   ///
@@ -205,6 +229,12 @@ abstract class S {
   /// In en, this message translates to:
   /// **'Run in backgroud'**
   String get bgRun;
+
+  /// No description provided for @bioAuth.
+  ///
+  /// In en, this message translates to:
+  /// **'Biometric auth'**
+  String get bioAuth;
 
   /// No description provided for @canPullRefresh.
   ///
@@ -259,6 +289,12 @@ abstract class S {
   /// In en, this message translates to:
   /// **'Connection'**
   String get conn;
+
+  /// No description provided for @connected.
+  ///
+  /// In en, this message translates to:
+  /// **'Connected'**
+  String get connected;
 
   /// No description provided for @containerName.
   ///
@@ -320,6 +356,12 @@ abstract class S {
   /// **'Decode'**
   String get decode;
 
+  /// No description provided for @decompress.
+  ///
+  /// In en, this message translates to:
+  /// **'Decompress'**
+  String get decompress;
+
   /// No description provided for @delete.
   ///
   /// In en, this message translates to:
@@ -331,6 +373,12 @@ abstract class S {
   /// In en, this message translates to:
   /// **'Batch delete servers'**
   String get deleteServers;
+
+  /// No description provided for @dirEmpty.
+  ///
+  /// In en, this message translates to:
+  /// **'Make sure dir is empty.'**
+  String get dirEmpty;
 
   /// No description provided for @disabled.
   ///
@@ -392,17 +440,17 @@ abstract class S {
   /// **'{count} container running.'**
   String dockerStatusRunningFmt(Object count);
 
+  /// No description provided for @doubleColumnMode.
+  ///
+  /// In en, this message translates to:
+  /// **'Double column mode'**
+  String get doubleColumnMode;
+
   /// No description provided for @download.
   ///
   /// In en, this message translates to:
   /// **'Download'**
   String get download;
-
-  /// No description provided for @downloadStatus.
-  ///
-  /// In en, this message translates to:
-  /// **'{percent}% of {size}'**
-  String downloadStatus(Object percent, Object size);
 
   /// No description provided for @edit.
   ///
@@ -506,6 +554,12 @@ abstract class S {
   /// **'Finished'**
   String get finished;
 
+  /// No description provided for @followSystem.
+  ///
+  /// In en, this message translates to:
+  /// **'Follow system'**
+  String get followSystem;
+
   /// No description provided for @font.
   ///
   /// In en, this message translates to:
@@ -554,6 +608,12 @@ abstract class S {
   /// **'Getting token...'**
   String get gettingToken;
 
+  /// No description provided for @goBackQ.
+  ///
+  /// In en, this message translates to:
+  /// **'Go back?'**
+  String get goBackQ;
+
   /// No description provided for @goto.
   ///
   /// In en, this message translates to:
@@ -577,6 +637,12 @@ abstract class S {
   /// In en, this message translates to:
   /// **'request failed, status code: {code}'**
   String httpFailedWithCode(Object code);
+
+  /// No description provided for @icloudSynced.
+  ///
+  /// In en, this message translates to:
+  /// **'iCloud wird synchronisiert und einige Einstellungen erfordern möglicherweise einen Neustart der App, um wirksam zu werden.'**
+  String get icloudSynced;
 
   /// No description provided for @image.
   ///
@@ -758,6 +824,18 @@ abstract class S {
   /// **'Mission'**
   String get mission;
 
+  /// No description provided for @moveOutServerFuncBtns.
+  ///
+  /// In en, this message translates to:
+  /// **'Server function button location'**
+  String get moveOutServerFuncBtns;
+
+  /// No description provided for @moveOutServerFuncBtnsHelp.
+  ///
+  /// In en, this message translates to:
+  /// **'On: can be displayed below each card on the Server Tab page. Off: can be displayed at the top of the Server Details page.'**
+  String get moveOutServerFuncBtnsHelp;
+
   /// No description provided for @ms.
   ///
   /// In en, this message translates to:
@@ -830,6 +908,12 @@ abstract class S {
   /// **'No server available.'**
   String get noServerAvailable;
 
+  /// No description provided for @noTask.
+  ///
+  /// In en, this message translates to:
+  /// **'No task'**
+  String get noTask;
+
   /// No description provided for @noUpdateAvailable.
   ///
   /// In en, this message translates to:
@@ -841,6 +925,12 @@ abstract class S {
   /// In en, this message translates to:
   /// **'Not selected'**
   String get notSelected;
+
+  /// No description provided for @note.
+  ///
+  /// In en, this message translates to:
+  /// **'Note'**
+  String get note;
 
   /// No description provided for @nullToken.
   ///
@@ -877,6 +967,12 @@ abstract class S {
   /// In en, this message translates to:
   /// **'Path'**
   String get path;
+
+  /// No description provided for @percentOfSize.
+  ///
+  /// In en, this message translates to:
+  /// **'{percent}% of {size}'**
+  String percentOfSize(Object percent, Object size);
 
   /// No description provided for @pickFile.
   ///
@@ -938,11 +1034,11 @@ abstract class S {
   /// **'Preview'**
   String get preview;
 
-  /// No description provided for @primaryColor.
+  /// No description provided for @primaryColorSeed.
   ///
   /// In en, this message translates to:
-  /// **'Primary color'**
-  String get primaryColor;
+  /// **'Primary color seed'**
+  String get primaryColorSeed;
 
   /// No description provided for @privateKey.
   ///
@@ -967,6 +1063,12 @@ abstract class S {
   /// In en, this message translates to:
   /// **'Password'**
   String get pwd;
+
+  /// No description provided for @reboot.
+  ///
+  /// In en, this message translates to:
+  /// **'Reboot'**
+  String get reboot;
 
   /// No description provided for @remotePath.
   ///
@@ -1003,12 +1105,6 @@ abstract class S {
   /// In en, this message translates to:
   /// **'Restore success. Restart app to apply.'**
   String get restoreSuccess;
-
-  /// No description provided for @restoreSureWithDate.
-  ///
-  /// In en, this message translates to:
-  /// **'Are you sure to restore from {date} ?'**
-  String restoreSureWithDate(Object date);
 
   /// No description provided for @result.
   ///
@@ -1051,6 +1147,18 @@ abstract class S {
   /// In en, this message translates to:
   /// **'Server'**
   String get server;
+
+  /// No description provided for @serverDetailOrder.
+  ///
+  /// In en, this message translates to:
+  /// **'Detail page widget order'**
+  String get serverDetailOrder;
+
+  /// No description provided for @serverOrder.
+  ///
+  /// In en, this message translates to:
+  /// **'Server order'**
+  String get serverOrder;
 
   /// No description provided for @serverTabConnecting.
   ///
@@ -1100,11 +1208,11 @@ abstract class S {
   /// **'Preparing to connect...'**
   String get sftpDlPrepare;
 
-  /// No description provided for @sftpNoDownloadTask.
+  /// No description provided for @sftpRmrDirSummary.
   ///
   /// In en, this message translates to:
-  /// **'No download task.'**
-  String get sftpNoDownloadTask;
+  /// **'Use `rm -r` to delete a folder in SFTP.'**
+  String get sftpRmrDirSummary;
 
   /// No description provided for @sftpSSHConnected.
   ///
@@ -1117,6 +1225,12 @@ abstract class S {
   /// In en, this message translates to:
   /// **'Show distribution logo'**
   String get showDistLogo;
+
+  /// No description provided for @shutdown.
+  ///
+  /// In en, this message translates to:
+  /// **'Shutdown'**
+  String get shutdown;
 
   /// No description provided for @snippet.
   ///
@@ -1172,29 +1286,23 @@ abstract class S {
   /// **'Success'**
   String get success;
 
-  /// No description provided for @sureDelete.
+  /// No description provided for @suspend.
   ///
   /// In en, this message translates to:
-  /// **'Are you sure to delete [{name}]?'**
-  String sureDelete(Object name);
+  /// **'Suspend'**
+  String get suspend;
 
-  /// No description provided for @sureDirEmpty.
+  /// No description provided for @suspendTip.
   ///
   /// In en, this message translates to:
-  /// **'Make sure dir is empty.'**
-  String get sureDirEmpty;
+  /// **'The suspend function requires root privileges and systemd support.'**
+  String get suspendTip;
 
-  /// No description provided for @sureNoPwd.
+  /// No description provided for @syncTip.
   ///
   /// In en, this message translates to:
-  /// **'Are you sure to use no password?'**
-  String get sureNoPwd;
-
-  /// No description provided for @sureToDeleteServer.
-  ///
-  /// In en, this message translates to:
-  /// **'Are you sure to delete server [{server}]?'**
-  String sureToDeleteServer(Object server);
+  /// **'After auto sync, a restart may be required for some changes to take effect.'**
+  String get syncTip;
 
   /// No description provided for @system.
   ///
@@ -1316,6 +1424,12 @@ abstract class S {
   /// **'URL or JSON'**
   String get urlOrJson;
 
+  /// No description provided for @useNoPwd.
+  ///
+  /// In en, this message translates to:
+  /// **'No password will be used.'**
+  String get useNoPwd;
+
   /// No description provided for @user.
   ///
   /// In en, this message translates to:
@@ -1331,7 +1445,7 @@ abstract class S {
   /// No description provided for @versionUnknownUpdate.
   ///
   /// In en, this message translates to:
-  /// **'Current: v1.0.{build}'**
+  /// **'Current: v1.0.{build}, click to check updates'**
   String versionUnknownUpdate(Object build);
 
   /// No description provided for @versionUpdated.
@@ -1363,6 +1477,12 @@ abstract class S {
   /// In en, this message translates to:
   /// **'Please wait for the connection to be established.'**
   String get waitConnection;
+
+  /// No description provided for @watchNotPaired.
+  ///
+  /// In en, this message translates to:
+  /// **'No paired Apple Watch'**
+  String get watchNotPaired;
 
   /// No description provided for @whenOpenApp.
   ///

@@ -1,18 +1,18 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_gen/gen_l10n/l10n.dart';
 import 'package:provider/provider.dart';
+import 'package:toolbox/core/extension/context/common.dart';
+import 'package:toolbox/core/extension/context/locale.dart';
 import 'package:toolbox/core/extension/datetime.dart';
-import 'package:toolbox/core/extension/navigator.dart';
+import 'package:toolbox/core/extension/context/dialog.dart';
 import 'package:toolbox/core/route.dart';
-import 'package:toolbox/locator.dart';
-import 'package:toolbox/view/page/storage/local.dart';
+import 'package:toolbox/data/res/provider.dart';
 
 import '../../../core/extension/numx.dart';
 import '../../../core/utils/misc.dart';
-import '../../../core/utils/ui.dart';
 import '../../../data/model/sftp/req.dart';
 import '../../../data/provider/sftp.dart';
 import '../../../data/res/ui.dart';
+import '../../widget/custom_appbar.dart';
 import '../../widget/round_rect_card.dart';
 
 class SftpMissionPage extends StatefulWidget {
@@ -23,22 +23,11 @@ class SftpMissionPage extends StatefulWidget {
 }
 
 class _SftpMissionPageState extends State<SftpMissionPage> {
-  late S _s;
-
-  @override
-  void didChangeDependencies() {
-    super.didChangeDependencies();
-    _s = S.of(context)!;
-  }
-
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        title: Text(
-          _s.mission,
-          style: textSize18,
-        ),
+      appBar: CustomAppBar(
+        title: Text(l10n.mission, style: UIs.textSize18),
       ),
       body: _buildBody(),
     );
@@ -48,7 +37,7 @@ class _SftpMissionPageState extends State<SftpMissionPage> {
     return Consumer<SftpProvider>(builder: (__, pro, _) {
       if (pro.status.isEmpty) {
         return Center(
-          child: Text(_s.sftpNoDownloadTask),
+          child: Text(l10n.noTask),
         );
       }
       return ListView.builder(
@@ -66,8 +55,8 @@ class _SftpMissionPageState extends State<SftpMissionPage> {
     switch (status.status) {
       case SftpWorkerStatus.finished:
         final time = status.spentTime.toString();
-        final str = '${_s.finished} ${_s.spentTime(
-          time == 'null' ? _s.unknown : (time.substring(0, time.length - 7)),
+        final str = '${l10n.finished} ${l10n.spentTime(
+          time == 'null' ? l10n.unknown : (time.substring(0, time.length - 7)),
         )}';
         return _wrapInCard(
           status: status,
@@ -79,48 +68,44 @@ class _SftpMissionPageState extends State<SftpMissionPage> {
                   onPressed: () {
                     final idx = status.req.localPath.lastIndexOf('/');
                     final dir = status.req.localPath.substring(0, idx);
-                    AppRoute(
-                      LocalStoragePage(initDir: dir),
-                      'sftp local',
-                    ).go(context);
+                    AppRoute.localStorage(initDir: dir).go(context);
                   },
                   icon: const Icon(Icons.file_open)),
               IconButton(
-                onPressed: () => shareFiles(context, [status.req.localPath]),
+                onPressed: () => shareFiles([status.req.localPath]),
                 icon: const Icon(Icons.open_in_new),
               )
             ],
           ),
         );
-      case SftpWorkerStatus.downloading:
+      case SftpWorkerStatus.loading:
         final percentStr = (status.progress ?? 0.0).toStringAsFixed(2);
         final size = (status.size ?? 0).convertBytes;
         return _wrapInCard(
           status: status,
-          subtitle: _s.downloadStatus(percentStr, size),
+          subtitle: l10n.percentOfSize(percentStr, size),
           trailing: _buildDelete(status.fileName, status.id),
         );
       case SftpWorkerStatus.preparing:
         return _wrapInCard(
           status: status,
-          subtitle: _s.sftpDlPrepare,
+          subtitle: l10n.sftpDlPrepare,
           trailing: _buildDelete(status.fileName, status.id),
         );
       case SftpWorkerStatus.sshConnectted:
         return _wrapInCard(
           status: status,
-          subtitle: _s.sftpSSHConnected,
+          subtitle: l10n.sftpSSHConnected,
           trailing: _buildDelete(status.fileName, status.id),
         );
       default:
         return _wrapInCard(
           status: status,
-          subtitle: _s.unknown,
+          subtitle: l10n.unknown,
           trailing: IconButton(
-            onPressed: () => showRoundDialog(
-              context: context,
-              title: Text(_s.error),
-              child: Text((status.error ?? _s.unknown).toString()),
+            onPressed: () => context.showRoundDialog(
+              title: Text(l10n.error),
+              child: Text((status.error ?? l10n.unknown).toString()),
             ),
             icon: const Icon(Icons.error),
           ),
@@ -142,12 +127,7 @@ class _SftpMissionPageState extends State<SftpMissionPage> {
           overflow: TextOverflow.ellipsis,
           maxLines: 1,
         ),
-        subtitle: subtitle == null
-            ? null
-            : Text(
-                subtitle,
-                style: grey,
-              ),
+        subtitle: subtitle == null ? null : Text(subtitle, style: UIs.textGrey),
         trailing: trailing,
       ),
     );
@@ -155,17 +135,18 @@ class _SftpMissionPageState extends State<SftpMissionPage> {
 
   Widget _buildDelete(String name, int id) {
     return IconButton(
-      onPressed: () => showRoundDialog(
-          context: context,
-          title: Text(_s.attention),
-          child: Text(_s.sureDelete(name)),
+      onPressed: () => context.showRoundDialog(
+          title: Text(l10n.attention),
+          child: Text(l10n.askContinue(
+            '${l10n.delete} ${l10n.mission}($name)',
+          )),
           actions: [
             TextButton(
               onPressed: () {
-                locator<SftpProvider>().cancel(id);
+                Pros.sftp.cancel(id);
                 context.pop();
               },
-              child: Text(_s.ok),
+              child: Text(l10n.ok),
             ),
           ]),
       icon: const Icon(Icons.delete),

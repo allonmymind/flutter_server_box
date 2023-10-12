@@ -1,18 +1,22 @@
 import 'dart:async';
 
+import 'package:dartssh2/dartssh2.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter_gen/gen_l10n/l10n.dart';
-import 'package:toolbox/core/extension/stringx.dart';
+import 'package:toolbox/core/extension/context/common.dart';
+import 'package:toolbox/core/extension/context/dialog.dart';
+import 'package:toolbox/core/extension/context/locale.dart';
+import 'package:toolbox/core/extension/context/snackbar.dart';
 import 'package:toolbox/core/extension/uint8list.dart';
-import 'package:toolbox/core/utils/ui.dart';
-import 'package:toolbox/data/model/server/proc.dart';
-import 'package:toolbox/data/model/server/server_private_info.dart';
-import 'package:toolbox/data/res/ui.dart';
-import 'package:toolbox/view/widget/round_rect_card.dart';
-import 'package:toolbox/view/widget/two_line_text.dart';
+import 'package:toolbox/core/utils/misc.dart';
+import 'package:toolbox/data/res/store.dart';
 
-import '../../data/provider/server.dart';
-import '../../locator.dart';
+import '../../data/model/app/shell_func.dart';
+import '../../data/model/server/proc.dart';
+import '../../data/model/server/server_private_info.dart';
+import '../../data/res/ui.dart';
+import '../widget/custom_appbar.dart';
+import '../widget/round_rect_card.dart';
+import '../widget/two_line_text.dart';
 
 class ProcessPage extends StatefulWidget {
   final ServerPrivateInfo spi;
@@ -23,48 +27,64 @@ class ProcessPage extends StatefulWidget {
 }
 
 class _ProcessPageState extends State<ProcessPage> {
-  late S _s;
   late Timer _timer;
+  late MediaQueryData _media;
 
-  PsResult _result = PsResult(procs: []);
+  SSHClient? _client;
+
+  PsResult _result = const PsResult(procs: []);
   int? _lastFocusId;
-  ProcSortMode _procSortMode = ProcSortMode.mem;
 
-  final _serverProvider = locator<ServerProvider>();
+  // Issue #64
+  // In cpu mode, the process list will change in a high frequency.
+  // So user will easily know that the list is refreshed.
+  ProcSortMode _procSortMode = ProcSortMode.cpu;
+  List<ProcSortMode> _sortModes = List.from(ProcSortMode.values);
 
   @override
   void initState() {
     super.initState();
-    final client = _serverProvider.servers[widget.spi.id]?.client;
-    if (client == null) {
-      showSnackBar(context, Text(_s.noClient));
-      return;
-    }
-    _timer = Timer.periodic(const Duration(seconds: 3), (_) async {
-      if (mounted) {
-        final result = await client.run('ps -aux'.withLangExport).string;
-        if (result.isEmpty) {
-          showSnackBar(context, Text(_s.noResult));
-          return;
-        }
-        _result = PsResult.parse(result, sort: _procSortMode);
-        setState(() {});
-      } else {
-        _timer.cancel();
+    _client = widget.spi.server?.client;
+    final duration =
+        Duration(seconds: Stores.setting.serverStatusUpdateInterval.fetch());
+    _timer = Timer.periodic(duration, (_) => _refresh());
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    _media = MediaQuery.of(context);
+  }
+
+  Future<void> _refresh() async {
+    if (mounted) {
+      final result = await _client?.run(ShellFunc.process.exec).string;
+      if (result == null || result.isEmpty) {
+        context.showSnackBar(l10n.noResult);
+        return;
       }
-    });
+      _result = PsResult.parse(result, sort: _procSortMode);
+
+      // If there are any [Proc]'s data is not complete,
+      // the option to sort by cpu/mem will not be available.
+      final isAnyProcDataNotComplete =
+          _result.procs.any((e) => e.cpu == null || e.mem == null);
+      if (isAnyProcDataNotComplete) {
+        _sortModes.removeWhere((e) => e == ProcSortMode.cpu);
+        _sortModes.removeWhere((e) => e == ProcSortMode.mem);
+      } else {
+        _sortModes = ProcSortMode.values;
+      }
+      setState(() {});
+    } else {
+      _timer.cancel();
+    }
   }
 
   @override
   void dispose() {
     super.dispose();
     _timer.cancel();
-  }
-
-  @override
-  void didChangeDependencies() {
-    super.didChangeDependencies();
-    _s = S.of(context)!;
   }
 
   @override
@@ -78,40 +98,40 @@ class _ProcessPageState extends State<ProcessPage> {
         },
         icon: const Icon(Icons.sort),
         initialValue: _procSortMode,
-        itemBuilder: (_) => ProcSortMode.values
-            .map(
-              (e) => PopupMenuItem(value: e, child: Text(e.name)),
-            )
+        itemBuilder: (_) => _sortModes
+            .map((e) => PopupMenuItem(value: e, child: Text(e.name)))
             .toList(),
       ),
     ];
     if (_result.error != null) {
       actions.add(IconButton(
         icon: const Icon(Icons.error),
-        onPressed: () => showRoundDialog(
-          context: context,
-          title: Text(_s.error),
-          child: Text(_result.error!),
+        onPressed: () => context.showRoundDialog(
+          title: Text(l10n.error),
+          child: SingleChildScrollView(child: Text(_result.error!)),
+          actions: [
+            TextButton(
+              onPressed: () => copy2Clipboard(_result.error!),
+              child: Text(l10n.copy),
+            ),
+          ],
         ),
       ));
     }
     Widget child;
     if (_result.procs.isEmpty) {
-      child = centerLoading;
+      child = UIs.centerLoading;
     } else {
       child = ListView.builder(
         itemCount: _result.procs.length,
         padding: const EdgeInsets.symmetric(vertical: 3, horizontal: 7),
-        itemBuilder: (ctx, idx) {
-          final proc = _result.procs[idx];
-          return _buildListItem(proc);
-        },
+        itemBuilder: (_, idx) => _buildListItem(_result.procs[idx]),
       );
     }
     return Scaffold(
-      appBar: AppBar(
+      appBar: CustomAppBar(
         centerTitle: true,
-        title: TwoLineText(up: widget.spi.name, down: _s.process),
+        title: TwoLineText(up: widget.spi.name, down: l10n.process),
         actions: actions,
       ),
       body: child,
@@ -119,28 +139,68 @@ class _ProcessPageState extends State<ProcessPage> {
   }
 
   Widget _buildListItem(Proc proc) {
-    return RoundRectCard(ListTile(
-      leading: SizedBox(
-        width: 57,
-        child: TwoLineText(up: proc.pid.toString(), down: proc.user),
+    final leading = proc.user == null
+        ? Text(proc.pid.toString())
+        : TwoLineText(up: proc.pid.toString(), down: proc.user!);
+    return RoundRectCard(
+      ListTile(
+        leading: SizedBox(
+          width: _media.size.width / 6,
+          child: leading,
+        ),
+        title: Text(proc.binary),
+        subtitle: Text(
+          proc.command,
+          style: UIs.textGrey,
+          maxLines: 3,
+          overflow: TextOverflow.fade,
+        ),
+        trailing: _buildItemTrail(proc),
+        onTap: () => _lastFocusId = proc.pid,
+        onLongPress: () {
+          context.showRoundDialog(
+            title: Text(l10n.attention),
+            child: Text(l10n.askContinue(
+              '${l10n.stop} ${l10n.process}(${proc.pid})',
+            )),
+            actions: [
+              TextButton(
+                onPressed: () async {
+                  await _client?.run('kill ${proc.pid}');
+                  await _refresh();
+                  context.pop();
+                },
+                child: Text(l10n.ok),
+              ),
+            ],
+          );
+        },
+        selected: _lastFocusId == proc.pid,
+        autofocus: _lastFocusId == proc.pid,
       ),
-      title: Text(proc.binary),
-      subtitle: Text(
-        proc.command,
-        style: grey,
-        maxLines: 3,
-        overflow: TextOverflow.fade,
-      ),
-      trailing: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          TwoLineText(up: proc.cpu.toStringAsFixed(1), down: 'cpu'),
-          width13,
-          TwoLineText(up: proc.mem.toStringAsFixed(1), down: 'mem'),
-        ],
-      ),
-      onTap: () => _lastFocusId = proc.pid,
-      autofocus: _lastFocusId == proc.pid,
-    ));
+      key: ValueKey(proc.pid),
+    );
+  }
+
+  Widget? _buildItemTrail(Proc proc) {
+    if (proc.cpu == null && proc.mem == null) {
+      return null;
+    }
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        if (proc.cpu != null)
+          TwoLineText(
+            up: proc.cpu!.toStringAsFixed(1),
+            down: 'cpu',
+          ),
+        UIs.width13,
+        if (proc.mem != null)
+          TwoLineText(
+            up: proc.mem!.toStringAsFixed(1),
+            down: 'mem',
+          ),
+      ],
+    );
   }
 }

@@ -3,10 +3,9 @@ import 'dart:async';
 import 'package:dartssh2/dartssh2.dart';
 import 'package:flutter/foundation.dart';
 import 'package:toolbox/data/model/app/error.dart';
+import 'package:toolbox/data/res/store.dart';
 
 import '../../data/model/server/server_private_info.dart';
-import '../../data/store/private_key.dart';
-import '../../locator.dart';
 
 /// Must put this func out of any Class.
 ///
@@ -32,7 +31,7 @@ enum GenSSHClientStatus {
 }
 
 String getPrivateKey(String id) {
-  final pki = locator<PrivateKeyStore>().get(id);
+  final pki = Stores.key.get(id);
   if (pki == null) {
     throw SSHErr(
       type: SSHErrType.noPrivateKey,
@@ -46,23 +45,25 @@ Future<SSHClient> genClient(
   ServerPrivateInfo spi, {
   void Function(GenSSHClientStatus)? onStatus,
   String? privateKey,
+  Duration? timeout,
 }) async {
   onStatus?.call(GenSSHClientStatus.socket);
   late SSHSocket socket;
+  final duration = timeout ?? const Duration(seconds: 5);
   try {
     socket = await SSHSocket.connect(
       spi.ip,
       spi.port,
-      timeout: const Duration(seconds: 5),
+      timeout: duration,
     );
   } catch (e) {
     if (spi.alterUrl == null) rethrow;
     try {
-      spi.fromStringUrl();
+      final ipPort = spi.fromStringUrl();
       socket = await SSHSocket.connect(
-        spi.ip,
-        spi.port,
-        timeout: const Duration(seconds: 5),
+        ipPort.ip,
+        ipPort.port,
+        timeout: duration,
       );
     } catch (e) {
       rethrow;

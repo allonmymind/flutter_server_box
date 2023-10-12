@@ -2,10 +2,9 @@ import 'dart:async';
 import 'dart:io';
 
 import 'package:countly_flutter/countly_flutter.dart';
-import 'package:logging/logging.dart';
 import 'package:toolbox/core/build_mode.dart';
-
-import 'utils/platform.dart';
+import 'package:toolbox/core/utils/platform/base.dart';
+import 'package:toolbox/data/res/logger.dart';
 
 class Analysis {
   static const _url = 'https://countly.xuty.cc';
@@ -23,17 +22,15 @@ class Analysis {
           .setLoggingEnabled(false)
           .enableCrashReporting();
       await Countly.initWithConfig(config);
-      await Countly.start();
       await Countly.giveAllConsent();
     } else {
-      Logger('COUNTLY')
-          .info('Unsupported platform ${Platform.operatingSystem}');
+      Loggers.app.info('Countly unsupport: ${Platform.operatingSystem}');
     }
   }
 
   static void recordView(String view) {
     if (enabled) {
-      Countly.recordView(view);
+      Countly.instance.views.startView(view);
     }
   }
 

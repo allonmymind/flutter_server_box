@@ -1,4 +1,4 @@
-#!/usr/bin/env fvm dart
+#!/usr/bin/env dart
 // ignore_for_file: avoid_print
 
 import 'dart:convert';
@@ -9,6 +9,8 @@ const appName = 'ServerBox';
 const buildDataFilePath = 'lib/data/res/build_data.dart';
 const apkPath = 'build/app/outputs/flutter-apk/app-release.apk';
 const appleXCConfigPath = 'Runner.xcodeproj/project.pbxproj';
+const macOSArchievePath = 'build/macos/Build/Products/Release/server_box.app';
+const releaseDir = 'release';
 
 var regAppleProjectVer = RegExp(r'CURRENT_PROJECT_VERSION = .+;');
 var regAppleMarketVer = RegExp(r'MARKETING_VERSION = .+');
@@ -17,17 +19,23 @@ const buildFuncs = {
   'ios': flutterBuildIOS,
   'android': flutterBuildAndroid,
   'macos': flutterBuildMacOS,
+  'linux': flutterBuildLinux,
 };
 
 int? build;
 
-Future<ProcessResult> fvmRun(List<String> args) async {
-  return await Process.run('fvm', args, runInShell: true);
-}
-
 Future<void> getGitCommitCount() async {
   final result = await Process.run('git', ['log', '--oneline']);
   build = (result.stdout as String)
+      .split('\n')
+      .where((line) => line.isNotEmpty)
+      .length;
+}
+
+Future<int> getScriptCommitCount() async {
+  final result = await Process.run(
+      'git', ['log', '--oneline', 'lib/data/model/app/shell_func.dart']);
+  return (result.stdout as String)
       .split('\n')
       .where((line) => line.isNotEmpty)
       .length;
@@ -58,7 +66,7 @@ Future<int> getGitModificationCount() async {
 }
 
 Future<String> getFlutterVersion() async {
-  final result = await fvmRun(['flutter', '--version']);
+  final result = await Process.run('flutter', ['--version']);
   final stdout = result.stdout as String;
   return stdout.split('\n')[0].split('•')[0].split(' ')[1].trim();
 }
@@ -68,8 +76,9 @@ Future<Map<String, dynamic>> getBuildData() async {
     'name': appName,
     'build': build,
     'engine': await getFlutterVersion(),
-    'buildAt': DateTime.now().toString(),
+    'buildAt': DateTime.now().toString().split('.')[0],
     'modifications': await getGitModificationCount(),
+    'script': await getScriptCommitCount(),
   };
   return data;
 }
@@ -87,7 +96,7 @@ Future<void> updateBuildData() async {
 }
 
 Future<void> dartFormat() async {
-  final result = await fvmRun(['dart', 'format', '.']);
+  final result = await Process.run('dart', ['format', '.']);
   print(result.stdout);
   if (result.exitCode != 0) {
     print(result.stderr);
@@ -95,10 +104,10 @@ Future<void> dartFormat() async {
   }
 }
 
-void flutterRun(String? mode) {
-  Process.start(
-      'fvm', mode == null ? ['flutter', 'run'] : ['flutter', 'run', '--$mode'],
-      mode: ProcessStartMode.inheritStdio, runInShell: true);
+Future<String> getFileSha256(String path) async {
+  final result = await Process.run('shasum', ['-a', '256', path]);
+  final stdout = result.stdout as String;
+  return stdout.split(' ')[0];
 }
 
 Future<void> flutterBuild(String buildType) async {
@@ -120,7 +129,7 @@ Future<void> flutterBuild(String buildType) async {
     ]);
   }
   print('\n[$buildType]\nBuilding with args: ${args.join(' ')}');
-  final buildResult = await fvmRun(['flutter', ...args]);
+  final buildResult = await Process.run('flutter', args);
   final exitCode = buildResult.exitCode;
 
   if (exitCode != 0) {
@@ -137,25 +146,78 @@ Future<void> flutterBuildIOS() async {
 
 Future<void> flutterBuildMacOS() async {
   await flutterBuild('macos');
+  await scpMacOS2CDN();
 }
 
 Future<void> flutterBuildAndroid() async {
   await flutterBuild('apk');
   await killJava();
-  await scp2CDN();
+  await scpApk2CDN();
 }
 
-Future<void> scp2CDN() async {
+Future<void> flutterBuildLinux() async {
+  await flutterBuild('linux');
+  await scpLinux2CDN();
+}
+
+Future<void> scpApk2CDN() async {
+  final sha256 = await getFileSha256(apkPath);
+  print('SHA256: $sha256');
   final result = await Process.run(
     'scp',
-    [apkPath, 'hk:/var/www/res/serverbox/apks/$build.apk'],
+    [apkPath, 'hk:/var/www/res/serverbox/$sha256.apk'],
     runInShell: true,
   );
-  print(result.stdout);
   if (result.exitCode != 0) {
     print(result.stderr);
     exit(1);
   }
+}
+
+Future<void> scpMacOS2CDN() async {
+  await Process.run('mv', [
+    macOSArchievePath,
+    'release',
+  ]);
+  final zipName = '$build.app.zip';
+  // Zip the .app
+  await Process.run(
+      'zip',
+      [
+        '-r',
+        zipName,
+        'server_box.app',
+      ],
+      workingDirectory: releaseDir);
+  final result = await Process.run(
+    'scp',
+    [
+      '$releaseDir/$zipName',
+      'hk:/var/www/res/serverbox/$build.app.zip',
+    ],
+    runInShell: true,
+  );
+  if (result.exitCode != 0) {
+    print(result.stderr);
+    exit(1);
+  }
+  print('Upload macOS $zipName finished.');
+}
+
+Future<void> scpLinux2CDN() async {
+  final result = await Process.run(
+    'scp',
+    [
+      './build/linux/x64/release/bundle/server_box.tar.gz',
+      'hk:/var/www/res/serverbox/$build.tar.gz',
+    ],
+    runInShell: true,
+  );
+  if (result.exitCode != 0) {
+    print(result.stderr);
+    exit(1);
+  }
+  print('Upload Linux $build.tar.gz finished.');
 }
 
 Future<void> changeAppleVersion() async {
@@ -188,38 +250,40 @@ void main(List<String> args) async {
   }
 
   final command = args[0];
-
   switch (command) {
     case 'build':
-      final stopwatch = Stopwatch()..start();
       await dartFormat();
       await getGitCommitCount();
       // always change version to avoid dismatch version between different
       // platforms
       await changeAppleVersion();
       await updateBuildData();
+
+      final funcs = <Future<void> Function()>[];
+
       if (args.length > 1) {
         final platforms = args[1];
         for (final platform in platforms.split(',')) {
           if (buildFuncs.keys.contains(platform)) {
-            await buildFuncs[platform]!();
-            print('Build finished in [${stopwatch.elapsed}]');
-            stopwatch.reset();
-            stopwatch.start();
+            funcs.add(buildFuncs[platform]!);
           } else {
             print('Unknown platform: $platform');
           }
         }
+      } else {
+        funcs.addAll(buildFuncs.values);
+      }
 
-        return;
-      }
-      for (final func in buildFuncs.values) {
+      final stopwatch = Stopwatch();
+      for (final func in funcs) {
+        stopwatch.start();
         await func();
+        print('Build finished in ${stopwatch.elapsed}');
+        stopwatch.reset();
       }
-      print('Build finished in ${stopwatch.elapsed}\n');
-      return;
+      break;
     default:
       print('Unsupported command: $command');
-      return;
+      break;
   }
 }

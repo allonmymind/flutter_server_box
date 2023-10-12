@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 
 extension LocaleX on Locale {
-  String get name {
+  String get code {
     if (countryCode == null) {
       return languageCode;
     }
@@ -10,7 +10,11 @@ extension LocaleX on Locale {
 }
 
 extension String2Locale on String {
-  Locale get toLocale {
+  Locale? get toLocale {
+    // Issue #151
+    if (isEmpty) {
+      return null;
+    }
     final parts = split('_');
     if (parts.length == 1) {
       return Locale(parts[0]);

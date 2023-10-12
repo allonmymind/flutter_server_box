@@ -35,10 +35,24 @@ class SEn extends S {
   String get alterUrl => 'Alter url';
 
   @override
+  String askContinue(Object msg) {
+    return '$msg, continue?';
+  }
+
+  @override
   String get attention => 'Attention';
 
   @override
+  String get authRequired => 'Auth required';
+
+  @override
   String get auto => 'Auto';
+
+  @override
+  String get autoCheckUpdate => 'Auto check update';
+
+  @override
+  String get autoConnect => 'Auto connect';
 
   @override
   String get autoUpdateHomeWidget => 'Auto update home widget';
@@ -57,6 +71,9 @@ class SEn extends S {
 
   @override
   String get bgRun => 'Run in backgroud';
+
+  @override
+  String get bioAuth => 'Biometric auth';
 
   @override
   String get canPullRefresh => 'You can pull to refresh.';
@@ -84,6 +101,9 @@ class SEn extends S {
 
   @override
   String get conn => 'Connection';
+
+  @override
+  String get connected => 'Connected';
 
   @override
   String get containerName => 'Container name';
@@ -116,10 +136,16 @@ class SEn extends S {
   String get decode => 'Decode';
 
   @override
+  String get decompress => 'Decompress';
+
+  @override
   String get delete => 'Delete';
 
   @override
   String get deleteServers => 'Batch delete servers';
+
+  @override
+  String get dirEmpty => 'Make sure dir is empty.';
 
   @override
   String get disabled => 'Disabled';
@@ -160,12 +186,10 @@ class SEn extends S {
   }
 
   @override
-  String get download => 'Download';
+  String get doubleColumnMode => 'Double column mode';
 
   @override
-  String downloadStatus(Object percent, Object size) {
-    return '$percent% of $size';
-  }
+  String get download => 'Download';
 
   @override
   String get edit => 'Edit';
@@ -223,6 +247,9 @@ class SEn extends S {
   String get finished => 'Finished';
 
   @override
+  String get followSystem => 'Follow system';
+
+  @override
   String get font => 'Font';
 
   @override
@@ -249,6 +276,9 @@ class SEn extends S {
   String get gettingToken => 'Getting token...';
 
   @override
+  String get goBackQ => 'Go back?';
+
+  @override
   String get goto => 'Go to';
 
   @override
@@ -261,6 +291,9 @@ class SEn extends S {
   String httpFailedWithCode(Object code) {
     return 'request failed, status code: $code';
   }
+
+  @override
+  String get icloudSynced => 'iCloud wird synchronisiert und einige Einstellungen erfordern möglicherweise einen Neustart der App, um wirksam zu werden.';
 
   @override
   String get image => 'Image';
@@ -357,6 +390,12 @@ class SEn extends S {
   String get mission => 'Mission';
 
   @override
+  String get moveOutServerFuncBtns => 'Server function button location';
+
+  @override
+  String get moveOutServerFuncBtnsHelp => 'On: can be displayed below each card on the Server Tab page. Off: can be displayed at the top of the Server Details page.';
+
+  @override
   String get ms => 'ms';
 
   @override
@@ -393,10 +432,16 @@ class SEn extends S {
   String get noServerAvailable => 'No server available.';
 
   @override
+  String get noTask => 'No task';
+
+  @override
   String get noUpdateAvailable => 'No update available';
 
   @override
   String get notSelected => 'Not selected';
+
+  @override
+  String get note => 'Note';
 
   @override
   String get nullToken => 'Null token';
@@ -415,6 +460,11 @@ class SEn extends S {
 
   @override
   String get path => 'Path';
+
+  @override
+  String percentOfSize(Object percent, Object size) {
+    return '$percent% of $size';
+  }
 
   @override
   String get pickFile => 'Pick file';
@@ -447,7 +497,7 @@ class SEn extends S {
   String get preview => 'Preview';
 
   @override
-  String get primaryColor => 'Primary color';
+  String get primaryColorSeed => 'Primary color seed';
 
   @override
   String get privateKey => 'Private Key';
@@ -460,6 +510,9 @@ class SEn extends S {
 
   @override
   String get pwd => 'Password';
+
+  @override
+  String get reboot => 'Reboot';
 
   @override
   String get remotePath => 'Remote path';
@@ -482,11 +535,6 @@ class SEn extends S {
   String get restoreSuccess => 'Restore success. Restart app to apply.';
 
   @override
-  String restoreSureWithDate(Object date) {
-    return 'Are you sure to restore from $date ?';
-  }
-
-  @override
   String get result => 'Result';
 
   @override
@@ -506,6 +554,12 @@ class SEn extends S {
 
   @override
   String get server => 'Server';
+
+  @override
+  String get serverDetailOrder => 'Detail page widget order';
+
+  @override
+  String get serverOrder => 'Server order';
 
   @override
   String get serverTabConnecting => 'Connecting...';
@@ -532,13 +586,16 @@ class SEn extends S {
   String get sftpDlPrepare => 'Preparing to connect...';
 
   @override
-  String get sftpNoDownloadTask => 'No download task.';
+  String get sftpRmrDirSummary => 'Use `rm -r` to delete a folder in SFTP.';
 
   @override
   String get sftpSSHConnected => 'SFTP Connected';
 
   @override
   String get showDistLogo => 'Show distribution logo';
+
+  @override
+  String get shutdown => 'Shutdown';
 
   @override
   String get snippet => 'Snippet';
@@ -572,20 +629,13 @@ class SEn extends S {
   String get success => 'Success';
 
   @override
-  String sureDelete(Object name) {
-    return 'Are you sure to delete [$name]?';
-  }
+  String get suspend => 'Suspend';
 
   @override
-  String get sureDirEmpty => 'Make sure dir is empty.';
+  String get suspendTip => 'The suspend function requires root privileges and systemd support.';
 
   @override
-  String get sureNoPwd => 'Are you sure to use no password?';
-
-  @override
-  String sureToDeleteServer(Object server) {
-    return 'Are you sure to delete server [$server]?';
-  }
+  String get syncTip => 'After auto sync, a restart may be required for some changes to take effect.';
 
   @override
   String get system => 'System';
@@ -652,6 +702,9 @@ class SEn extends S {
   String get urlOrJson => 'URL or JSON';
 
   @override
+  String get useNoPwd => 'No password will be used.';
+
+  @override
   String get user => 'User';
 
   @override
@@ -661,7 +714,7 @@ class SEn extends S {
 
   @override
   String versionUnknownUpdate(Object build) {
-    return 'Current: v1.0.$build';
+    return 'Current: v1.0.$build, click to check updates';
   }
 
   @override
@@ -680,6 +733,9 @@ class SEn extends S {
 
   @override
   String get waitConnection => 'Please wait for the connection to be established.';
+
+  @override
+  String get watchNotPaired => 'No paired Apple Watch';
 
   @override
   String get whenOpenApp => 'When opening the app';

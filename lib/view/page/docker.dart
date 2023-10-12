@@ -1,24 +1,23 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_gen/gen_l10n/l10n.dart';
-import 'package:nil/nil.dart';
 import 'package:provider/provider.dart';
-import 'package:toolbox/core/extension/navigator.dart';
+import 'package:toolbox/core/extension/context/common.dart';
+import 'package:toolbox/core/extension/context/dialog.dart';
+import 'package:toolbox/core/extension/context/locale.dart';
+import 'package:toolbox/core/extension/context/snackbar.dart';
 import 'package:toolbox/core/route.dart';
 import 'package:toolbox/data/model/docker/image.dart';
-import 'package:toolbox/view/page/ssh/term.dart';
+import 'package:toolbox/data/res/provider.dart';
+import 'package:toolbox/data/res/store.dart';
 import 'package:toolbox/view/widget/input_field.dart';
 
-import '../../core/utils/ui.dart';
 import '../../data/model/docker/ps.dart';
 import '../../data/model/server/server_private_info.dart';
 import '../../data/provider/docker.dart';
-import '../../data/provider/server.dart';
 import '../../data/model/app/error.dart';
 import '../../data/model/app/menu.dart';
 import '../../data/res/ui.dart';
 import '../../data/res/url.dart';
-import '../../data/store/docker.dart';
-import '../../locator.dart';
+import '../widget/custom_appbar.dart';
 import '../widget/popup_menu.dart';
 import '../widget/round_rect_card.dart';
 import '../widget/two_line_text.dart';
@@ -26,57 +25,60 @@ import '../widget/url_text.dart';
 
 class DockerManagePage extends StatefulWidget {
   final ServerPrivateInfo spi;
-  const DockerManagePage(this.spi, {Key? key}) : super(key: key);
+  const DockerManagePage({required this.spi, Key? key}) : super(key: key);
 
   @override
   State<DockerManagePage> createState() => _DockerManagePageState();
 }
 
 class _DockerManagePageState extends State<DockerManagePage> {
-  final _docker = locator<DockerProvider>();
   final _textController = TextEditingController();
-  late S _s;
 
   @override
   void dispose() {
     super.dispose();
-    _docker.clear();
-  }
-
-  @override
-  void didChangeDependencies() {
-    super.didChangeDependencies();
-    _s = S.of(context)!;
+    Pros.docker.clear();
+    _textController.dispose();
   }
 
   @override
   void initState() {
     super.initState();
-    final client = locator<ServerProvider>().servers[widget.spi.id]?.client;
+    final client = widget.spi.server?.client;
     if (client == null) {
-      showSnackBar(context, Text(_s.noClient));
-      context.pop();
       return;
     }
-    _docker.init(client, widget.spi.user, onPwdRequest, widget.spi.id);
+    Pros.docker
+      ..init(
+        client,
+        widget.spi.user,
+        (user) async => await context.showPwdDialog(user),
+        widget.spi.id,
+        context,
+      )
+      ..refresh();
   }
 
   @override
   Widget build(BuildContext context) {
     return Consumer<DockerProvider>(builder: (_, ___, __) {
       return Scaffold(
-        appBar: AppBar(
+        appBar: CustomAppBar(
           centerTitle: true,
           title: TwoLineText(up: 'Docker', down: widget.spi.name),
           actions: [
             IconButton(
-              onPressed: _docker.refresh,
+              onPressed: () async {
+                context.showLoadingDialog();
+                await Pros.docker.refresh();
+                context.pop();
+              },
               icon: const Icon(Icons.refresh),
             )
           ],
         ),
         body: _buildMain(),
-        floatingActionButton: _docker.error == null ? _buildFAB() : null,
+        floatingActionButton: Pros.docker.error == null ? _buildFAB() : null,
       );
     });
   }
@@ -92,28 +94,28 @@ class _DockerManagePageState extends State<DockerManagePage> {
     final imageCtrl = TextEditingController();
     final nameCtrl = TextEditingController();
     final argsCtrl = TextEditingController();
-    await showRoundDialog(
-      context: context,
-      title: Text(_s.newContainer),
+    await context.showRoundDialog(
+      title: Text(l10n.newContainer),
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
           Input(
+            autoFocus: true,
             type: TextInputType.text,
-            label: _s.image,
+            label: l10n.image,
             hint: 'xxx:1.1',
             controller: imageCtrl,
           ),
           Input(
             type: TextInputType.text,
             controller: nameCtrl,
-            label: _s.containerName,
+            label: l10n.containerName,
             hint: 'xxx',
           ),
           Input(
             type: TextInputType.text,
             controller: argsCtrl,
-            label: _s.extraArgs,
+            label: l10n.extraArgs,
             hint: '-p 2222:22 -v ~/.xxx/:/xxx',
           ),
         ],
@@ -121,7 +123,7 @@ class _DockerManagePageState extends State<DockerManagePage> {
       actions: [
         TextButton(
           onPressed: () => context.pop(),
-          child: Text(_s.cancel),
+          child: Text(l10n.cancel),
         ),
         TextButton(
           onPressed: () async {
@@ -134,31 +136,32 @@ class _DockerManagePageState extends State<DockerManagePage> {
               ),
             );
           },
-          child: Text(_s.ok),
+          child: Text(l10n.ok),
         )
       ],
     );
   }
 
   Future<void> _showAddCmdPreview(String cmd) async {
-    await showRoundDialog(
-      context: context,
-      title: Text(_s.preview),
+    await context.showRoundDialog(
+      title: Text(l10n.preview),
       child: Text(cmd),
       actions: [
         TextButton(
           onPressed: () => context.pop(),
-          child: Text(_s.cancel),
+          child: Text(l10n.cancel),
         ),
         TextButton(
           onPressed: () async {
             context.pop();
-            final result = await _docker.run(cmd);
+            context.showLoadingDialog();
+            final result = await Pros.docker.run(cmd);
+            context.pop();
             if (result != null) {
-              showSnackBar(context, Text(result.message ?? _s.unknownError));
+              context.showSnackBar(result.message ?? l10n.unknownError);
             }
           },
-          child: Text(_s.run),
+          child: Text(l10n.run),
         )
       ],
     );
@@ -177,58 +180,8 @@ class _DockerManagePageState extends State<DockerManagePage> {
     return 'docker run -itd --name $name $suffix';
   }
 
-  void onSubmitted() {
-    context.pop();
-    if (_textController.text == '') {
-      showRoundDialog(
-        context: context,
-        title: Text(_s.attention),
-        child: Text(_s.fieldMustNotEmpty),
-        actions: [
-          TextButton(
-            onPressed: () => context.pop(),
-            child: Text(_s.ok),
-          ),
-        ],
-      );
-      return;
-    }
-  }
-
-  Future<String> onPwdRequest() async {
-    if (!mounted) return '';
-    await showRoundDialog(
-      context: context,
-      title: Text(widget.spi.user),
-      child: Input(
-        controller: _textController,
-        type: TextInputType.visiblePassword,
-        obscureText: true,
-        onSubmitted: (_) => onSubmitted(),
-        label: _s.pwd,
-      ),
-      actions: [
-        TextButton(
-          onPressed: () {
-            context.pop();
-            context.pop();
-          },
-          child: Text(_s.cancel),
-        ),
-        TextButton(
-          onPressed: onSubmitted,
-          child: Text(
-            _s.ok,
-            style: const TextStyle(color: Colors.red),
-          ),
-        ),
-      ],
-    );
-    return _textController.text.trim();
-  }
-
   Widget _buildMain() {
-    if (_docker.error != null && _docker.items == null) {
+    if (Pros.docker.error != null && Pros.docker.items == null) {
       return SizedBox.expand(
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
@@ -239,32 +192,25 @@ class _DockerManagePageState extends State<DockerManagePage> {
               size: 37,
             ),
             const SizedBox(height: 27),
-            Text(_docker.error?.message ?? _s.unknownError),
+            Text(Pros.docker.error?.message ?? l10n.unknownError),
             const SizedBox(height: 27),
             Padding(
               padding: const EdgeInsets.all(17),
-              child: _buildSolution(_docker.error!),
+              child: _buildSolution(Pros.docker.error!),
             )
           ],
         ),
       );
     }
-    if (_docker.items == null || _docker.images == null) {
-      Future.delayed(const Duration(milliseconds: 37), () {
-        if (mounted) {
-          _docker.refresh();
-        }
-      });
-      return centerLoading;
+    if (Pros.docker.items == null || Pros.docker.images == null) {
+      return UIs.centerLoading;
     }
 
     final items = <Widget>[
       _buildLoading(),
       _buildVersion(),
-      _buildPsHeader(),
-      _buildPsItems(),
-      _buildImageHeader(),
-      _buildImageItems(),
+      _buildPs(),
+      _buildImage(),
       _buildEditHost(),
     ].map((e) => RoundRectCard(e));
     return ListView(
@@ -273,27 +219,24 @@ class _DockerManagePageState extends State<DockerManagePage> {
     );
   }
 
-  Widget _buildImageHeader() {
-    return ListTile(
-      title: Text(_s.imagesList),
-      subtitle: Text(
-        _s.dockerImagesFmt(_docker.images!.length),
-        style: grey,
+  Widget _buildImage() {
+    final items = <Widget>[
+      ListTile(
+        title: Text(l10n.imagesList),
+        subtitle: Text(
+          l10n.dockerImagesFmt(Pros.docker.images!.length),
+          style: UIs.textGrey,
+        ),
       ),
-    );
-  }
-
-  Widget _buildImageItems() {
-    if (_docker.images == null) {
-      return nil;
-    }
-    return Column(children: _docker.images!.map(_buildImageItem).toList());
+    ];
+    items.addAll(Pros.docker.images!.map(_buildImageItem));
+    return Column(children: items);
   }
 
   Widget _buildImageItem(DockerImage e) {
     return ListTile(
       title: Text(e.repo),
-      subtitle: Text('${e.tag} - ${e.size}', style: grey),
+      subtitle: Text('${e.tag} - ${e.size}', style: UIs.textGrey),
       trailing: IconButton(
         padding: EdgeInsets.zero,
         alignment: Alignment.centerRight,
@@ -304,39 +247,32 @@ class _DockerManagePageState extends State<DockerManagePage> {
   }
 
   void _showImageRmDialog(DockerImage e) {
-    showRoundDialog(
-      context: context,
-      title: Text(_s.attention),
-      child: Text(_s.sureDelete(e.repo)),
+    context.showRoundDialog(
+      title: Text(l10n.attention),
+      child: Text(l10n.askContinue('${l10n.delete} Image(${e.repo})')),
       actions: [
         TextButton(
           onPressed: () => context.pop(),
-          child: Text(_s.cancel),
+          child: Text(l10n.cancel),
         ),
         TextButton(
           onPressed: () async {
             context.pop();
-            final result = await _docker.run(
+            final result = await Pros.docker.run(
               'docker rmi ${e.id} -f',
             );
             if (result != null) {
-              showSnackBar(
-                context,
-                Text(result.message ?? _s.unknownError),
-              );
+              context.showSnackBar(result.message ?? l10n.unknownError);
             }
           },
-          child: Text(
-            _s.ok,
-            style: const TextStyle(color: Colors.red),
-          ),
+          child: Text(l10n.ok, style: UIs.textRed),
         ),
       ],
     );
   }
 
   Widget _buildLoading() {
-    if (!_docker.isBusy) return nil;
+    if (Pros.docker.runLog == null) return UIs.placeholder;
     return Padding(
       padding: const EdgeInsets.all(17),
       child: Column(
@@ -344,8 +280,8 @@ class _DockerManagePageState extends State<DockerManagePage> {
           const Center(
             child: CircularProgressIndicator(),
           ),
-          height13,
-          Text(_docker.runLog ?? '...'),
+          UIs.height13,
+          Text(Pros.docker.runLog ?? '...'),
         ],
       ),
     );
@@ -355,18 +291,16 @@ class _DockerManagePageState extends State<DockerManagePage> {
     switch (err.type) {
       case DockerErrType.notInstalled:
         return UrlText(
-          text: _s.installDockerWithUrl,
-          replace: _s.install,
+          text: l10n.installDockerWithUrl,
+          replace: l10n.install,
         );
       case DockerErrType.noClient:
-        return Text(_s.waitConnection);
+        return Text(l10n.waitConnection);
       case DockerErrType.invalidVersion:
         return UrlText(
-          text: _s.invalidVersionHelp(appHelpUrl),
+          text: l10n.invalidVersionHelp(Urls.appHelp),
           replace: 'Github',
         );
-
-      /// TODO: Add solution for these cases.
       case DockerErrType.parseImages:
         return const Text('Parse images error');
       case DockerErrType.parsePsItem:
@@ -388,27 +322,27 @@ class _DockerManagePageState extends State<DockerManagePage> {
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
-          Text(_docker.edition ?? _s.unknown),
-          Text(_docker.version ?? _s.unknown),
+          Text(Pros.docker.edition ?? l10n.unknown),
+          Text(Pros.docker.version ?? l10n.unknown),
         ],
       ),
     );
   }
 
-  Widget _buildPsHeader() {
-    return ListTile(
-      title: Text(_s.containerStatus),
-      subtitle: Text(_buildPsCardSubtitle(_docker.items!), style: grey),
-    );
-  }
-
-  Widget _buildPsItems() {
-    if (_docker.items == null) {
-      return nil;
-    }
+  Widget _buildPs() {
+    final items = <Widget>[
+      ListTile(
+        title: Text(l10n.containerStatus),
+        subtitle: Text(
+          _buildPsCardSubtitle(Pros.docker.items!),
+          style: UIs.textGrey,
+        ),
+      ),
+    ];
+    items.addAll(Pros.docker.items!.map(_buildPsItem));
     return Column(
       mainAxisSize: MainAxisSize.min,
-      children: _docker.items!.map(_buildPsItem).toList(),
+      children: items,
     );
   }
 
@@ -417,86 +351,81 @@ class _DockerManagePageState extends State<DockerManagePage> {
       title: Text(item.image),
       subtitle: Text(
         '${item.name} - ${item.status}',
-        style: textSize13Grey,
+        style: UIs.textSize13Grey,
       ),
-      trailing: _buildMoreBtn(item, _docker.isBusy),
+      trailing: _buildMoreBtn(item),
     );
   }
 
-  Widget _buildMoreBtn(DockerPsItem dItem, bool busy) {
+  Widget _buildMoreBtn(DockerPsItem dItem) {
     return PopupMenu(
-      items: DockerMenuType.items(dItem.running)
-          .map(
-            (e) => e.build(_s),
-          )
-          .toList(),
+      items: DockerMenuType.items(dItem.running).map((e) => e.widget).toList(),
       onSelected: (DockerMenuType item) async {
-        if (busy) {
-          showSnackBar(context, Text(_s.isBusy));
-          return;
-        }
         switch (item) {
           case DockerMenuType.rm:
-            showRoundDialog(
-              context: context,
-              title: Text(_s.attention),
-              child: Text(_s.sureDelete(dItem.name)),
+            context.showRoundDialog(
+              title: Text(l10n.attention),
+              child: Text(l10n.askContinue(
+                '${l10n.delete} Container(${dItem.name})',
+              )),
               actions: [
                 TextButton(
-                  onPressed: () {
+                  onPressed: () async {
                     context.pop();
-                    _docker.delete(dItem.containerId);
+                    context.showLoadingDialog();
+                    await Pros.docker.delete(dItem.containerId);
+                    context.pop();
                   },
-                  child: Text(_s.ok),
+                  child: Text(l10n.ok),
                 )
               ],
             );
             break;
           case DockerMenuType.start:
-            _docker.start(dItem.containerId);
+            context.showLoadingDialog();
+            await Pros.docker.start(dItem.containerId);
+            context.pop();
             break;
           case DockerMenuType.stop:
-            _docker.stop(dItem.containerId);
+            context.showLoadingDialog();
+            await Pros.docker.stop(dItem.containerId);
+            context.pop();
             break;
           case DockerMenuType.restart:
-            _docker.restart(dItem.containerId);
+            context.showLoadingDialog();
+            await Pros.docker.restart(dItem.containerId);
+            context.pop();
             break;
           case DockerMenuType.logs:
-            AppRoute(
-              SSHPage(
-                spi: widget.spi,
-                initCmd: 'docker logs ${dItem.containerId}',
-              ),
-              'Docker logs',
+            AppRoute.ssh(
+              spi: widget.spi,
+              initCmd: 'docker logs -f --tail 100 ${dItem.containerId}',
             ).go(context);
             break;
           case DockerMenuType.terminal:
-            AppRoute(
-              SSHPage(
-                spi: widget.spi,
-                initCmd: 'docker exec -it ${dItem.containerId} /bin/sh',
-              ),
-              'Docker terminal',
+            AppRoute.ssh(
+              spi: widget.spi,
+              initCmd: 'docker exec -it ${dItem.containerId} sh',
             ).go(context);
             break;
-          case DockerMenuType.stats:
-            showRoundDialog(
-              context: context,
-              title: Text(_s.stats),
-              child: Text(
-                'CPU: ${dItem.cpu}\n'
-                'Mem: ${dItem.mem}\n'
-                'Net: ${dItem.net}\n'
-                'Block: ${dItem.disk}',
-              ),
-              actions: [
-                TextButton(
-                  onPressed: () => context.pop(),
-                  child: Text(_s.ok),
-                ),
-              ],
-            );
-            break;
+          // case DockerMenuType.stats:
+          //   showRoundDialog(
+          //     context: context,
+          //     title: Text(l10n.stats),
+          //     child: Text(
+          //       'CPU: ${dItem.cpu}\n'
+          //       'Mem: ${dItem.mem}\n'
+          //       'Net: ${dItem.net}\n'
+          //       'Block: ${dItem.disk}',
+          //     ),
+          //     actions: [
+          //       TextButton(
+          //         onPressed: () => context.pop(),
+          //         child: Text(l10n.ok),
+          //       ),
+          //     ],
+          //   );
+          //   break;
         }
       },
     );
@@ -506,18 +435,18 @@ class _DockerManagePageState extends State<DockerManagePage> {
     final runningCount = running.where((element) => element.running).length;
     final stoped = running.length - runningCount;
     if (stoped == 0) {
-      return _s.dockerStatusRunningFmt(runningCount);
+      return l10n.dockerStatusRunningFmt(runningCount);
     }
-    return _s.dockerStatusRunningAndStoppedFmt(runningCount, stoped);
+    return l10n.dockerStatusRunningAndStoppedFmt(runningCount, stoped);
   }
 
   Widget _buildEditHost() {
     final children = <Widget>[];
-    if (_docker.items!.isEmpty && _docker.images!.isEmpty) {
+    if (Pros.docker.items!.isEmpty && Pros.docker.images!.isEmpty) {
       children.add(Padding(
         padding: const EdgeInsets.fromLTRB(17, 17, 17, 0),
         child: Text(
-          _s.dockerEmptyRunningItems,
+          l10n.dockerEmptyRunningItems,
           textAlign: TextAlign.center,
         ),
       ));
@@ -525,7 +454,7 @@ class _DockerManagePageState extends State<DockerManagePage> {
     children.add(
       TextButton(
         onPressed: _showEditHostDialog,
-        child: Text(_s.dockerEditHost),
+        child: Text(l10n.dockerEditHost),
       ),
     );
     return Column(
@@ -534,25 +463,28 @@ class _DockerManagePageState extends State<DockerManagePage> {
   }
 
   Future<void> _showEditHostDialog() async {
-    await showRoundDialog(
-      context: context,
-      title: Text(_s.dockerEditHost),
+    final id = widget.spi.id;
+    final host = Stores.docker.fetch(id) ?? 'unix:///run/user/1000/docker.sock';
+    final ctrl = TextEditingController(text: host);
+    await context.showRoundDialog(
+      title: Text(l10n.dockerEditHost),
       child: Input(
         maxLines: 1,
-        controller:
-            TextEditingController(text: 'unix:///run/user/1000/docker.sock'),
-        onSubmitted: (value) {
-          locator<DockerStore>().setDockerHost(widget.spi.id, value.trim());
-          _docker.refresh();
-          context.pop();
-        },
+        controller: ctrl,
+        onSubmitted: _onSaveDockerHost,
       ),
       actions: [
         TextButton(
-          onPressed: () => context.pop(),
-          child: Text(_s.cancel),
+          onPressed: () => _onSaveDockerHost(ctrl.text),
+          child: Text(l10n.ok),
         ),
       ],
     );
+  }
+
+  void _onSaveDockerHost(String val) {
+    context.pop();
+    Stores.docker.put(widget.spi.id, val.trim());
+    Pros.docker.refresh();
   }
 }

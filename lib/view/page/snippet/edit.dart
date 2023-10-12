@@ -1,15 +1,16 @@
 import 'package:after_layout/after_layout.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter_gen/gen_l10n/l10n.dart';
-import 'package:toolbox/core/extension/navigator.dart';
+import 'package:toolbox/core/extension/context/common.dart';
+import 'package:toolbox/core/extension/context/dialog.dart';
+import 'package:toolbox/core/extension/context/locale.dart';
+import 'package:toolbox/core/extension/context/snackbar.dart';
+import 'package:toolbox/data/res/provider.dart';
 import 'package:toolbox/view/widget/input_field.dart';
 
-import '../../../core/utils/ui.dart';
 import '../../../data/model/server/snippet.dart';
-import '../../../data/provider/snippet.dart';
 import '../../../data/res/ui.dart';
-import '../../../locator.dart';
-import '../../widget/tag/editor.dart';
+import '../../widget/custom_appbar.dart';
+import '../../widget/tag.dart';
 
 class SnippetEditPage extends StatefulWidget {
   const SnippetEditPage({Key? key, this.snippet}) : super(key: key);
@@ -24,30 +25,24 @@ class _SnippetEditPageState extends State<SnippetEditPage>
     with AfterLayoutMixin {
   final _nameController = TextEditingController();
   final _scriptController = TextEditingController();
+  final _noteController = TextEditingController();
   final _scriptNode = FocusNode();
-
-  late SnippetProvider _provider;
-  late S _s;
 
   List<String> _tags = [];
 
   @override
-  void initState() {
-    super.initState();
-    _provider = locator<SnippetProvider>();
-  }
-
-  @override
-  void didChangeDependencies() {
-    super.didChangeDependencies();
-    _s = S.of(context)!;
+  void dispose() {
+    super.dispose();
+    _nameController.dispose();
+    _scriptController.dispose();
+    _scriptNode.dispose();
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        title: Text(_s.edit, style: textSize18),
+      appBar: CustomAppBar(
+        title: Text(l10n.edit, style: UIs.textSize18),
         actions: _buildAppBarActions(),
       ),
       body: _buildBody(),
@@ -62,10 +57,24 @@ class _SnippetEditPageState extends State<SnippetEditPage>
     return [
       IconButton(
         onPressed: () {
-          _provider.del(widget.snippet!);
-          context.pop();
+          context.showRoundDialog(
+            title: Text(l10n.attention),
+            child: Text(l10n.askContinue(
+              '${l10n.delete} ${l10n.snippet}(${widget.snippet!.name})',
+            )),
+            actions: [
+              TextButton(
+                onPressed: () {
+                  Pros.snippet.del(widget.snippet!);
+                  context.pop();
+                  context.pop();
+                },
+                child: Text(l10n.ok, style: UIs.textRed),
+              ),
+            ],
+          );
         },
-        tooltip: _s.delete,
+        tooltip: l10n.delete,
         icon: const Icon(Icons.delete),
       )
     ];
@@ -79,14 +88,20 @@ class _SnippetEditPageState extends State<SnippetEditPage>
         final name = _nameController.text;
         final script = _scriptController.text;
         if (name.isEmpty || script.isEmpty) {
-          showSnackBar(context, Text(_s.fieldMustNotEmpty));
+          context.showSnackBar(l10n.fieldMustNotEmpty);
           return;
         }
-        final snippet = Snippet(name, script, _tags);
+        final note = _noteController.text;
+        final snippet = Snippet(
+          name: name,
+          script: script,
+          tags: _tags.isEmpty ? null : _tags,
+          note: note.isEmpty ? null : note,
+        );
         if (widget.snippet != null) {
-          _provider.update(widget.snippet!, snippet);
+          Pros.snippet.update(widget.snippet!, snippet);
         } else {
-          _provider.add(snippet);
+          Pros.snippet.add(snippet);
         }
         context.pop();
       },
@@ -98,11 +113,30 @@ class _SnippetEditPageState extends State<SnippetEditPage>
       padding: const EdgeInsets.all(13),
       children: [
         Input(
+          autoFocus: true,
           controller: _nameController,
           type: TextInputType.text,
           onSubmitted: (_) => FocusScope.of(context).requestFocus(_scriptNode),
-          label: _s.name,
+          label: l10n.name,
           icon: Icons.info,
+        ),
+        Input(
+          controller: _noteController,
+          minLines: 3,
+          maxLines: 3,
+          type: TextInputType.multiline,
+          label: l10n.note,
+          icon: Icons.note,
+        ),
+        TagEditor(
+          tags: _tags,
+          onChanged: (p0) => setState(() {
+            _tags = p0;
+          }),
+          allTags: [...Pros.server.tags],
+          onRenameTag: (old, n) => setState(() {
+            Pros.server.renameTag(old, n);
+          }),
         ),
         Input(
           controller: _scriptController,
@@ -110,20 +144,9 @@ class _SnippetEditPageState extends State<SnippetEditPage>
           minLines: 3,
           maxLines: 10,
           type: TextInputType.multiline,
-          label: _s.snippet,
+          label: l10n.snippet,
           icon: Icons.code,
         ),
-        TagEditor(
-          tags: _tags,
-          onChanged: (p0) => setState(() {
-            _tags = p0;
-          }),
-          s: _s,
-          tagSuggestions: [..._provider.tags],
-          onRenameTag: (old, n) => setState(() {
-            _provider.renameTag(old, n);
-          }),
-        )
       ],
     );
   }
@@ -133,6 +156,10 @@ class _SnippetEditPageState extends State<SnippetEditPage>
     if (widget.snippet != null) {
       _nameController.text = widget.snippet!.name;
       _scriptController.text = widget.snippet!.script;
+      if (widget.snippet!.note != null) {
+        _noteController.text = widget.snippet!.note!;
+      }
+
       if (widget.snippet!.tags != null) {
         _tags = widget.snippet!.tags!;
         setState(() {});

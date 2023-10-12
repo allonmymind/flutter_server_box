@@ -1,35 +1,43 @@
 import 'dart:convert';
 
-import 'package:toolbox/core/provider_base.dart';
+import 'package:flutter/material.dart';
 import 'package:toolbox/data/model/server/snippet.dart';
-import 'package:toolbox/data/store/snippet.dart';
-import 'package:toolbox/locator.dart';
+import 'package:toolbox/data/res/store.dart';
 
 import '../../core/extension/order.dart';
-import '../store/setting.dart';
 
-class SnippetProvider extends BusyProvider {
+class SnippetProvider extends ChangeNotifier {
   late Order<Snippet> _snippets;
   Order<Snippet> get snippets => _snippets;
 
   final _tags = <String>[];
   List<String> get tags => _tags;
 
-  final _store = locator<SnippetStore>();
-  final _setting = locator<SettingStore>();
-
-  void loadData() {
-    _snippets = _store.fetch();
-    final order = _setting.snippetOrder.fetch();
-    if (order != null) {
+  void load() {
+    _snippets = Stores.snippet.fetch();
+    final order = Stores.setting.snippetOrder.fetch();
+    if (order.isNotEmpty) {
       final surplus = _snippets.reorder(
         order: order,
         finder: (n, name) => n.name == name,
       );
       order.removeWhere((e) => surplus.any((ele) => ele == e));
-      _setting.snippetOrder.put(order);
+      if (order != Stores.setting.snippetOrder.fetch()) {
+        Stores.setting.snippetOrder.put(order);
+      }
     }
+    _addInternal();
     _updateTags();
+  }
+
+  void _addInternal() {
+    if (!Stores.first.iSSBM.fetch() ||
+        _snippets.any((e) => e.name == installSBM.name)) {
+      return;
+    }
+    _snippets.add(installSBM);
+    Stores.snippet.put(installSBM);
+    Stores.first.iSSBM.put(false);
   }
 
   void _updateTags() {
@@ -46,21 +54,21 @@ class SnippetProvider extends BusyProvider {
 
   void add(Snippet snippet) {
     _snippets.add(snippet);
-    _store.put(snippet);
+    Stores.snippet.put(snippet);
     _updateTags();
     notifyListeners();
   }
 
   void del(Snippet snippet) {
     _snippets.remove(snippet);
-    _store.delete(snippet);
+    Stores.snippet.delete(snippet);
     _updateTags();
     notifyListeners();
   }
 
   void update(Snippet old, Snippet newOne) {
-    _store.delete(old);
-    _store.put(newOne);
+    Stores.snippet.delete(old);
+    Stores.snippet.put(newOne);
     _snippets.remove(old);
     _snippets.add(newOne);
     _updateTags();
@@ -72,7 +80,7 @@ class SnippetProvider extends BusyProvider {
       if (s.tags?.contains(old) ?? false) {
         s.tags?.remove(old);
         s.tags?.add(newOne);
-        _store.put(s);
+        Stores.snippet.put(s);
       }
     }
     _updateTags();

@@ -1,10 +1,10 @@
 import 'dart:async';
 
-import 'package:toolbox/core/provider_base.dart';
+import 'package:flutter/material.dart';
 
 import '../model/sftp/req.dart';
 
-class SftpProvider extends ProviderBase {
+class SftpProvider extends ChangeNotifier {
   final List<SftpReqStatus> _status = [];
   List<SftpReqStatus> get status => _status;
 
@@ -23,14 +23,14 @@ class SftpProvider extends ProviderBase {
   @override
   void dispose() {
     for (final item in _status) {
-      item.worker.dispose();
+      item.dispose();
     }
     super.dispose();
   }
 
   void cancel(int id) {
     final idx = _status.indexWhere((element) => element.id == id);
-    _status[idx].worker.dispose();
+    _status[idx].dispose();
     _status.removeAt(idx);
     notifyListeners();
   }

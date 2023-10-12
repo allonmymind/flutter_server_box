@@ -1,21 +1,18 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_gen/gen_l10n/l10n.dart';
 import 'package:provider/provider.dart';
+import 'package:toolbox/core/extension/context/dialog.dart';
+import 'package:toolbox/core/extension/context/locale.dart';
 import 'package:toolbox/core/extension/order.dart';
-import 'package:toolbox/data/model/server/server.dart';
-import 'package:toolbox/data/provider/server.dart';
-import 'package:toolbox/data/res/ui.dart';
-import 'package:toolbox/view/widget/tag/switcher.dart';
+import 'package:toolbox/data/res/provider.dart';
+import 'package:toolbox/data/res/store.dart';
 
 import '../../../core/utils/misc.dart';
-import '../../../core/utils/ui.dart';
+import '../../../data/model/server/server.dart';
 import '../../../data/model/server/snippet.dart';
-import '../../../data/store/setting.dart';
-import '../../../locator.dart';
-import '../../widget/tag/picker.dart';
+import '../../../data/res/ui.dart';
+import '../../widget/tag.dart';
 import '/core/route.dart';
 import '/data/provider/snippet.dart';
-import 'edit.dart';
 import '/view/widget/round_rect_card.dart';
 
 class SnippetListPage extends StatefulWidget {
@@ -26,17 +23,13 @@ class SnippetListPage extends StatefulWidget {
 }
 
 class _SnippetListPageState extends State<SnippetListPage> {
-  late S _s;
   late MediaQueryData _media;
-
-  final _settingStore = locator<SettingStore>();
 
   String? _tag;
 
   @override
   void didChangeDependencies() {
     super.didChangeDependencies();
-    _s = S.of(context)!;
     _media = MediaQuery.of(context);
   }
 
@@ -47,10 +40,7 @@ class _SnippetListPageState extends State<SnippetListPage> {
       floatingActionButton: FloatingActionButton(
         heroTag: 'snippet',
         child: const Icon(Icons.add),
-        onPressed: () => AppRoute(
-          const SnippetEditPage(),
-          'snippet edit page',
-        ).go(context),
+        onPressed: () => AppRoute.snippetEdit().go(context),
       ),
     );
   }
@@ -60,7 +50,7 @@ class _SnippetListPageState extends State<SnippetListPage> {
       builder: (_, provider, __) {
         if (provider.snippets.isEmpty) {
           return Center(
-            child: Text(_s.noSavedSnippet),
+            child: Text(l10n.noSavedSnippet),
           );
         }
 
@@ -69,7 +59,7 @@ class _SnippetListPageState extends State<SnippetListPage> {
             .toList();
 
         return ReorderableListView.builder(
-          padding: const EdgeInsets.all(13),
+          padding: const EdgeInsets.symmetric(horizontal: 13),
           itemCount: filtered.length,
           onReorder: (oldIdx, newIdx) => setState(() {
             provider.snippets.moveByItem(
@@ -77,7 +67,7 @@ class _SnippetListPageState extends State<SnippetListPage> {
               oldIdx,
               newIdx,
               onMove: (p0) {
-                _settingStore.snippetOrder.put(p0.map((e) => e.name).toList());
+                Stores.setting.snippetOrder.put(p0.map((e) => e.name).toList());
               },
             );
           }),
@@ -85,14 +75,15 @@ class _SnippetListPageState extends State<SnippetListPage> {
             tags: provider.tags,
             onTagChanged: (tag) => setState(() => _tag = tag),
             initTag: _tag,
-            all: _s.all,
+            all: l10n.all,
             width: _media.size.width,
           ),
+          footer: UIs.height77,
           buildDefaultDragHandles: false,
           itemBuilder: (context, idx) {
             final snippet = filtered.elementAt(idx);
             return ReorderableDelayedDragStartListener(
-              key: ValueKey(snippet.name),
+              key: ValueKey(idx),
               index: idx,
               child: _buildSnippetItem(snippet),
             );
@@ -112,19 +103,17 @@ class _SnippetListPageState extends State<SnippetListPage> {
           maxLines: 1,
         ),
         subtitle: Text(
-          snippet.script,
+          snippet.note ?? snippet.script,
           overflow: TextOverflow.ellipsis,
-          maxLines: 1,
-          style: grey,
+          maxLines: 3,
+          style: UIs.textGrey,
         ),
         trailing: Row(
           mainAxisSize: MainAxisSize.min,
           children: [
             IconButton(
-              onPressed: () => AppRoute(
-                SnippetEditPage(snippet: snippet),
-                'snippet edit page',
-              ).go(context),
+              onPressed: () =>
+                  AppRoute.snippetEdit(snippet: snippet).go(context),
               icon: const Icon(Icons.edit),
             ),
             IconButton(
@@ -138,35 +127,28 @@ class _SnippetListPageState extends State<SnippetListPage> {
   }
 
   Future<void> _runSnippet(Snippet snippet) async {
-    final provider = locator<ServerProvider>();
-    final servers = await showDialog<List<Server>>(
-      context: context,
-      builder: (_) => TagPicker<Server>(
-        items: provider.servers.values.toList(),
-        containsTag: (t, tag) => t.spi.tags?.contains(tag) ?? false,
-        tags: provider.tags.toSet(),
-        name: (t) => t.spi.id,
-      ),
+    final servers = await context.showPickDialog<Server>(
+      items: Pros.server.servers.toList(),
+      name: (e) => e.spi.name,
     );
     if (servers == null) {
       return;
     }
     final ids = servers.map((e) => e.spi.id).toList();
-    final results = await provider.runSnippetsOnMulti(ids, [snippet]);
+    final results = await Pros.server.runSnippetsMulti(ids, [snippet]);
     if (results.isNotEmpty) {
       // SERVER_NAME: RESULT
       final result = Map.fromIterables(
         ids,
         results,
       ).entries.map((e) => '${e.key}:\n${e.value}').join('\n');
-      showRoundDialog(
-        context: context,
-        title: Text(_s.result),
+      context.showRoundDialog(
+        title: Text(l10n.result),
         child: Text(result),
         actions: [
           TextButton(
             onPressed: () => copy2Clipboard(result),
-            child: Text(_s.copy),
+            child: Text(l10n.copy),
           )
         ],
       );

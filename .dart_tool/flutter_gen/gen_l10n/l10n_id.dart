@@ -35,10 +35,24 @@ class SId extends S {
   String get alterUrl => 'Alter url';
 
   @override
+  String askContinue(Object msg) {
+    return '$msg, lanjutkan?';
+  }
+
+  @override
   String get attention => 'Perhatian';
 
   @override
+  String get authRequired => 'Auth diperlukan';
+
+  @override
   String get auto => 'Auto';
+
+  @override
+  String get autoCheckUpdate => 'Periksa pembaruan otomatis';
+
+  @override
+  String get autoConnect => 'Hubungkan otomatis';
 
   @override
   String get autoUpdateHomeWidget => 'Widget Rumah Pembaruan Otomatis';
@@ -57,6 +71,9 @@ class SId extends S {
 
   @override
   String get bgRun => 'Jalankan di Backgroud';
+
+  @override
+  String get bioAuth => 'Biosertifikasi';
 
   @override
   String get canPullRefresh => 'Anda dapat menarik untuk menyegarkan.';
@@ -84,6 +101,9 @@ class SId extends S {
 
   @override
   String get conn => 'Koneksi';
+
+  @override
+  String get connected => 'Terhubung';
 
   @override
   String get containerName => 'Nama kontainer';
@@ -116,10 +136,16 @@ class SId extends S {
   String get decode => 'Membaca sandi';
 
   @override
+  String get decompress => 'Dekompresi';
+
+  @override
   String get delete => 'Menghapus';
 
   @override
   String get deleteServers => 'Penghapusan server secara batch';
+
+  @override
+  String get dirEmpty => 'Pastikan dir kosong.';
 
   @override
   String get disabled => 'Dengan disabilitas';
@@ -160,12 +186,10 @@ class SId extends S {
   }
 
   @override
-  String get download => 'Unduh';
+  String get doubleColumnMode => 'Mode kolom ganda';
 
   @override
-  String downloadStatus(Object percent, Object size) {
-    return '$percent% dari $size';
-  }
+  String get download => 'Unduh';
 
   @override
   String get edit => 'Edit';
@@ -223,6 +247,9 @@ class SId extends S {
   String get finished => 'Selesai';
 
   @override
+  String get followSystem => 'Ikuti sistem';
+
+  @override
   String get font => 'Font';
 
   @override
@@ -249,6 +276,9 @@ class SId extends S {
   String get gettingToken => 'Mendapatkan token ...';
 
   @override
+  String get goBackQ => 'Datang kembali?';
+
+  @override
   String get goto => 'Pergi ke';
 
   @override
@@ -261,6 +291,9 @@ class SId extends S {
   String httpFailedWithCode(Object code) {
     return 'Permintaan gagal, kode status: $code';
   }
+
+  @override
+  String get icloudSynced => 'iCloud disinkronkan dan beberapa pengaturan mungkin memerlukan pengaktifan ulang aplikasi agar dapat diterapkan.';
 
   @override
   String get image => 'Gambar';
@@ -357,6 +390,12 @@ class SId extends S {
   String get mission => 'Misi';
 
   @override
+  String get moveOutServerFuncBtns => 'Lokasi tombol fungsi server';
+
+  @override
+  String get moveOutServerFuncBtnsHelp => 'Aktif: dapat ditampilkan di bawah setiap kartu pada halaman Tab Server. Nonaktif: dapat ditampilkan di bagian atas halaman Rincian Server.';
+
+  @override
   String get ms => 'MS';
 
   @override
@@ -393,10 +432,16 @@ class SId extends S {
   String get noServerAvailable => 'Tidak ada server yang tersedia.';
 
   @override
+  String get noTask => 'Tidak bertanya';
+
+  @override
   String get noUpdateAvailable => 'Tidak ada pembaruan yang tersedia';
 
   @override
   String get notSelected => 'Tidak terpilih';
+
+  @override
+  String get note => 'Catatan';
 
   @override
   String get nullToken => 'Token NULL';
@@ -415,6 +460,11 @@ class SId extends S {
 
   @override
   String get path => 'Jalur';
+
+  @override
+  String percentOfSize(Object percent, Object size) {
+    return '$percent% dari $size';
+  }
 
   @override
   String get pickFile => 'Pilih file';
@@ -447,7 +497,7 @@ class SId extends S {
   String get preview => 'Pratinjau';
 
   @override
-  String get primaryColor => 'Warna utama';
+  String get primaryColorSeed => 'Warna utama';
 
   @override
   String get privateKey => 'Kunci Pribadi';
@@ -460,6 +510,9 @@ class SId extends S {
 
   @override
   String get pwd => 'Kata sandi';
+
+  @override
+  String get reboot => 'Reboot';
 
   @override
   String get remotePath => 'Jalur jarak jauh';
@@ -482,11 +535,6 @@ class SId extends S {
   String get restoreSuccess => 'Kembalikan kesuksesan. Mulai ulang aplikasi untuk diterapkan.';
 
   @override
-  String restoreSureWithDate(Object date) {
-    return 'Apakah Anda pasti akan memulihkan dari $date?';
-  }
-
-  @override
   String get result => 'Hasil';
 
   @override
@@ -506,6 +554,12 @@ class SId extends S {
 
   @override
   String get server => 'Server';
+
+  @override
+  String get serverDetailOrder => 'Detail pesanan widget halaman';
+
+  @override
+  String get serverOrder => 'Pesanan server';
 
   @override
   String get serverTabConnecting => 'Menghubungkan ...';
@@ -532,13 +586,16 @@ class SId extends S {
   String get sftpDlPrepare => 'Bersiap untuk terhubung ...';
 
   @override
-  String get sftpNoDownloadTask => 'Tidak ada tugas unduhan.';
+  String get sftpRmrDirSummary => 'Gunakan `rm -r` untuk menghapus dir di SFTP';
 
   @override
   String get sftpSSHConnected => 'Sftp terhubung';
 
   @override
   String get showDistLogo => 'Tampilkan logo distribusi';
+
+  @override
+  String get shutdown => 'Matikan';
 
   @override
   String get snippet => 'Snippet';
@@ -572,20 +629,13 @@ class SId extends S {
   String get success => 'Kesuksesan';
 
   @override
-  String sureDelete(Object name) {
-    return 'Apakah Anda pasti akan menghapus [$name]?';
-  }
+  String get suspend => 'Suspend';
 
   @override
-  String get sureDirEmpty => 'Pastikan dir kosong.';
+  String get suspendTip => 'Fungsi penangguhan memerlukan hak akses root dan dukungan systemd.';
 
   @override
-  String get sureNoPwd => 'Apakah Anda pasti tidak menggunakan kata sandi?';
-
-  @override
-  String sureToDeleteServer(Object server) {
-    return 'Apakah Anda pasti akan menghapus server [$server]?';
-  }
+  String get syncTip => 'Setelah sinkronisasi otomatis, mungkin perlu memulai ulang aplikasi agar perubahan tertentu dapat diterapkan.';
 
   @override
   String get system => 'Sistem';
@@ -652,6 +702,9 @@ class SId extends S {
   String get urlOrJson => 'URL atau JSON';
 
   @override
+  String get useNoPwd => 'Tidak ada kata sandi yang akan digunakan.';
+
+  @override
   String get user => 'Username';
 
   @override
@@ -661,7 +714,7 @@ class SId extends S {
 
   @override
   String versionUnknownUpdate(Object build) {
-    return 'Saat ini: v1.0.$build';
+    return 'Saat ini: v1.0.$build. Klik untuk memeriksa pembaruan.';
   }
 
   @override
@@ -680,6 +733,9 @@ class SId extends S {
 
   @override
   String get waitConnection => 'Harap tunggu koneksi akan dibuat.';
+
+  @override
+  String get watchNotPaired => 'Tidak ada Apple Watch yang dipasangkan';
 
   @override
   String get whenOpenApp => 'Saat membuka aplikasi';

@@ -5,9 +5,8 @@ import 'dart:typed_data';
 
 import 'package:dartssh2/dartssh2.dart';
 import 'package:easy_isolate/easy_isolate.dart';
-import 'package:toolbox/core/utils/misc.dart';
-import 'package:toolbox/core/utils/server.dart';
 
+import '../../../core/utils/server.dart';
 import 'req.dart';
 
 class SftpWorker {
@@ -21,6 +20,13 @@ class SftpWorker {
     required this.req,
   });
 
+  /// Use [@Deprecated] to prevent calling [SftpWorker.dispose] directly
+  ///
+  /// Don't delete this method
+  @Deprecated(
+    "Use [SftpWorkerStatus.dispose] to dispose the worker, "
+    "instead of [SftpWorker.dispose]",
+  )
   void dispose() {
     worker.dispose();
   }
@@ -78,26 +84,27 @@ Future<void> _download(
     final client = await genClient(req.spi, privateKey: req.privateKey);
     mainSendPort.send(SftpWorkerStatus.sshConnectted);
 
-    final remotePath = req.remotePath;
-    final localPath = req.localPath;
-    await Directory(localPath.substring(0, req.localPath.lastIndexOf('/')))
-        .create(recursive: true);
-    final local = File(localPath);
-    if (await local.exists()) {
-      await local.delete();
-    }
-    final localFile = local.openWrite(mode: FileMode.append);
-    final file = await (await client.sftp()).open(remotePath);
+    /// Create the directory if not exists
+    final dirPath = req.localPath.substring(0, req.localPath.lastIndexOf('/'));
+    await Directory(dirPath).create(recursive: true);
+
+    /// Use [FileMode.write] to overwrite the file
+    final localFile = File(req.localPath).openWrite(mode: FileMode.write);
+    final file = await (await client.sftp()).open(req.remotePath);
     final size = (await file.stat()).size;
     if (size == null) {
-      mainSendPort.send(Exception('can not get file size'));
+      mainSendPort.send(Exception('can\'t get file size: ${req.remotePath}'));
       return;
     }
-    // Read 10m each time
-    const defaultChunkSize = 1024 * 1024;
-    final chunkSize = size > defaultChunkSize ? defaultChunkSize : size;
+
     mainSendPort.send(size);
-    mainSendPort.send(SftpWorkerStatus.downloading);
+    mainSendPort.send(SftpWorkerStatus.loading);
+
+    // Read 2m each time
+    // Issue #161
+    // The download speed is about 2m/s may due to single core performance
+    const defaultChunkSize = 1024 * 1024 * 2;
+    final chunkSize = size > defaultChunkSize ? defaultChunkSize : size;
     for (var i = 0; i < size; i += chunkSize) {
       final fileData = file.read(length: chunkSize);
       await for (var form in fileData) {
@@ -105,8 +112,10 @@ Future<void> _download(
         mainSendPort.send((i + form.length) / size * 100);
       }
     }
+
     await localFile.close();
     await file.close();
+
     mainSendPort.send(watch.elapsed);
     mainSendPort.send(SftpWorkerStatus.finished);
   } catch (e) {
@@ -125,19 +134,26 @@ Future<void> _upload(
     final client = await genClient(req.spi, privateKey: req.privateKey);
     mainSendPort.send(SftpWorkerStatus.sshConnectted);
 
-    final localPath = req.localPath;
-    final fileName = getFileName(localPath) ?? 'srvbox_sftp_upload';
-    final remotePath = '${req.remotePath}/$fileName';
-    final local = File(localPath);
+    final local = File(req.localPath);
     if (!await local.exists()) {
       mainSendPort.send(Exception('local file not exists'));
       return;
     }
+    final localLen = await local.length();
+    mainSendPort.send(localLen);
+    mainSendPort.send(SftpWorkerStatus.loading);
     final localFile = local.openRead().cast<Uint8List>();
     final sftp = await client.sftp();
-    final file = await sftp.open(remotePath,
-        mode: SftpFileOpenMode.write | SftpFileOpenMode.create);
-    final writer = file.write(localFile);
+    final file = await sftp.open(
+      req.remotePath,
+      mode: SftpFileOpenMode.write | SftpFileOpenMode.create,
+    );
+    final writer = file.write(
+      localFile,
+      onProgress: (total) {
+        mainSendPort.send(total / localLen * 100);
+      },
+    );
     await writer.done;
     await file.close();
     mainSendPort.send(watch.elapsed);

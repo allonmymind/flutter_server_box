@@ -7,7 +7,7 @@ extension OrderX<T> on Order<T> {
   void move(
     int oldIndex,
     int newIndex, {
-    StoreProperty<List<T>>? property,
+    StorePropertyBase<List<T>>? property,
     _OnMove<T>? onMove,
   }) {
     if (oldIndex == newIndex) return;
@@ -35,7 +35,7 @@ extension OrderX<T> on Order<T> {
     List<T> items,
     int o,
     int n, {
-    StoreProperty<List<T>>? property,
+    StorePropertyBase<List<T>>? property,
     _OnMove<T>? onMove,
   }) {
     if (o == n) return;
@@ -80,5 +80,15 @@ extension OrderX<T> on Order<T> {
     addAll(newOrder);
     addAll(missed);
     return surplus;
+  }
+
+  /// Dart uses memory address to compare objects by default.
+  /// This method compares the values of the objects.
+  bool equals(Order<T> other) {
+    if (length != other.length) return false;
+    for (var i = 0; i < length; i++) {
+      if (this[i] != other[i]) return false;
+    }
+    return true;
   }
 }

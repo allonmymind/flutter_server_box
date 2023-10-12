@@ -1,19 +1,13 @@
 import 'dart:io';
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter/services.dart';
-import 'package:flutter/widgets.dart';
-import 'package:flutter_gen/gen_l10n/l10n.dart';
 import 'package:plain_notification_token/plain_notification_token.dart';
 import 'package:share_plus/share_plus.dart';
+import 'package:toolbox/core/extension/context/locale.dart';
+import 'package:toolbox/core/utils/platform/base.dart';
+import 'package:toolbox/data/res/provider.dart';
 
-import '../../data/provider/app.dart';
-import '../../locator.dart';
-import '../../view/widget/rebuild.dart';
-import 'platform.dart';
-
-final _app = locator<AppProvider>();
-
-Future<bool> shareFiles(BuildContext context, List<String> filePaths) async {
+Future<bool> shareFiles(List<String> filePaths) async {
   for (final filePath in filePaths) {
     if (!await File(filePath).exists()) {
       return false;
@@ -23,12 +17,12 @@ Future<bool> shareFiles(BuildContext context, List<String> filePaths) async {
   if (filePaths.length == 1) {
     text = filePaths.first.split('/').last;
   } else {
-    text = '${filePaths.length} ${S.of(context)!.files}';
+    text = '${filePaths.length} ${l10n.files}';
   }
-  _app.moveBg = false;
+  Pros.app.moveBg = false;
   // ignore: deprecated_member_use
-  await Share.shareFiles(filePaths, subject: 'ServerBox -> $text');
-  _app.moveBg = true;
+  await Share.shareFiles(filePaths, subject: text);
+  Pros.app.moveBg = true;
   return filePaths.isNotEmpty;
 }
 
@@ -37,9 +31,9 @@ void copy2Clipboard(String text) {
 }
 
 Future<String?> pickOneFile() async {
-  _app.moveBg = false;
+  Pros.app.moveBg = false;
   final result = await FilePicker.platform.pickFiles(type: FileType.any);
-  _app.moveBg = true;
+  Pros.app.moveBg = true;
   return result?.files.single.path;
 }
 
@@ -63,26 +57,7 @@ String? getFileName(String? path) {
   return path.split('/').last;
 }
 
-void rebuildAll(BuildContext context) {
-  RebuildWidget.restartApp(context);
-}
-
-String getTime(int? unixMill) {
-  return DateTime.fromMillisecondsSinceEpoch((unixMill ?? 0) * 1000)
-      .toString()
-      .replaceFirst('.000', '');
-}
-
+/// Join two path with `/`
 String pathJoin(String path1, String path2) {
   return path1 + (path1.endsWith('/') ? '' : '/') + path2;
-}
-
-String? getHomeDir() {
-  final envVars = Platform.environment;
-  if (isMacOS || isLinux) {
-    return envVars['HOME'];
-  } else if (isWindows) {
-    return envVars['UserProfile'];
-  }
-  return null;
 }

@@ -1,6 +1,14 @@
+import 'dart:convert';
+import 'dart:io';
+
 import 'package:toolbox/data/model/server/private_key_info.dart';
 import 'package:toolbox/data/model/server/server_private_info.dart';
 import 'package:toolbox/data/model/server/snippet.dart';
+import 'package:toolbox/data/res/logger.dart';
+import 'package:toolbox/data/res/path.dart';
+import 'package:toolbox/data/res/store.dart';
+
+const backupFormatVersion = 1;
 
 class Backup {
   // backup format version
@@ -9,15 +17,17 @@ class Backup {
   final List<ServerPrivateInfo> spis;
   final List<Snippet> snippets;
   final List<PrivateKeyInfo> keys;
-  final Map<String, String> dockerHosts;
+  final Map<String, dynamic> dockerHosts;
+  final Map<String, dynamic> settings;
 
-  Backup({
+  const Backup({
     required this.version,
     required this.date,
     required this.spis,
     required this.snippets,
     required this.keys,
     required this.dockerHosts,
+    required this.settings,
   });
 
   Backup.fromJson(Map<String, dynamic> json)
@@ -31,7 +41,8 @@ class Backup {
         keys = (json['keys'] as List)
             .map((e) => PrivateKeyInfo.fromJson(e))
             .toList(),
-        dockerHosts = json['dockerHosts'] ?? {};
+        dockerHosts = json['dockerHosts'] ?? {},
+        settings = json['settings'] ?? {};
 
   Map<String, dynamic> toJson() => {
         'version': version,
@@ -39,5 +50,60 @@ class Backup {
         'spis': spis,
         'snippets': snippets,
         'keys': keys,
+        'dockerHosts': dockerHosts,
+        'settings': settings,
       };
+
+  Backup.loadFromStore()
+      : version = backupFormatVersion,
+        date = DateTime.now().toString().split('.').first,
+        spis = Stores.server.fetch(),
+        snippets = Stores.snippet.fetch(),
+        keys = Stores.key.fetch(),
+        dockerHosts = Stores.docker.fetchAll(),
+        settings = Stores.setting.toJson();
+
+  static Future<void> backup() async {
+    final result = _diyEncrtpt(json.encode(Backup.loadFromStore()));
+    await File(await Paths.bak).writeAsString(result);
+  }
+
+  Future<void> restore() async {
+    for (final s in snippets) {
+      Stores.snippet.put(s);
+    }
+    for (final s in spis) {
+      Stores.server.put(s);
+    }
+    for (final s in keys) {
+      Stores.key.put(s);
+    }
+    for (final k in dockerHosts.keys) {
+      final val = dockerHosts[k];
+      if (val != null && val is String && val.isNotEmpty) {
+        Stores.docker.put(k, val);
+      }
+    }
+  }
+
+  Backup.fromJsonString(String raw)
+      : this.fromJson(json.decode(_diyDecrypt(raw)));
+}
+
+String _diyEncrtpt(String raw) => json.encode(
+      raw.codeUnits.map((e) => e * 2 + 1).toList(growable: false),
+    );
+
+String _diyDecrypt(String raw) {
+  try {
+    final list = json.decode(raw);
+    final sb = StringBuffer();
+    for (final e in list) {
+      sb.writeCharCode((e - 1) ~/ 2);
+    }
+    return sb.toString();
+  } catch (e, trace) {
+    Loggers.app.warning('Backup decrypt failed', e, trace);
+    rethrow;
+  }
 }

@@ -35,10 +35,24 @@ class SDe extends S {
   String get alterUrl => 'Url ändern';
 
   @override
+  String askContinue(Object msg) {
+    return '$msg, weiter?';
+  }
+
+  @override
   String get attention => 'Achtung';
 
   @override
+  String get authRequired => 'Autorisierung erforderlich';
+
+  @override
   String get auto => 'System folgen';
+
+  @override
+  String get autoCheckUpdate => 'Aktualisierung automatisch prüfen';
+
+  @override
+  String get autoConnect => 'Automatisch verbinden';
 
   @override
   String get autoUpdateHomeWidget => 'Home-Widget automatisch aktualisieren';
@@ -57,6 +71,9 @@ class SDe extends S {
 
   @override
   String get bgRun => 'Hintergrundaktualisierung';
+
+  @override
+  String get bioAuth => 'Biozertifizierung';
 
   @override
   String get canPullRefresh => 'Danach: herunterziehen zum Aktualisieren';
@@ -84,6 +101,9 @@ class SDe extends S {
 
   @override
   String get conn => 'Verbindung';
+
+  @override
+  String get connected => 'in Verbindung gebracht';
 
   @override
   String get containerName => 'Container Name';
@@ -116,10 +136,16 @@ class SDe extends S {
   String get decode => 'Decode';
 
   @override
+  String get decompress => 'Dekomprimieren';
+
+  @override
   String get delete => 'Löschen';
 
   @override
   String get deleteServers => 'Batch-Löschung von Servern';
+
+  @override
+  String get dirEmpty => 'Stelle sicher, dass der Ordner leer ist.';
 
   @override
   String get disabled => 'Behinderte';
@@ -160,12 +186,10 @@ class SDe extends S {
   }
 
   @override
-  String get download => 'Download';
+  String get doubleColumnMode => 'Doppelspaltiger Modus';
 
   @override
-  String downloadStatus(Object percent, Object size) {
-    return '$percent% von $size';
-  }
+  String get download => 'Download';
 
   @override
   String get edit => 'Bearbeiten';
@@ -223,6 +247,9 @@ class SDe extends S {
   String get finished => 'fertiggestellt';
 
   @override
+  String get followSystem => 'System verfolgen';
+
+  @override
   String get font => 'Schriftarten';
 
   @override
@@ -249,6 +276,9 @@ class SDe extends S {
   String get gettingToken => 'Getting token...';
 
   @override
+  String get goBackQ => 'Zurückkommen?';
+
+  @override
   String get goto => 'Pfad öffnen';
 
   @override
@@ -261,6 +291,9 @@ class SDe extends S {
   String httpFailedWithCode(Object code) {
     return 'Anfrage fehlgeschlagen, Statuscode: $code';
   }
+
+  @override
+  String get icloudSynced => 'iCloud wird synchronisiert und einige Einstellungen erfordern möglicherweise einen Neustart der App, um wirksam zu werden.';
 
   @override
   String get image => 'Image';
@@ -357,6 +390,12 @@ class SDe extends S {
   String get mission => 'Mission';
 
   @override
+  String get moveOutServerFuncBtns => 'Position der Server-Funktionsschaltfläche';
+
+  @override
+  String get moveOutServerFuncBtnsHelp => 'Ein: kann unter jeder Karte auf der Registerkarte \"Server\" angezeigt werden. Aus: kann oben auf der Seite \"Serverdetails\" angezeigt werden.';
+
+  @override
   String get ms => 'ms';
 
   @override
@@ -393,10 +432,16 @@ class SDe extends S {
   String get noServerAvailable => 'Kein Server verfügbar.';
 
   @override
+  String get noTask => 'Nicht fragen';
+
+  @override
   String get noUpdateAvailable => 'Kein Update verfügbar';
 
   @override
   String get notSelected => 'Nicht ausgewählt';
+
+  @override
+  String get note => 'Hinweis';
 
   @override
   String get nullToken => 'Null token';
@@ -415,6 +460,11 @@ class SDe extends S {
 
   @override
   String get path => 'Pfad';
+
+  @override
+  String percentOfSize(Object percent, Object size) {
+    return '$percent% von $size';
+  }
 
   @override
   String get pickFile => 'Datei wählen';
@@ -447,7 +497,7 @@ class SDe extends S {
   String get preview => 'Vorschau';
 
   @override
-  String get primaryColor => 'Farbschema';
+  String get primaryColorSeed => 'Farbschema';
 
   @override
   String get privateKey => 'Private Key';
@@ -460,6 +510,9 @@ class SDe extends S {
 
   @override
   String get pwd => 'Passwort';
+
+  @override
+  String get reboot => 'Neustart';
 
   @override
   String get remotePath => 'Entfernte Pfade';
@@ -482,11 +535,6 @@ class SDe extends S {
   String get restoreSuccess => 'Wiederherstellung erfolgreich. App neustarten um Änderungen anzuwenden.';
 
   @override
-  String restoreSureWithDate(Object date) {
-    return 'Bist du sicher, dass du das Backup vom $date wiederherstellen möchtest?';
-  }
-
-  @override
   String get result => 'Result';
 
   @override
@@ -506,6 +554,12 @@ class SDe extends S {
 
   @override
   String get server => 'Server';
+
+  @override
+  String get serverDetailOrder => 'Reihenfolge der Widgets auf der Detailseite';
+
+  @override
+  String get serverOrder => 'Server-Bestellung';
 
   @override
   String get serverTabConnecting => 'Verbinden...';
@@ -532,13 +586,16 @@ class SDe extends S {
   String get sftpDlPrepare => 'Verbindung vorbereiten...';
 
   @override
-  String get sftpNoDownloadTask => 'Keine aktiven Downloads.';
+  String get sftpRmrDirSummary => 'Verwenden Sie \"rm -r\", um das Verzeichnis in SFTP zu löschen.';
 
   @override
   String get sftpSSHConnected => 'SFTP Verbunden';
 
   @override
   String get showDistLogo => 'Distributionslogo anzeigen';
+
+  @override
+  String get shutdown => 'Abschaltung';
 
   @override
   String get snippet => 'Snippet';
@@ -572,20 +629,13 @@ class SDe extends S {
   String get success => 'Erfolgreich';
 
   @override
-  String sureDelete(Object name) {
-    return 'Soll [$name] wirklich gelöscht werden?';
-  }
+  String get suspend => 'Suspend';
 
   @override
-  String get sureDirEmpty => 'Stelle sicher, dass der Ordner leer ist.';
+  String get suspendTip => 'Die Suspend-Funktion erfordert Root-Rechte und systemd-Unterstützung.';
 
   @override
-  String get sureNoPwd => 'Bist du sicher, dass du kein Passwort verwenden willst?';
-
-  @override
-  String sureToDeleteServer(Object server) {
-    return 'Bist du sicher, dass du [$server] löschen willst?';
-  }
+  String get syncTip => 'Nach der automatischen Synchronisierung kann es erforderlich sein, die App neu zu starten, damit bestimmte Änderungen wirksam werden.';
 
   @override
   String get system => 'Systeme';
@@ -652,6 +702,9 @@ class SDe extends S {
   String get urlOrJson => 'URL oder JSON';
 
   @override
+  String get useNoPwd => 'Es wird kein Passwort verwendet.';
+
+  @override
   String get user => 'Benutzer';
 
   @override
@@ -661,7 +714,7 @@ class SDe extends S {
 
   @override
   String versionUnknownUpdate(Object build) {
-    return 'Aktuell: v1.0.$build';
+    return 'Aktuell: v1.0.$build. Klicken Sie hier, um nach Updates zu suchen';
   }
 
   @override
@@ -680,6 +733,9 @@ class SDe extends S {
 
   @override
   String get waitConnection => 'Bitte warte, bis die Verbindung hergestellt wurde.';
+
+  @override
+  String get watchNotPaired => 'Keine gekoppelte Apple Watch';
 
   @override
   String get whenOpenApp => 'Beim Öffnen der App';

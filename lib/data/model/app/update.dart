@@ -27,10 +27,10 @@
 
 import 'dart:convert';
 
-import '/core/utils/platform.dart';
+import 'package:toolbox/core/utils/platform/base.dart';
 
 class AppUpdate {
-  AppUpdate({
+  const AppUpdate({
     required this.changelog,
     required this.build,
     required this.url,
@@ -112,12 +112,12 @@ class AppUpdatePlatformSpecific<T> {
       };
 
   T? get current {
-    switch (platform) {
-      case PlatformType.macos:
+    switch (OS.type) {
+      case OS.macos:
         return mac;
-      case PlatformType.ios:
+      case OS.ios:
         return ios;
-      case PlatformType.android:
+      case OS.android:
         return android;
       default:
         return null;

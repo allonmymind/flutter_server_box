@@ -44,20 +44,20 @@ If you have any question or feature request, please open a [discussion](https://
 If ServerBox app has any bug, please open an [issue](https://github.com/lollipopkit/flutter_server_box/issues/new).
 
 
-## 📱 ScreenShots
+## 🏙️ ScreenShots
 <table>
   <tr>
     <td>
-	    <img width="200px" src="imgs/server.jpeg">
+	    <img width="200px" src="imgs/server.png">
     </td>
     <td>
-	    <img width="200px" src="imgs/detail.jpg">
+	    <img width="200px" src="imgs/detail.png">
     </td>
     <td>
-	    <img width="200px" src="imgs/ssh.jpg">
+	    <img width="200px" src="imgs/sftp.png">
     </td>
     <td>
-	    <img width="200px" src="imgs/editor.jpg">
+	    <img width="200px" src="imgs/editor.png">
     </td>
   </tr>
 </table>
@@ -67,7 +67,7 @@ If ServerBox app has any bug, please open an [issue](https://github.com/lollipop
 	    <img width="200px" src="imgs/ping.png">
     </td>
     <td>
-	    <img width="200px" src="imgs/sftp.jpeg">
+	    <img width="200px" src="imgs/ssh.jpg">
     </td>
     <td>
 	    <img width="200px" src="imgs/docker.jpeg">
@@ -83,12 +83,12 @@ If ServerBox app has any bug, please open an [issue](https://github.com/lollipop
 Status|Platform          
 --- | ---
 Full Support| Android / iOS / macOS
-Support, but not tested| Windows / Linux
+Not tested| Windows / Linux
 
 
 ## 🧱 Contribution
 **Any positive contribution is welcome**.
-10 iOS app redemption codes will be given away for the first time you participate in the contribution. This is the only thing I can do to thank you. :)
+10 iOS app redemption codes will be given away for the first time you participate in the contribution. :)
 ### l10n guide
 1. Fork this repo and clone forked repo to your local machine.
 2. Create `arb` file in `lib/l10n/` directory
@@ -100,5 +100,9 @@ Support, but not tested| Windows / Linux
 
 
 ## 📝 License
-1. You can package it for personal use, but you can't distribute it. (For example: You can teach others how to package it to avoid spending money to buy App, but you can't directly distribute the App you packaged.)
-2. Except for the above, apply the `GPLv3` license.
+- You can package it for personal use, but you can't distribute it. 
+  - For example: You can teach others how to package it to avoid spending money to buy App, but you can't directly distribute the App you packaged.
+  - Why do I have to do this? 
+    - Security: If anyone inject malicious code into the source code and distribute it, it will cause a lot of trouble.
+    - Income: Apple developer account = $99 per year. As a freshly graduated independent developer, I need income.
+- Except for the above, apply the `GPLv3` license.

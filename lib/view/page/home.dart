@@ -1,32 +1,34 @@
+import 'dart:convert';
+
 import 'package:after_layout/after_layout.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_gen/gen_l10n/l10n.dart';
 import 'package:get_it/get_it.dart';
-import 'package:toolbox/data/model/app/github_id.dart';
-import 'package:toolbox/data/model/app/tab.dart';
-import 'package:toolbox/data/provider/app.dart';
-import 'package:toolbox/data/res/misc.dart';
-import 'package:toolbox/view/widget/round_rect_card.dart';
-import 'package:toolbox/view/widget/value_notifier.dart';
+import 'package:toolbox/core/channel/bg_run.dart';
+import 'package:toolbox/core/channel/home_widget.dart';
+import 'package:toolbox/core/extension/context/dialog.dart';
+import 'package:toolbox/core/extension/context/locale.dart';
+import 'package:toolbox/core/utils/platform/auth.dart';
+import 'package:toolbox/core/utils/platform/base.dart';
+import 'package:toolbox/data/res/github_id.dart';
+import 'package:toolbox/data/res/logger.dart';
+import 'package:toolbox/data/res/provider.dart';
+import 'package:toolbox/data/res/store.dart';
 
 import '../../core/analysis.dart';
 import '../../core/route.dart';
 import '../../core/update.dart';
-import '../../core/utils/platform.dart';
 import '../../core/utils/ui.dart';
-import '../../data/provider/server.dart';
+import '../../data/model/app/github_id.dart';
+import '../../data/model/app/tab.dart';
 import '../../data/res/build_data.dart';
+import '../../data/res/misc.dart';
 import '../../data/res/ui.dart';
 import '../../data/res/url.dart';
-import '../../data/store/setting.dart';
-import '../../locator.dart';
+import '../widget/custom_appbar.dart';
+import '../widget/round_rect_card.dart';
 import '../widget/url_text.dart';
-import 'backup.dart';
-import 'convert.dart';
-import 'debug.dart';
-import 'private_key/list.dart';
-import 'setting.dart';
-import 'storage/local.dart';
+import '../widget/value_notifier.dart';
 
 class HomePage extends StatefulWidget {
   const HomePage({Key? key}) : super(key: key);
@@ -40,23 +42,19 @@ class _HomePageState extends State<HomePage>
         AutomaticKeepAliveClientMixin,
         AfterLayoutMixin,
         WidgetsBindingObserver {
-  final _serverProvider = locator<ServerProvider>();
-  final _setting = locator<SettingStore>();
-  final _app = locator<AppProvider>();
-
   late final PageController _pageController;
 
   final _selectIndex = ValueNotifier(0);
-  late S _s;
 
   bool _switchingPage = false;
+  bool _isAuthing = false;
 
   @override
   void initState() {
     super.initState();
     switchStatusBar(hide: false);
     WidgetsBinding.instance.addObserver(this);
-    _selectIndex.value = _setting.launchPage.fetch()!;
+    _selectIndex.value = Stores.setting.launchPage.fetch();
     // avoid index out of range
     if (_selectIndex.value >= AppTab.values.length || _selectIndex.value < 0) {
       _selectIndex.value = 0;
@@ -67,14 +65,15 @@ class _HomePageState extends State<HomePage>
   @override
   void didChangeDependencies() {
     super.didChangeDependencies();
-    _s = S.of(context)!;
+    l10n = S.of(context)!;
   }
 
   @override
   void dispose() {
     super.dispose();
     WidgetsBinding.instance.removeObserver(this);
-    _serverProvider.closeServer();
+    Pros.server.closeServer();
+    _pageController.dispose();
   }
 
   @override
@@ -84,20 +83,21 @@ class _HomePageState extends State<HomePage>
 
     switch (state) {
       case AppLifecycleState.resumed:
-        if (!_serverProvider.isAutoRefreshOn) {
-          _serverProvider.startAutoRefresh();
+        _auth();
+        if (!Pros.server.isAutoRefreshOn) {
+          Pros.server.startAutoRefresh();
         }
         updateHomeWidget();
         break;
       case AppLifecycleState.paused:
         // Keep running in background on Android device
-        if (isAndroid && _setting.bgRun.fetch()!) {
-          if (_app.moveBg) {
-            bgRunChannel.invokeMethod('sendToBackground');
+        if (isAndroid && Stores.setting.bgRun.fetch()) {
+          if (Pros.app.moveBg) {
+            BgRunMC.moveToBg();
           }
         } else {
-          _serverProvider.setDisconnected();
-          _serverProvider.stopAutoRefresh();
+          Pros.server.setDisconnected();
+          Pros.server.stopAutoRefresh();
         }
         break;
       default:
@@ -108,21 +108,10 @@ class _HomePageState extends State<HomePage>
   @override
   Widget build(BuildContext context) {
     super.build(context);
+
     return Scaffold(
       drawer: _buildDrawer(),
-      appBar: AppBar(
-        title: const Text(BuildData.name),
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.developer_mode, size: 23),
-            tooltip: _s.debug,
-            onPressed: () => AppRoute(
-              const DebugPage(),
-              'Debug Page',
-            ).go(context),
-          ),
-        ],
-      ),
+      appBar: _buildAppBar(),
       body: PageView.builder(
         controller: _pageController,
         itemCount: AppTab.values.length,
@@ -140,9 +129,41 @@ class _HomePageState extends State<HomePage>
     );
   }
 
+  PreferredSizeWidget _buildAppBar() {
+    final actions = <Widget>[
+      IconButton(
+        icon: const Icon(Icons.developer_mode, size: 23),
+        tooltip: l10n.debug,
+        onPressed: () => AppRoute.debug().go(context),
+      ),
+    ];
+    if (isDesktop && _selectIndex.value == AppTab.server.index) {
+      actions.add(
+        ValueBuilder(
+          listenable: _selectIndex,
+          build: () {
+            if (_selectIndex.value != AppTab.server.index) {
+              return const SizedBox();
+            }
+            return IconButton(
+              icon: const Icon(Icons.refresh, size: 23),
+              tooltip: 'Refresh',
+              onPressed: () => Pros.server.refreshData(onlyFailed: true),
+            );
+          },
+        ),
+      );
+    }
+    return CustomAppBar(
+      title: const Text(BuildData.name),
+      actions: actions,
+    );
+  }
+
   Widget _buildBottomBar() {
     return NavigationBar(
       selectedIndex: _selectIndex.value,
+      height: kBottomNavigationBarHeight * 1.2,
       animationDuration: const Duration(milliseconds: 250),
       onDestinationSelected: (int index) {
         if (_selectIndex.value == index) return;
@@ -161,12 +182,12 @@ class _HomePageState extends State<HomePage>
       destinations: [
         NavigationDestination(
           icon: const Icon(Icons.cloud_outlined),
-          label: _s.server,
+          label: l10n.server,
           selectedIcon: const Icon(Icons.cloud),
         ),
         NavigationDestination(
           icon: const Icon(Icons.snippet_folder_outlined),
-          label: _s.snippet,
+          label: l10n.snippet,
           selectedIcon: const Icon(Icons.snippet_folder),
         ),
         const NavigationDestination(
@@ -186,15 +207,15 @@ class _HomePageState extends State<HomePage>
         children: [
           _buildIcon(),
           TextButton(
-            onPressed: () => showRoundDialog(
-              context: context,
+            onPressed: () => context.showRoundDialog(
               title: Text(_versionStr),
-              child: const Text(BuildData.buildAt),
+              child: const Text(
+                  '${BuildData.buildAt}\nFlutter ${BuildData.engine}'),
             ),
             child: Text(
               '${BuildData.name}\n$_versionStr',
               textAlign: TextAlign.center,
-              style: textSize13,
+              style: UIs.textSize13,
             ),
           ),
           const SizedBox(height: 37),
@@ -211,47 +232,28 @@ class _HomePageState extends State<HomePage>
         children: [
           ListTile(
             leading: const Icon(Icons.settings),
-            title: Text(_s.setting),
-            onTap: () => AppRoute(
-              const SettingPage(),
-              'Setting',
-            ).go(context),
+            title: Text(l10n.setting),
+            onTap: () => AppRoute.settings().go(context),
+            onLongPress: _onLongPressSetting,
           ),
           ListTile(
             leading: const Icon(Icons.vpn_key),
-            title: Text(_s.privateKey),
-            onTap: () => AppRoute(
-              const PrivateKeysListPage(),
-              'private key list',
-            ).go(context),
+            title: Text(l10n.privateKey),
+            onTap: () => AppRoute.keyList().go(context),
           ),
           ListTile(
-            leading: const Icon(Icons.download),
-            title: Text(_s.download),
-            onTap: () => AppRoute(
-              const LocalStoragePage(),
-              'sftp local page',
-            ).go(context),
+            leading: const Icon(Icons.file_open),
+            title: Text(l10n.files),
+            onTap: () => AppRoute.localStorage().go(context),
           ),
           ListTile(
             leading: const Icon(Icons.import_export),
-            title: Text(_s.backup),
-            onTap: () => AppRoute(
-              BackupPage(),
-              'backup page',
-            ).go(context),
-          ),
-          ListTile(
-            leading: const Icon(Icons.code),
-            title: Text(_s.convert),
-            onTap: () => AppRoute(
-              const ConvertPage(),
-              'convert page',
-            ).go(context),
+            title: Text(l10n.backupAndRestore),
+            onTap: () => AppRoute.backup().go(context),
           ),
           ListTile(
             leading: const Icon(Icons.text_snippet),
-            title: Text('${_s.about} & ${_s.feedback}'),
+            title: Text('${l10n.about} & ${l10n.feedback}'),
             onTap: _showAboutDialog,
           )
         ].map((e) => RoundRectCard(e)).toList(),
@@ -260,18 +262,21 @@ class _HomePageState extends State<HomePage>
   }
 
   void _showAboutDialog() {
-    showRoundDialog(
-      context: context,
-      title: Text(_s.about),
+    context.showRoundDialog(
+      title: Text(l10n.about),
       child: _buildAboutContent(),
       actions: [
         TextButton(
-          onPressed: () => openUrl(appHelpUrl),
-          child: Text(_s.feedback),
+          onPressed: () => openUrl(Urls.appWiki),
+          child: const Text('Wiki'),
+        ),
+        TextButton(
+          onPressed: () => openUrl(Urls.appHelp),
+          child: Text(l10n.feedback),
         ),
         TextButton(
           onPressed: () => showLicensePage(context: context),
-          child: Text(_s.license),
+          child: Text(l10n.license),
         ),
       ],
     );
@@ -284,22 +289,23 @@ class _HomePageState extends State<HomePage>
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           UrlText(
-            text: _s.madeWithLove(myGithub),
+            text: l10n.madeWithLove(Urls.myGithub),
             replace: 'lollipopkit',
           ),
-          height13,
+          UIs.height13,
           // Use [UrlText] for same text style
-          Text(_s.aboutThanks),
-          height13,
+          Text(l10n.aboutThanks),
+          UIs.height13,
           const Text('Contributors:'),
-          ...contributors.map(
+          ...GithubIds.contributors.map(
             (name) => UrlText(
               text: name.url,
               replace: name,
             ),
           ),
+          UIs.height13,
           const Text('Participants:'),
-          ...participants.map(
+          ...GithubIds.participants.map(
             (name) => UrlText(
               text: name.url,
               replace: name,
@@ -313,7 +319,7 @@ class _HomePageState extends State<HomePage>
   Widget _buildIcon() {
     return ConstrainedBox(
       constraints: const BoxConstraints(maxHeight: 57, maxWidth: 57),
-      child: appIcon,
+      child: UIs.appIcon,
     );
   }
 
@@ -322,7 +328,7 @@ class _HomePageState extends State<HomePage>
     if (BuildData.modifications != 0) {
       mod = '(+${BuildData.modifications})';
     }
-    return 'Ver: 1.0.${BuildData.build}$mod';
+    return 'v1.0.${BuildData.build}$mod';
   }
 
   @override
@@ -330,19 +336,82 @@ class _HomePageState extends State<HomePage>
 
   @override
   Future<void> afterFirstLayout(BuildContext context) async {
-    doUpdate(context);
+    // Auth required for first launch
+    _auth();
+    if (Stores.setting.autoCheckAppUpdate.fetch()) {
+      doUpdate(context);
+    }
     updateHomeWidget();
     await GetIt.I.allReady();
-    await _serverProvider.loadLocalData();
-    await _serverProvider.refreshData();
+    await Pros.server.load();
+    await Pros.server.refreshData();
     if (!Analysis.enabled) {
       Analysis.init();
     }
   }
 
   void updateHomeWidget() {
-    if (_setting.autoUpdateHomeWidget.fetch()!) {
-      homeWidgetChannel.invokeMethod('update');
+    if (Stores.setting.autoUpdateHomeWidget.fetch()) {
+      HomeWidgetMC.update();
+    }
+  }
+
+  Future<void> _onLongPressSetting() async {
+    final map = Stores.setting.toJson();
+    final keys = map.keys;
+
+    /// Encode [map] to String with indent `\t`
+    final text = Miscs.jsonEncoder.convert(map);
+    final result = await AppRoute.editor(
+      text: text,
+      langCode: 'json',
+      title: l10n.setting,
+    ).go<String>(context);
+    if (result == null) {
+      return;
+    }
+    try {
+      final newSettings = json.decode(result) as Map<String, dynamic>;
+      Stores.setting.box.putAll(newSettings);
+      final newKeys = newSettings.keys;
+      final removedKeys = keys.where((e) => !newKeys.contains(e));
+      for (final key in removedKeys) {
+        Stores.setting.box.delete(key);
+      }
+    } catch (e, trace) {
+      context.showRoundDialog(
+        title: Text(l10n.error),
+        child: Text('${l10n.save}:\n$e'),
+      );
+      Loggers.app.warning('Update json settings failed', e, trace);
+    }
+  }
+
+  void _auth() {
+    if (Stores.setting.useBioAuth.fetch()) {
+      if (!_isAuthing) {
+        _isAuthing = true;
+        BioAuth.auth(l10n.authRequired).then(
+          (val) {
+            switch (val) {
+              case AuthResult.success:
+                // wait for animation
+                Future.delayed(
+                    const Duration(seconds: 1), () => _isAuthing = false);
+                break;
+              case AuthResult.fail:
+              case AuthResult.cancel:
+                _isAuthing = false;
+                _auth();
+                break;
+              case AuthResult.notAvail:
+                _isAuthing = false;
+                Stores.setting.useBioAuth.put(false);
+                break;
+            }
+          },
+        );
+      }
     }
   }
 }

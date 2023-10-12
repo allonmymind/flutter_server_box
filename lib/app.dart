@@ -1,39 +1,54 @@
+import 'package:dynamic_color/dynamic_color.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_gen/gen_l10n/l10n.dart';
+import 'package:toolbox/core/extension/context/common.dart';
 import 'package:toolbox/core/extension/locale.dart';
-import 'package:toolbox/view/page/full_screen.dart';
+import 'package:toolbox/core/utils/rebuild.dart';
+import 'package:toolbox/data/res/store.dart';
+import 'package:toolbox/view/widget/value_notifier.dart';
 
 import 'core/utils/ui.dart';
 import 'data/res/build_data.dart';
 import 'data/res/color.dart';
-import 'data/store/setting.dart';
-import 'locator.dart';
+import 'view/page/full_screen.dart';
 import 'view/page/home.dart';
 
-class MyApp extends StatelessWidget {
-  MyApp({Key? key}) : super(key: key);
+/// After upgrading to flutter 3.13,
+/// the shadow color of the drawer is white (maybe a bug).
+/// Only on [iOS].
+/// TODO: remember to remove it after the bug is fixed.
+const _drawerTheme = DrawerThemeData(
+  shadowColor: Colors.black12,
+);
 
-  final _setting = locator<SettingStore>();
+class MyApp extends StatelessWidget {
+  const MyApp({Key? key}) : super(key: key);
 
   @override
   Widget build(BuildContext context) {
     setTransparentNavigationBar(context);
-    primaryColor = Color(_setting.primaryColor.fetch()!);
-    final fullScreen = _setting.fullScreen.fetch()!;
+    final child = _wrapTheme(context);
+    if (Stores.setting.useSystemPrimaryColor.fetch()) {
+      return _wrapSystemColor(context, child);
+    }
+    return child;
+  }
 
-    return ValueListenableBuilder<int>(
-      valueListenable: _setting.themeMode.listenable(),
-      builder: (_, tMode, __) {
+  Widget _wrapTheme(BuildContext context) {
+    return ValueBuilder(
+      listenable: RebuildNodes.app,
+      build: () {
+        final tMode = Stores.setting.themeMode.fetch();
         final isAMOLED = tMode >= 0 && tMode <= ThemeMode.values.length - 1;
         // Issue #57
         // if not [ok] -> [AMOLED] mode, use [ThemeMode.dark]
         final themeMode = isAMOLED ? ThemeMode.values[tMode] : ThemeMode.dark;
-        final localeStr = _setting.locale.fetch();
-        final locale = localeStr?.toLocale;
+        final locale = Stores.setting.locale.fetch().toLocale;
         final darkTheme = ThemeData(
           useMaterial3: true,
           brightness: Brightness.dark,
           colorSchemeSeed: primaryColor,
+          drawerTheme: _drawerTheme,
         );
 
         return MaterialApp(
@@ -47,39 +62,38 @@ class MyApp extends StatelessWidget {
             useMaterial3: true,
             colorSchemeSeed: primaryColor,
           ),
-          darkTheme: isAMOLED
-              ? darkTheme
-              : darkTheme.copyWith(
-                  scaffoldBackgroundColor: Colors.black,
-                  dialogBackgroundColor: Colors.black,
-                  drawerTheme: const DrawerThemeData(
-                    backgroundColor: Colors.black,
-                  ),
-                  appBarTheme: const AppBarTheme(
-                    backgroundColor: Colors.black,
-                  ),
-                  dialogTheme: const DialogTheme(
-                    backgroundColor: Colors.black,
-                  ),
-                  bottomSheetTheme: const BottomSheetThemeData(
-                    backgroundColor: Colors.black,
-                  ),
-                  listTileTheme: const ListTileThemeData(
-                    tileColor: Colors.black12,
-                  ),
-                  cardTheme: const CardTheme(
-                    color: Colors.black12,
-                  ),
-                  navigationBarTheme: const NavigationBarThemeData(
-                    backgroundColor: Colors.black,
-                  ),
-                  popupMenuTheme: const PopupMenuThemeData(
-                    color: Colors.black,
-                  ),
-                ),
-          home: fullScreen ? const FullScreenPage() : const HomePage(),
+          darkTheme: isAMOLED ? darkTheme : _getAmoledTheme(darkTheme),
+          home: Stores.setting.fullScreen.fetch()
+              ? const FullScreenPage()
+              : const HomePage(),
         );
       },
     );
   }
+
+  Widget _wrapSystemColor(BuildContext context, Widget child) {
+    return DynamicColorBuilder(builder: (light, dark) {
+      if (context.isDark && light != null) {
+        primaryColor = light.primary;
+      } else if (!context.isDark && dark != null) {
+        primaryColor = dark.primary;
+      }
+      return child;
+    });
+  }
 }
+
+ThemeData _getAmoledTheme(ThemeData darkTheme) => darkTheme.copyWith(
+      scaffoldBackgroundColor: Colors.black,
+      dialogBackgroundColor: Colors.black,
+      drawerTheme: _drawerTheme.copyWith(backgroundColor: Colors.black),
+      appBarTheme: const AppBarTheme(backgroundColor: Colors.black),
+      dialogTheme: const DialogTheme(backgroundColor: Colors.black),
+      bottomSheetTheme:
+          const BottomSheetThemeData(backgroundColor: Colors.black),
+      listTileTheme: const ListTileThemeData(tileColor: Colors.black12),
+      cardTheme: const CardTheme(color: Colors.black12),
+      navigationBarTheme:
+          const NavigationBarThemeData(backgroundColor: Colors.black),
+      popupMenuTheme: const PopupMenuThemeData(color: Colors.black),
+    );

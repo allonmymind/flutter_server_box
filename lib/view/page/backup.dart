@@ -1,131 +1,100 @@
 import 'dart:async';
-import 'dart:convert';
 import 'dart:io';
 
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter_gen/gen_l10n/l10n.dart';
-import 'package:toolbox/core/extension/navigator.dart';
+import 'package:toolbox/core/extension/context/common.dart';
+import 'package:toolbox/core/extension/context/dialog.dart';
+import 'package:toolbox/core/extension/context/locale.dart';
+import 'package:toolbox/core/extension/context/snackbar.dart';
+import 'package:toolbox/core/utils/platform/base.dart';
+import 'package:toolbox/core/utils/rebuild.dart';
+import 'package:toolbox/data/model/app/backup.dart';
+import 'package:toolbox/data/res/logger.dart';
 import 'package:toolbox/data/res/path.dart';
+import 'package:toolbox/data/res/provider.dart';
+import 'package:toolbox/data/res/store.dart';
+import 'package:toolbox/view/widget/round_rect_card.dart';
 
-import '../../core/extension/colorx.dart';
 import '../../core/utils/misc.dart';
-import '../../core/utils/ui.dart';
-import '../../data/model/app/backup.dart';
-import '../../data/res/color.dart';
 import '../../data/res/ui.dart';
-import '../../data/store/docker.dart';
-import '../../data/store/private_key.dart';
-import '../../data/store/server.dart';
-import '../../data/store/snippet.dart';
-import '../../locator.dart';
-
-const backupFormatVersion = 1;
+import '../widget/custom_appbar.dart';
+import '../widget/store_switch.dart';
 
 class BackupPage extends StatelessWidget {
-  BackupPage({Key? key}) : super(key: key);
-
-  final _server = locator<ServerStore>();
-  final _snippet = locator<SnippetStore>();
-  final _privateKey = locator<PrivateKeyStore>();
-  final _dockerHosts = locator<DockerStore>();
+  const BackupPage({Key? key}) : super(key: key);
 
   @override
   Widget build(BuildContext context) {
-    final s = S.of(context)!;
     return Scaffold(
-      appBar: AppBar(
-        title: Text(s.backupAndRestore, style: textSize18),
+      appBar: CustomAppBar(
+        title: Text(l10n.backupAndRestore, style: UIs.textSize18),
       ),
-      body: _buildBody(context, s),
+      body: _buildBody(context),
     );
   }
 
-  Widget _buildBody(BuildContext context, S s) {
-    final media = MediaQuery.of(context);
-    return Center(
-        child: Column(
+  Widget _buildBody(BuildContext context) {
+    final tip = () {
+      if (isMacOS || isIOS) {
+        return '${l10n.syncTip}\n${l10n.backupTip}';
+      }
+      return l10n.backupTip;
+    }();
+    return Column(
       mainAxisAlignment: MainAxisAlignment.center,
       crossAxisAlignment: CrossAxisAlignment.center,
       children: [
+        if (isMacOS || isIOS) _buildIcloudSync(context),
+        UIs.height13,
         Padding(
           padding: const EdgeInsets.all(37),
           child: Text(
-            s.backupTip,
+            tip,
             textAlign: TextAlign.center,
           ),
         ),
-        const SizedBox(height: 107),
-        _buildCard(s.restore, Icons.download, media, () async {
-          final path = await pickOneFile();
-          if (path == null) {
-            showSnackBar(context, Text(s.notSelected));
-            return;
-          }
-          final file = File(path);
-          if (!file.existsSync()) {
-            showSnackBar(context, Text(s.fileNotExist(path)));
-            return;
-          }
-          final text = await file.readAsString();
-          _import(text, context, s);
-        }),
-        height13,
+        UIs.height77,
+        _buildCard(
+          l10n.restore,
+          Icons.download,
+          () => _onRestore(context),
+        ),
+        UIs.height13,
         const SizedBox(
           width: 37,
           child: Divider(),
         ),
-        height13,
+        UIs.height13,
         _buildCard(
-          s.backup,
-          Icons.file_upload,
-          media,
+          l10n.backup,
+          Icons.save,
           () async {
-            final result = _diyEncrtpt(
-              json.encode(
-                Backup(
-                  version: backupFormatVersion,
-                  date: DateTime.now().toString().split('.').first,
-                  spis: _server.fetch(),
-                  snippets: _snippet.fetch(),
-                  keys: _privateKey.fetch(),
-                  dockerHosts: _dockerHosts.fetch(),
-                ),
-              ),
-            );
-            final path = '${(await docDir).path}/srvbox_bak.json';
-            await File(path).writeAsString(result);
-            await shareFiles(context, [path]);
+            await Backup.backup();
+            await shareFiles([await Paths.bak]);
           },
         )
       ],
-    ));
+    );
   }
 
   Widget _buildCard(
     String text,
     IconData icon,
-    MediaQueryData media,
     FutureOr Function() onTap,
   ) {
-    final textColor = primaryColor.isBrightColor ? Colors.black : Colors.white;
-    return GestureDetector(
-      onTap: onTap,
-      child: Container(
-        decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(37), color: primaryColor),
+    return RoundRectCard(
+      InkWell(
+        onTap: onTap,
         child: Padding(
           padding: const EdgeInsets.symmetric(vertical: 7, horizontal: 17),
           child: Row(
             mainAxisSize: MainAxisSize.min,
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              Icon(
-                icon,
-                color: textColor,
-              ),
-              width7,
-              Text(text, style: TextStyle(color: textColor)),
+              Icon(icon, size: 20),
+              UIs.width7,
+              Text(text),
             ],
           ),
         ),
@@ -133,85 +102,81 @@ class BackupPage extends StatelessWidget {
     );
   }
 
-  Future<void> _import(String text, BuildContext context, S s) async {
-    if (text.isEmpty) {
-      showSnackBar(context, Text(s.fieldMustNotEmpty));
-      return;
-    }
-    await _importBackup(text, context, s);
+  Widget _buildIcloudSync(BuildContext context) {
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.center,
+      children: [
+        const Text(
+          'iCloud',
+          textAlign: TextAlign.center,
+        ),
+        UIs.width13,
+        // Hive db only save data into local file after app exit,
+        // so this button is useless
+        // IconButton(
+        //     onPressed: () async {
+        //       showLoadingDialog(context);
+        //       await ICloud.syncDb();
+        //       context.pop();
+        //       showRestartSnackbar(context, btn: s.restart, msg: s.icloudSynced);
+        //     },
+        //     icon: const Icon(Icons.sync)),
+        // width13,
+        StoreSwitch(prop: Stores.setting.icloudSync)
+      ],
+    );
   }
 
-  Future<void> _importBackup(String raw, BuildContext context, S s) async {
+  Future<void> _onRestore(BuildContext context) async {
+    final path = await pickOneFile();
+    if (path == null) return;
+
+    final file = File(path);
+    if (!await file.exists()) {
+      context.showSnackBar(l10n.fileNotExist(path));
+      return;
+    }
+
+    final text = await file.readAsString();
+    if (text.isEmpty) {
+      context.showSnackBar(l10n.fieldMustNotEmpty);
+      return;
+    }
+
     try {
-      final backup = await compute(_decode, raw);
+      context.showLoadingDialog();
+      final backup = await compute(Backup.fromJsonString, text.trim());
       if (backupFormatVersion != backup.version) {
-        showSnackBar(context, Text(s.backupVersionNotMatch));
+        context.showSnackBar(l10n.backupVersionNotMatch);
         return;
       }
 
-      await showRoundDialog(
-        context: context,
-        title: Text(s.restore),
-        child: Text(s.restoreSureWithDate(backup.date)),
+      await context.showRoundDialog(
+        title: Text(l10n.restore),
+        child: Text(l10n.askContinue(
+          '${l10n.restore} ${l10n.backup}(${backup.date})',
+        )),
         actions: [
           TextButton(
             onPressed: () => context.pop(),
-            child: Text(s.cancel),
+            child: Text(l10n.cancel),
           ),
           TextButton(
             onPressed: () async {
-              for (final s in backup.snippets) {
-                _snippet.put(s);
-              }
-              for (final s in backup.spis) {
-                _server.put(s);
-              }
-              for (final s in backup.keys) {
-                _privateKey.put(s);
-              }
-              for (final k in backup.dockerHosts.keys) {
-                _dockerHosts.setDockerHost(k, backup.dockerHosts[k]!);
-              }
+              backup.restore();
               context.pop();
-              showRoundDialog(
-                context: context,
-                title: Text(s.restore),
-                child: Text(s.restoreSuccess),
-                actions: [
-                  TextButton(
-                    onPressed: () => rebuildAll(context),
-                    child: Text(s.restart),
-                  ),
-                  TextButton(
-                    onPressed: () => context.pop(),
-                    child: Text(s.cancel),
-                  ),
-                ],
-              );
+              RebuildNodes.app.rebuild();
+              Pros.reload();
             },
-            child: Text(s.ok),
+            child: Text(l10n.ok),
           ),
         ],
       );
-    } catch (e) {
-      showSnackBar(context, Text(e.toString()));
-      rethrow;
+    } catch (e, trace) {
+      Loggers.app.warning('Import backup failed', e, trace);
+      context.showSnackBar(e.toString());
+    } finally {
+      context.pop();
     }
   }
-}
-
-Backup _decode(String raw) {
-  final decrypted = _diyDecrypt(raw);
-  return Backup.fromJson(json.decode(decrypted));
-}
-
-String _diyEncrtpt(String raw) =>
-    json.encode(raw.codeUnits.map((e) => e * 2 + 1).toList(growable: false));
-String _diyDecrypt(String raw) {
-  final list = json.decode(raw);
-  final sb = StringBuffer();
-  for (final e in list) {
-    sb.writeCharCode((e - 1) ~/ 2);
-  }
-  return sb.toString();
 }
