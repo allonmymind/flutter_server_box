@@ -201,6 +201,9 @@ class SId extends S {
   String get editor => 'Editor';
 
   @override
+  String get editorHighlightTip => 'Performa penyorotan kode saat ini lebih buruk, dan dapat dimatikan secara opsional untuk perbaikan.';
+
+  @override
   String get encode => 'Menyandi';
 
   @override
@@ -280,6 +283,9 @@ class SId extends S {
 
   @override
   String get goto => 'Pergi ke';
+
+  @override
+  String get highlight => 'Sorotan kode';
 
   @override
   String get homeWidgetUrlConfig => 'Konfigurasi URL Widget Rumah';
@@ -454,6 +460,12 @@ class SId extends S {
 
   @override
   String get open => 'Membuka';
+
+  @override
+  String get openLastPath => 'Buka jalur terakhir';
+
+  @override
+  String get openLastPathTip => 'Server yang berbeda akan memiliki catatan yang berbeda, dan catatan tersebut adalah jalur menuju pintu keluar';
 
   @override
   String get paste => 'Tempel';

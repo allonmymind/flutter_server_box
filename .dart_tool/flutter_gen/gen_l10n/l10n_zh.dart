@@ -201,6 +201,9 @@ class SZh extends S {
   String get editor => '编辑器';
 
   @override
+  String get editorHighlightTip => '目前的代码高亮性能较为糟糕，可以选择关闭以改善。';
+
+  @override
   String get encode => '编码';
 
   @override
@@ -280,6 +283,9 @@ class SZh extends S {
 
   @override
   String get goto => '前往';
+
+  @override
+  String get highlight => '代码高亮';
 
   @override
   String get homeWidgetUrlConfig => '桌面部件链接配置';
@@ -454,6 +460,12 @@ class SZh extends S {
 
   @override
   String get open => '打开';
+
+  @override
+  String get openLastPath => '打开上次的路径';
+
+  @override
+  String get openLastPathTip => '不同的服务器会有不同的记录，且记录的是退出时的路径';
 
   @override
   String get paste => '粘贴';
@@ -945,6 +957,9 @@ class SZhTw extends SZh {
   String get editor => '編輯器';
 
   @override
+  String get editorHighlightTip => '目前的代碼高亮性能較為糟糕，可以選擇關閉以改善。';
+
+  @override
   String get encode => '編碼';
 
   @override
@@ -1024,6 +1039,9 @@ class SZhTw extends SZh {
 
   @override
   String get goto => '前往';
+
+  @override
+  String get highlight => '代碼高亮';
 
   @override
   String get homeWidgetUrlConfig => '桌面部件鏈接配置';
@@ -1198,6 +1216,12 @@ class SZhTw extends SZh {
 
   @override
   String get open => '打開';
+
+  @override
+  String get openLastPath => '打開上次的路徑';
+
+  @override
+  String get openLastPathTip => '不同的服務器會有不同的記錄，且記錄的是退出時的路徑';
 
   @override
   String get paste => '貼上';

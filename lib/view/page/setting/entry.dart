@@ -11,11 +11,11 @@ import 'package:toolbox/core/extension/context/snackbar.dart';
 import 'package:toolbox/core/extension/locale.dart';
 import 'package:toolbox/core/extension/context/dialog.dart';
 import 'package:toolbox/core/extension/stringx.dart';
-import 'package:toolbox/core/utils/platform/auth.dart';
 import 'package:toolbox/core/utils/platform/base.dart';
 import 'package:toolbox/core/utils/rebuild.dart';
 import 'package:toolbox/data/res/provider.dart';
 import 'package:toolbox/data/res/store.dart';
+import 'package:toolbox/view/widget/expand_tile.dart';
 
 import '../../../core/persistant_store.dart';
 import '../../../core/route.dart';
@@ -29,7 +29,6 @@ import '../../../data/res/path.dart';
 import '../../../data/res/ui.dart';
 import '../../widget/color_picker.dart';
 import '../../widget/custom_appbar.dart';
-import '../../widget/future_widget.dart';
 import '../../widget/input_field.dart';
 import '../../widget/round_rect_card.dart';
 import '../../widget/store_switch.dart';
@@ -157,6 +156,8 @@ class _SettingPageState extends State<SettingPage> {
           _buildServer(),
           _buildTitle('SSH'),
           _buildSSH(),
+          _buildTitle('SFTP'),
+          _buildSFTP(),
           _buildTitle(l10n.editor),
           _buildEditor(),
           _buildTitle(l10n.fullScreen),
@@ -187,9 +188,6 @@ class _SettingPageState extends State<SettingPage> {
       //_buildLaunchPage(),
       _buildCheckUpdate(),
     ];
-    if (BioAuth.isPlatformSupported) {
-      children.add(_buildBioAuth());
-    }
 
     /// Platform specific settings
     if (OS.hasSettings) {
@@ -234,7 +232,6 @@ class _SettingPageState extends State<SettingPage> {
         // Use hardware keyboard on desktop, so there is no need to set it
         if (isMobile) _buildKeyboardType(),
         _buildSSHVirtKeys(),
-        _buildSftpRmrDir(),
       ].map((e) => RoundRectCard(e)).toList(),
     );
   }
@@ -245,6 +242,7 @@ class _SettingPageState extends State<SettingPage> {
         _buildEditorFontSize(),
         _buildEditorTheme(),
         _buildEditorDarkTheme(),
+        _buildEditorHighlight(),
       ].map((e) => RoundRectCard(e)).toList(),
     );
   }
@@ -845,6 +843,23 @@ class _SettingPageState extends State<SettingPage> {
     );
   }
 
+  Widget _buildSFTP() {
+    return Column(
+      children: [
+        _buildSftpRmrDir(),
+        _buildSftpOpenLastPath(),
+      ].map((e) => RoundRectCard(e)).toList(),
+    );
+  }
+
+  Widget _buildSftpOpenLastPath() {
+    return ListTile(
+      title: Text(l10n.openLastPath),
+      subtitle: Text(l10n.openLastPathTip, style: UIs.textGrey),
+      trailing: StoreSwitch(prop: _setting.sftpOpenLastPath),
+    );
+  }
+
   Widget _buildNetViewType() {
     final items = NetViewType.values
         .map((e) => PopupMenuItem(
@@ -920,29 +935,24 @@ class _SettingPageState extends State<SettingPage> {
   }
 
   Widget _buildServerOrder() {
-    return ListTile(
+    return ExpandTile(
       title: Text(l10n.serverOrder),
-      subtitle: Text('${l10n.serverOrder} / ${l10n.serverDetailOrder}',
-          style: UIs.textGrey),
-      trailing: const Icon(Icons.keyboard_arrow_right),
-      onTap: () => context.showRoundDialog(
-        title: Text(l10n.choose),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            ListTile(
-              title: Text(l10n.serverOrder),
-              trailing: const Icon(Icons.keyboard_arrow_right),
-              onTap: () => AppRoute.serverOrder().go(context),
-            ),
-            ListTile(
-              title: Text(l10n.serverDetailOrder),
-              trailing: const Icon(Icons.keyboard_arrow_right),
-              onTap: () => AppRoute.serverDetailOrder().go(context),
-            ),
-          ],
-        ),
+      subtitle: Text(
+        '${l10n.serverOrder} / ${l10n.serverDetailOrder}',
+        style: UIs.textGrey,
       ),
+      children: [
+        ListTile(
+          title: Text(l10n.serverOrder),
+          trailing: const Icon(Icons.keyboard_arrow_right),
+          onTap: () => AppRoute.serverOrder().go(context),
+        ),
+        ListTile(
+          title: Text(l10n.serverDetailOrder),
+          trailing: const Icon(Icons.keyboard_arrow_right),
+          onTap: () => AppRoute.serverDetailOrder().go(context),
+        ),
+      ],
     );
   }
 
@@ -1013,47 +1023,6 @@ class _SettingPageState extends State<SettingPage> {
   //   );
   // }
 
-  Widget _buildBioAuth() {
-    return FutureWidget<bool>(
-      future: BioAuth.isAvail,
-      loading: ListTile(
-        title: Text(l10n.bioAuth),
-        subtitle: Text(l10n.serverTabLoading, style: UIs.textGrey),
-      ),
-      error: (e, __) => ListTile(
-        title: Text(l10n.bioAuth),
-        subtitle: Text('${l10n.failed}: $e', style: UIs.textGrey),
-      ),
-      success: (can) {
-        return ListTile(
-          title: Text(l10n.bioAuth),
-          subtitle: can
-              ? null
-              : const Text('Error: Bio auth is not available',
-                  style: UIs.textGrey),
-          trailing: can
-              ? StoreSwitch(
-                  prop: Stores.setting.useBioAuth,
-                  func: (val) async {
-                    if (val) {
-                      Stores.setting.useBioAuth.put(false);
-                      return;
-                    }
-                    // Only auth when turn off (val == false)
-                    final result = await BioAuth.auth(l10n.authRequired);
-                    // If failed, turn on again
-                    if (result != AuthResult.success) {
-                      Stores.setting.useBioAuth.put(true);
-                    }
-                  },
-                )
-              : null,
-        );
-      },
-      noData: UIs.placeholder,
-    );
-  }
-
   Widget _buildPlatformSetting() {
     return ListTile(
       title: Text('${OS.type} ${l10n.setting}'),
@@ -1070,6 +1039,14 @@ class _SettingPageState extends State<SettingPage> {
             break;
         }
       },
+    );
+  }
+
+  Widget _buildEditorHighlight() {
+    return ListTile(
+      title: Text(l10n.highlight),
+      subtitle: Text(l10n.editorHighlightTip, style: UIs.textGrey),
+      trailing: StoreSwitch(prop: _setting.editorHighlight),
     );
   }
 }

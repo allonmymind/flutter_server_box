@@ -201,6 +201,9 @@ class SEn extends S {
   String get editor => 'Editor';
 
   @override
+  String get editorHighlightTip => 'The current code highlighting performance is worse and can be optionally turned off to improve.';
+
+  @override
   String get encode => 'Encode';
 
   @override
@@ -280,6 +283,9 @@ class SEn extends S {
 
   @override
   String get goto => 'Go to';
+
+  @override
+  String get highlight => 'Code highlight';
 
   @override
   String get homeWidgetUrlConfig => 'Config home widget url';
@@ -454,6 +460,12 @@ class SEn extends S {
 
   @override
   String get open => 'Open';
+
+  @override
+  String get openLastPath => 'Open the last path';
+
+  @override
+  String get openLastPathTip => 'Different servers will have different logs, and the log is the path to the exit';
 
   @override
   String get paste => 'Paste';

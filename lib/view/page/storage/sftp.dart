@@ -208,7 +208,7 @@ class _SftpPageState extends State<SftpPage> with AfterLayoutMixin {
               if (!Stores.setting.recordHistory.fetch()) {
                 return [];
               }
-              return Stores.history.sftpPath.all.where(
+              return Stores.history.sftpGoPath.all.where(
                 (element) => element.contains(val.text),
               );
             },
@@ -232,7 +232,7 @@ class _SftpPageState extends State<SftpPage> with AfterLayoutMixin {
         _status.path?.update(p);
         final suc = await _listDir();
         if (suc && Stores.setting.recordHistory.fetch()) {
-          Stores.history.sftpPath.add(p);
+          Stores.history.sftpGoPath.add(p);
         }
       },
       icon: const Icon(Icons.gps_fixed),
@@ -647,6 +647,12 @@ class _SftpPageState extends State<SftpPage> with AfterLayoutMixin {
           _status.files = fs;
         });
         context.pop();
+
+        // Only update history when success
+        if (Stores.setting.sftpOpenLastPath.fetch()) {
+          Stores.history.sftpLastPath.put(widget.spi.id, listPath);
+        }
+
         return true;
       }
       return false;
@@ -679,7 +685,14 @@ class _SftpPageState extends State<SftpPage> with AfterLayoutMixin {
 
   @override
   FutureOr<void> afterFirstLayout(BuildContext context) {
-    _status.path = AbsolutePath(widget.initPath ?? '/');
+    var initPath = '/';
+    if (Stores.setting.sftpOpenLastPath.fetch()) {
+      final history = Stores.history.sftpLastPath.fetch(widget.spi.id);
+      if (history != null) {
+        initPath = history;
+      }
+    }
+    _status.path = AbsolutePath(widget.initPath ?? initPath);
     _listDir();
   }
 }

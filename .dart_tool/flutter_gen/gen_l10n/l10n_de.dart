@@ -201,6 +201,9 @@ class SDe extends S {
   String get editor => 'Editor';
 
   @override
+  String get editorHighlightTip => 'Die Leistung der aktuellen Codehervorhebung ist schlechter und kann zur Verbesserung optional ausgeschaltet werden.';
+
+  @override
   String get encode => 'Encode';
 
   @override
@@ -280,6 +283,9 @@ class SDe extends S {
 
   @override
   String get goto => 'Pfad öffnen';
+
+  @override
+  String get highlight => 'Code highlight';
 
   @override
   String get homeWidgetUrlConfig => 'Home-Widget-Link konfigurieren';
@@ -454,6 +460,12 @@ class SDe extends S {
 
   @override
   String get open => 'Öffnen';
+
+  @override
+  String get openLastPath => 'Öffnen Sie den letzten Pfad';
+
+  @override
+  String get openLastPathTip => 'Verschiedene Server haben unterschiedliche Einträge, und der Eintrag ist der Pfad zum Ausgang';
 
   @override
   String get paste => 'Einfügen';

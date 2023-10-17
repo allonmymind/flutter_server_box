@@ -57,7 +57,9 @@ class _EditorPageState extends State<EditorPage> {
     super.initState();
 
     /// Higher priority than [path]
-    _langCode = widget.langCode ?? Highlights.getCode(widget.path);
+    if (Stores.setting.editorHighlight.fetch()) {
+      _langCode = widget.langCode ?? Highlights.getCode(widget.path);
+    }
     _controller = CodeController(
       language: Highlights.all[_langCode],
     );

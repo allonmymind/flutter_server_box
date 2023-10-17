@@ -1,20 +1,15 @@
 English | [简体中文](README_zh.md)
+
 <!-- Title-->
 <p align="center">
-  <img src="imgs/flutter_server_box.png">
+  <img src="https://socialify.git.ci/lollipopkit/flutter_server_box/image?description=1&font=Raleway&logo=https%3A%2F%2Fgithub.com%2Flollipopkit%2Fflutter_server_box%2Fblob%2Fmain%2Fassets%2Fapp_icon.png%3Fraw%3Dtrue&name=1&owner=1&pattern=Solid&theme=Auto" alt="flutter_server_box" width="640" height="320" />
 </p>
 
 <!-- Badges-->
 <p align="center">
-  <a href="https://apps.apple.com/app/id1586449703">
-    <img style="height: 37px" src="imgs/appstore.svg">
-  </a>
-  <a href="https://count.ly/f/badge" rel="nofollow">
-    <img style="height: 37px" src="https://count.ly/badges/dark.svg">
-  </a>
-  <a href="https://github.com/lollipopkit/flutter_server_box/releases/latest">
-    <img style="height: 37px" src="imgs/dl-android.svg">
-  </a>
+  <img alt="lang" src="https://img.shields.io/badge/lang-dart-pink">
+  <img alt="countly" src="https://img.shields.io/badge/analysis-countly-pink">
+  <img alt="license" src="https://img.shields.io/badge/license-GPLv3-pink">
 </p>
 
 <p align="center">
@@ -26,69 +21,63 @@ Especially thanks to <a href="https://github.com/TerminalStudio/dartssh2">dartss
 
 ## 🔖 Feature
 - [x] Functions
-  - [x] `SSH` Terminal, `SFTP`
-  - [x] `Docker & Pkg` Manager
-  - [x] `Status` charts
-  - [x] `Code editor`
-  - [x] `Ping` and etc.
+  - [x] `SSH` Terminal, `SFTP`, `Docker & Pkg & Process`, Status chart, Code editor...
+  - [x] Platform specific: `Bio auth`、`Msg push`、`Home widget`、`watchOS App`...
 - [x] Localization ( English, 简体中文, Deutsch, 繁體中文, Indonesian. [l10n guide](#l10n-guide) )
-- [x] Desktop support
+- [x] Platform support: `iOS / Android / macOS / Windows / Linux`
 
 
-## 📩 Push
-In order to push  server status to your portable device without opening ServerBox app (Such as **message push** and **home widget**), you need to install [ServerBoxMonitor](https://github.com/lollipopkit/server_box_monitor) on your servers, and config it correctly. See [Wiki](https://github.com/lollipopkit/server_box_monitor/wiki) for more details.
+## ⬇️ Download
+Platform | Support | Sign
+--- | --- | ---
+[iOS](https://apps.apple.com/app/id1586449703) / [Android](https://res.lolli.tech/serverbox/latest.apk) / [macOS](https://apps.apple.com/app/id1586449703) | Full | My own certificate
+[Linux](https://res.lolli.tech/serverbox/latest.AppImage) / [Windows](https://res.lolli.tech/serverbox/latest.win.zip) | Not tested | Flutter default certificate
+
+- Due to Chinese government policy and the [BEIAN](https://github.com/lollipopkit/flutter_server_box/discussions/180) issue. iOS app is now free. Please download it from other regions of AppStore.
+- Security:
+  - To prevent injection attacks and etc., please don't download from untrusted sources.
+  - Since `Linux / Windows` is signed with flutter default certificate, it is recommended to **build it yourself**.
 
 
 ## 🆘 Help
-If you have any question or feature request, please open a [discussion](https://github.com/lollipopkit/flutter_server_box/discussions/new/choose).  
-If ServerBox app has any bug, please open an [issue](https://github.com/lollipopkit/flutter_server_box/issues/new).
+- In order to push  server status to your portable device without opening ServerBox app (Such as **message push** and **home widget**), you need to install [ServerBoxMonitor](https://github.com/lollipopkit/server_box_monitor) on your servers, and config it correctly. See [wiki](https://github.com/lollipopkit/server_box_monitor/wiki) for more details.
+- **Common issues** can be found in [app wiki](https://github.com/lollipopkit/flutter_server_box/wiki).
+- If you have **any question or feature request**, please open a [discussion](https://github.com/lollipopkit/flutter_server_box/discussions/new/choose).  
+-  If ServerBox app has **any bug**, please open an [issue](https://github.com/lollipopkit/flutter_server_box/issues/new).
 
 
 ## 🏙️ ScreenShots
 <table>
   <tr>
     <td>
-	    <img width="200px" src="imgs/server.png">
+	    <img width="277px" src="imgs/server.png">
     </td>
     <td>
-	    <img width="200px" src="imgs/detail.png">
+	    <img width="277px" src="imgs/detail.png">
     </td>
     <td>
-	    <img width="200px" src="imgs/sftp.png">
-    </td>
-    <td>
-	    <img width="200px" src="imgs/editor.png">
+	    <img width="277px" src="imgs/sftp.png">
     </td>
   </tr>
 </table>
 <table>
   <tr>
     <td>
-	    <img width="200px" src="imgs/ping.png">
+	    <img width="277px" src="imgs/editor.png">
     </td>
     <td>
-	    <img width="200px" src="imgs/ssh.jpg">
+	    <img width="277px" src="imgs/ssh.png">
     </td>
     <td>
-	    <img width="200px" src="imgs/docker.jpeg">
-    </td>
-    <td>
-	    <img width="200px" src="imgs/convert.png">
+	    <img width="277px" src="imgs/docker.png">
     </td>
   </tr>
 </table>
 
 
-## 🖥 Platform
-Status|Platform          
---- | ---
-Full Support| Android / iOS / macOS
-Not tested| Windows / Linux
-
-
 ## 🧱 Contribution
 **Any positive contribution is welcome**.
-10 iOS app redemption codes will be given away for the first time you participate in the contribution. :)
+
 ### l10n guide
 1. Fork this repo and clone forked repo to your local machine.
 2. Create `arb` file in `lib/l10n/` directory
@@ -100,9 +89,4 @@ Not tested| Windows / Linux
 
 
 ## 📝 License
-- You can package it for personal use, but you can't distribute it. 
-  - For example: You can teach others how to package it to avoid spending money to buy App, but you can't directly distribute the App you packaged.
-  - Why do I have to do this? 
-    - Security: If anyone inject malicious code into the source code and distribute it, it will cause a lot of trouble.
-    - Income: Apple developer account = $99 per year. As a freshly graduated independent developer, I need income.
-- Except for the above, apply the `GPLv3` license.
+`GPL v3 lollipopkit 2023`
