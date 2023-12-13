@@ -49,6 +49,9 @@ class SDe extends S {
   String get auto => 'System folgen';
 
   @override
+  String get autoBackupConflict => 'Es kann nur eine automatische Sicherung gleichzeitig aktiviert werden.';
+
+  @override
   String get autoCheckUpdate => 'Aktualisierung automatisch prüfen';
 
   @override
@@ -142,6 +145,9 @@ class SDe extends S {
   String get delete => 'Löschen';
 
   @override
+  String get deleteScripts => 'Gleichzeitiges Löschen von Server-Skripten';
+
+  @override
   String get deleteServers => 'Batch-Löschung von Servern';
 
   @override
@@ -154,7 +160,13 @@ class SDe extends S {
   String get disconnected => 'Disconnected';
 
   @override
+  String get disk => 'Festplatte';
+
+  @override
   String get diskIgnorePath => 'Pfad für Datenträger ignorieren';
+
+  @override
+  String get displayName => 'Name anzeigen';
 
   @override
   String dl2Local(Object fileName) {
@@ -337,6 +349,9 @@ class SDe extends S {
   String get isBusy => 'Is busy now';
 
   @override
+  String get jumpServer => 'Server springen';
+
+  @override
   String get keepForeground => 'Stelle sicher, dass die App geöffnet bleibt.';
 
   @override
@@ -370,6 +385,9 @@ class SDe extends S {
   String get loadingFiles => 'Lädt Dateien...';
 
   @override
+  String get location => 'Standort';
+
+  @override
   String get log => 'Log';
 
   @override
@@ -379,6 +397,9 @@ class SDe extends S {
   String madeWithLove(Object myGithub) {
     return 'Erstellt mit ❤️ von $myGithub';
   }
+
+  @override
+  String get manual => 'Handbuch';
 
   @override
   String get max => 'max';
@@ -396,9 +417,6 @@ class SDe extends S {
   String get mission => 'Mission';
 
   @override
-  String get moveOutServerFuncBtns => 'Position der Server-Funktionsschaltfläche';
-
-  @override
   String get moveOutServerFuncBtnsHelp => 'Ein: kann unter jeder Karte auf der Registerkarte \"Server\" angezeigt werden. Aus: kann oben auf der Seite \"Serverdetails\" angezeigt werden.';
 
   @override
@@ -409,6 +427,9 @@ class SDe extends S {
 
   @override
   String get needRestart => 'App muss neugestartet werden';
+
+  @override
+  String get net => 'Netz';
 
   @override
   String get netViewType => 'Netzwerkansicht Typ';
@@ -524,6 +545,9 @@ class SDe extends S {
   String get pwd => 'Passwort';
 
   @override
+  String get read => 'Lesen';
+
+  @override
   String get reboot => 'Neustart';
 
   @override
@@ -565,10 +589,16 @@ class SDe extends S {
   String get second => 's';
 
   @override
+  String get sequence => 'Sequenz';
+
+  @override
   String get server => 'Server';
 
   @override
   String get serverDetailOrder => 'Reihenfolge der Widgets auf der Detailseite';
+
+  @override
+  String get serverFuncBtns => 'Server-Funktionsschaltflächen';
 
   @override
   String get serverOrder => 'Server-Bestellung';
@@ -647,7 +677,7 @@ class SDe extends S {
   String get suspendTip => 'Die Suspend-Funktion erfordert Root-Rechte und systemd-Unterstützung.';
 
   @override
-  String get syncTip => 'Nach der automatischen Synchronisierung kann es erforderlich sein, die App neu zu starten, damit bestimmte Änderungen wirksam werden.';
+  String get syncTip => 'Damit einige Änderungen wirksam werden, kann ein Neustart erforderlich sein.';
 
   @override
   String get system => 'Systeme';
@@ -656,7 +686,13 @@ class SDe extends S {
   String get tag => 'Tags';
 
   @override
+  String get temperature => 'Temperatur';
+
+  @override
   String get terminal => 'Terminal';
+
+  @override
+  String get test => 'Prüfung';
 
   @override
   String get theme => 'Themen';
@@ -750,8 +786,14 @@ class SDe extends S {
   String get watchNotPaired => 'Keine gekoppelte Apple Watch';
 
   @override
+  String get webdavSettingEmpty => 'Webdav-Einstellungen sind leer';
+
+  @override
   String get whenOpenApp => 'Beim Öffnen der App';
 
   @override
   String get willTakEeffectImmediately => 'Wird sofort angewendet';
+
+  @override
+  String get write => 'Schreiben';
 }

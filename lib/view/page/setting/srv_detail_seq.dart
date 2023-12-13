@@ -3,8 +3,8 @@ import 'package:toolbox/core/extension/context/locale.dart';
 import 'package:toolbox/data/res/store.dart';
 
 import '../../../core/extension/order.dart';
-import '../../widget/custom_appbar.dart';
-import '../../widget/round_rect_card.dart';
+import '../../widget/appbar.dart';
+import '../../widget/cardx.dart';
 
 class ServerDetailOrderPage extends StatefulWidget {
   const ServerDetailOrderPage({super.key});
@@ -26,7 +26,7 @@ class _ServerDetailOrderPageState extends State<ServerDetailOrderPage> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: CustomAppBar(
-        title: Text(l10n.serverOrder),
+        title: Text(l10n.serverDetailOrder),
       ),
       body: _buildBody(),
     );
@@ -53,7 +53,7 @@ class _ServerDetailOrderPageState extends State<ServerDetailOrderPage> {
     return ReorderableDelayedDragStartListener(
       key: ValueKey('$index'),
       index: index,
-      child: RoundRectCard(ListTile(
+      child: CardX(ListTile(
         title: Text(id),
         trailing: const Icon(Icons.drag_handle),
       )),

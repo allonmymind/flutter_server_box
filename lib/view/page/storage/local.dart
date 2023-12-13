@@ -5,13 +5,14 @@ import 'package:toolbox/core/extension/context/common.dart';
 import 'package:toolbox/core/extension/context/dialog.dart';
 import 'package:toolbox/core/extension/context/locale.dart';
 import 'package:toolbox/core/extension/context/snackbar.dart';
+import 'package:toolbox/core/utils/share.dart';
 import 'package:toolbox/data/model/server/server_private_info.dart';
 import 'package:toolbox/data/model/sftp/req.dart';
 import 'package:toolbox/data/res/misc.dart';
 import 'package:toolbox/data/res/provider.dart';
 import 'package:toolbox/view/widget/input_field.dart';
 import 'package:toolbox/view/widget/omit_start_text.dart';
-import 'package:toolbox/view/widget/round_rect_card.dart';
+import 'package:toolbox/view/widget/cardx.dart';
 
 import '../../../core/extension/numx.dart';
 import '../../../core/route.dart';
@@ -19,17 +20,17 @@ import '../../../core/utils/misc.dart';
 import '../../../data/model/app/path_with_prefix.dart';
 import '../../../data/res/path.dart';
 import '../../../data/res/ui.dart';
-import '../../widget/custom_appbar.dart';
+import '../../widget/appbar.dart';
 import '../../widget/fade_in.dart';
 
 class LocalStoragePage extends StatefulWidget {
   final bool isPickFile;
   final String? initDir;
   const LocalStoragePage({
-    Key? key,
+    super.key,
     required this.isPickFile,
     this.initDir,
-  }) : super(key: key);
+  });
 
   @override
   State<LocalStoragePage> createState() => _LocalStoragePageState();
@@ -77,7 +78,7 @@ class _LocalStoragePageState extends State<LocalStoragePage> {
       ),
       body: FadeIn(
         key: UniqueKey(),
-        child: _wrapPopScope(),
+        child: _buildBody(),
       ),
       bottomNavigationBar: SafeArea(child: _buildPath()),
     );
@@ -121,21 +122,6 @@ class _LocalStoragePageState extends State<LocalStoragePage> {
     );
   }
 
-  Widget _wrapPopScope() {
-    return WillPopScope(
-      onWillPop: () async {
-        if (_path == null) return true;
-        if (_path!.canBack) {
-          _path!.update('..');
-          setState(() {});
-          return false;
-        }
-        return true;
-      },
-      child: _buildBody(),
-    );
-  }
-
   Widget _buildBody() {
     if (_path == null) {
       return const Center(
@@ -153,7 +139,7 @@ class _LocalStoragePageState extends State<LocalStoragePage> {
         var stat = file.statSync();
         var isDir = stat.type == FileSystemEntityType.directory;
 
-        return RoundRectCard(ListTile(
+        return CardX(ListTile(
           leading: isDir
               ? const Icon(Icons.folder)
               : const Icon(Icons.insert_drive_file),
@@ -303,7 +289,7 @@ class _LocalStoragePageState extends State<LocalStoragePage> {
             leading: const Icon(Icons.open_in_new),
             title: Text(l10n.open),
             onTap: () {
-              shareFiles([file.absolute.path]);
+              Shares.files([file.absolute.path]);
             },
           ),
         ],

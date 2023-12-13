@@ -1,16 +1,14 @@
+import 'package:toolbox/data/model/server/server.dart';
 import 'package:toolbox/data/model/server/temp.dart';
 
 import '../model/server/cpu.dart';
 import '../model/server/disk.dart';
 import '../model/server/memory.dart';
 import '../model/server/net_speed.dart';
-import '../model/server/server_status.dart';
 import '../model/server/conn.dart';
 import '../model/server/system.dart';
 
-class InitStatus {
-  const InitStatus._();
-
+abstract final class InitStatus {
   static OneTimeCpuStatus get _initOneTimeCpuStatus => OneTimeCpuStatus(
         'cpu',
         0,
@@ -46,8 +44,8 @@ class InitStatus {
         uptime: '',
         disk: [
           const Disk(
-            path: '/',
-            loc: '/',
+            dev: '/',
+            mount: '/',
             usedPercent: 0,
             used: '0',
             size: '0',
@@ -63,5 +61,6 @@ class InitStatus {
         ),
         system: SystemType.linux,
         temps: Temperatures(),
+        diskIO: DiskIO([], []),
       );
 }

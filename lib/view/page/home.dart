@@ -8,6 +8,7 @@ import 'package:toolbox/core/channel/bg_run.dart';
 import 'package:toolbox/core/channel/home_widget.dart';
 import 'package:toolbox/core/extension/context/dialog.dart';
 import 'package:toolbox/core/extension/context/locale.dart';
+import 'package:toolbox/core/persistant_store.dart';
 import 'package:toolbox/core/utils/platform/auth.dart';
 import 'package:toolbox/core/utils/platform/base.dart';
 import 'package:toolbox/data/res/github_id.dart';
@@ -25,13 +26,13 @@ import '../../data/res/build_data.dart';
 import '../../data/res/misc.dart';
 import '../../data/res/ui.dart';
 import '../../data/res/url.dart';
-import '../widget/custom_appbar.dart';
-import '../widget/round_rect_card.dart';
+import '../widget/appbar.dart';
+import '../widget/cardx.dart';
 import '../widget/url_text.dart';
 import '../widget/value_notifier.dart';
 
 class HomePage extends StatefulWidget {
-  const HomePage({Key? key}) : super(key: key);
+  const HomePage({super.key});
 
   @override
   State<HomePage> createState() => _HomePageState();
@@ -92,11 +93,12 @@ class _HomePageState extends State<HomePage>
       case AppLifecycleState.paused:
         // Keep running in background on Android device
         if (isAndroid && Stores.setting.bgRun.fetch()) {
+          // Keep this if statement single
           if (Pros.app.moveBg) {
             BgRunMC.moveToBg();
           }
         } else {
-          Pros.server.setDisconnected();
+          //Pros.server.setDisconnected();
           Pros.server.stopAutoRefresh();
         }
         break;
@@ -111,7 +113,16 @@ class _HomePageState extends State<HomePage>
 
     return Scaffold(
       drawer: _buildDrawer(),
-      appBar: _buildAppBar(),
+      appBar: CustomAppBar(
+        title: const Text(BuildData.name),
+        actions: <Widget>[
+          IconButton(
+            icon: const Icon(Icons.developer_mode, size: 23),
+            tooltip: l10n.debug,
+            onPressed: () => AppRoute.debug().go(context),
+          ),
+        ],
+      ),
       body: PageView.builder(
         controller: _pageController,
         itemCount: AppTab.values.length,
@@ -126,37 +137,6 @@ class _HomePageState extends State<HomePage>
         listenable: _selectIndex,
         build: _buildBottomBar,
       ),
-    );
-  }
-
-  PreferredSizeWidget _buildAppBar() {
-    final actions = <Widget>[
-      IconButton(
-        icon: const Icon(Icons.developer_mode, size: 23),
-        tooltip: l10n.debug,
-        onPressed: () => AppRoute.debug().go(context),
-      ),
-    ];
-    if (isDesktop && _selectIndex.value == AppTab.server.index) {
-      actions.add(
-        ValueBuilder(
-          listenable: _selectIndex,
-          build: () {
-            if (_selectIndex.value != AppTab.server.index) {
-              return const SizedBox();
-            }
-            return IconButton(
-              icon: const Icon(Icons.refresh, size: 23),
-              tooltip: 'Refresh',
-              onPressed: () => Pros.server.refreshData(onlyFailed: true),
-            );
-          },
-        ),
-      );
-    }
-    return CustomAppBar(
-      title: const Text(BuildData.name),
-      actions: actions,
     );
   }
 
@@ -184,6 +164,11 @@ class _HomePageState extends State<HomePage>
           icon: const Icon(Icons.cloud_outlined),
           label: l10n.server,
           selectedIcon: const Icon(Icons.cloud),
+        ),
+        const NavigationDestination(
+          icon: Icon(Icons.terminal_outlined),
+          label: 'SSH',
+          selectedIcon: Icon(Icons.terminal),
         ),
         NavigationDestination(
           icon: const Icon(Icons.snippet_folder_outlined),
@@ -256,7 +241,7 @@ class _HomePageState extends State<HomePage>
             title: Text('${l10n.about} & ${l10n.feedback}'),
             onTap: _showAboutDialog,
           )
-        ].map((e) => RoundRectCard(e)).toList(),
+        ].map((e) => CardX(e)).toList(),
       ),
     );
   }
@@ -357,7 +342,7 @@ class _HomePageState extends State<HomePage>
   }
 
   Future<void> _onLongPressSetting() async {
-    final map = Stores.setting.toJson();
+    final map = Stores.setting.box.toJson(includeInternal: false);
     final keys = map.keys;
 
     /// Encode [map] to String with indent `\t`

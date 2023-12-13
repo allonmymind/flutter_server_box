@@ -9,11 +9,11 @@ import 'package:toolbox/view/widget/input_field.dart';
 
 import '../../../data/model/server/snippet.dart';
 import '../../../data/res/ui.dart';
-import '../../widget/custom_appbar.dart';
+import '../../widget/appbar.dart';
 import '../../widget/tag.dart';
 
 class SnippetEditPage extends StatefulWidget {
-  const SnippetEditPage({Key? key, this.snippet}) : super(key: key);
+  const SnippetEditPage({super.key, this.snippet});
 
   final Snippet? snippet;
 

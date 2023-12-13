@@ -1,12 +1,24 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 
 import '../../core/persistant_store.dart';
 
 class StoreSwitch extends StatelessWidget {
   final StorePropertyBase<bool> prop;
-  final void Function(bool)? func;
 
-  const StoreSwitch({super.key, required this.prop, this.func});
+  /// Exec before make change, after validator.
+  final FutureOr<void> Function(bool)? callback;
+
+  /// If return false, the switch will not change.
+  final bool Function(bool)? validator;
+
+  const StoreSwitch({
+    super.key,
+    required this.prop,
+    this.callback,
+    this.validator,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -15,8 +27,9 @@ class StoreSwitch extends StatelessWidget {
       builder: (context, bool value, widget) {
         return Switch(
           value: value,
-          onChanged: (value) {
-            func?.call(value);
+          onChanged: (value) async {
+            if (validator != null && validator?.call(value) != true) return;
+            await callback?.call(value);
             prop.put(value);
           },
         );

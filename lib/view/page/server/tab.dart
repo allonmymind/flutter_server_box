@@ -9,26 +9,27 @@ import 'package:toolbox/core/extension/context/locale.dart';
 import 'package:toolbox/core/extension/media_queryx.dart';
 import 'package:toolbox/core/extension/ssh_client.dart';
 import 'package:toolbox/core/utils/platform/base.dart';
+import 'package:toolbox/core/utils/share.dart';
 import 'package:toolbox/data/model/app/shell_func.dart';
+import 'package:toolbox/data/model/server/try_limiter.dart';
 import 'package:toolbox/data/res/provider.dart';
 import 'package:toolbox/data/res/store.dart';
+import 'package:toolbox/view/widget/value_notifier.dart';
 
 import '../../../core/route.dart';
-import '../../../core/utils/misc.dart';
 import '../../../data/model/app/net_view.dart';
 import '../../../data/model/server/disk.dart';
 import '../../../data/model/server/server.dart';
 import '../../../data/model/server/server_private_info.dart';
-import '../../../data/model/server/server_status.dart';
 import '../../../data/provider/server.dart';
 import '../../../data/res/color.dart';
 import '../../../data/res/ui.dart';
-import '../../widget/round_rect_card.dart';
+import '../../widget/cardx.dart';
 import '../../widget/server_func_btns.dart';
 import '../../widget/tag.dart';
 
 class ServerPage extends StatefulWidget {
-  const ServerPage({Key? key}) : super(key: key);
+  const ServerPage({super.key});
 
   @override
   _ServerPageState createState() => _ServerPageState();
@@ -38,7 +39,7 @@ class _ServerPageState extends State<ServerPage>
     with AutomaticKeepAliveClientMixin, AfterLayoutMixin {
   late MediaQueryData _media;
 
-  final _flipedCardIds = <String>{};
+  final _cardsStatus = <String, _CardNotifier>{};
 
   String? _tag;
   bool _useDoubleColumn = false;
@@ -82,17 +83,17 @@ class _ServerPageState extends State<ServerPage>
         final filtered = _filterServers(pro);
         if (_useDoubleColumn &&
             Stores.setting.doubleColumnServersPage.fetch()) {
-          return _buildBodyMedium(pro);
+          return _buildBodyMedium(pro: pro, filtered: filtered);
         }
         return _buildBodySmall(provider: pro, filtered: filtered);
       },
     );
 
     // Desktop doesn't support pull to refresh
-    if (isDesktop) {
-      return child;
-    }
+    if (isDesktop) return child;
+
     return RefreshIndicator(
+      key: ServerProvider.refreshKey,
       onRefresh: () async => await Pros.server.refreshData(onlyFailed: true),
       child: child,
     );
@@ -132,8 +133,10 @@ class _ServerPageState extends State<ServerPage>
     );
   }
 
-  Widget _buildBodyMedium(ServerProvider pro) {
-    final filtered = _filterServers(pro);
+  Widget _buildBodyMedium({
+    required ServerProvider pro,
+    required List<String> filtered,
+  }) {
     final left = filtered.where((e) => filtered.indexOf(e) % 2 == 0).toList();
     final right = filtered.where((e) => filtered.indexOf(e) % 2 == 1).toList();
     return Column(
@@ -168,37 +171,35 @@ class _ServerPageState extends State<ServerPage>
     );
   }
 
-  Widget _buildEachServerCard(Server? si) {
-    if (si == null) {
+  Widget _buildEachServerCard(Server? srv) {
+    if (srv == null) {
       return UIs.placeholder;
     }
 
-    return RoundRectCard(
-      key: Key(si.spi.id + (_tag ?? '')),
+    return CardX(
+      key: Key(srv.spi.id + (_tag ?? '')),
       InkWell(
         onTap: () {
-          if (si.state.canViewDetails) {
-            AppRoute.serverDetail(spi: si.spi).go(context);
-          } else if (si.status.failedInfo != null) {
-            _showFailReason(si.status);
+          if (srv.canViewDetails) {
+            AppRoute.serverDetail(spi: srv.spi).go(context);
+          } else if (srv.status.err != null) {
+            _showFailReason(srv.status);
           }
         },
         onLongPress: () {
-          if (si.state == ServerState.finished) {
-            setState(() {
-              if (_flipedCardIds.contains(si.spi.id)) {
-                _flipedCardIds.remove(si.spi.id);
-              } else {
-                _flipedCardIds.add(si.spi.id);
-              }
-            });
+          if (srv.state == ServerState.finished) {
+            final id = srv.spi.id;
+            final cardStatus = getCardNoti(id);
+            cardStatus.value = cardStatus.value.copyWith(
+              flip: !cardStatus.value.flip,
+            );
           } else {
-            AppRoute.serverEdit(spi: si.spi).go(context);
+            AppRoute.serverEdit(spi: srv.spi).go(context);
           }
         },
         child: Padding(
           padding: const EdgeInsets.all(13),
-          child: _buildRealServerCard(si),
+          child: _buildRealServerCard(srv),
         ),
       ),
     );
@@ -207,34 +208,42 @@ class _ServerPageState extends State<ServerPage>
   Widget _wrapWithSizedbox(Widget child) {
     return SizedBox(
       width: _useDoubleColumn
-          ? (_media.size.width - 146) / 10
-          : (_media.size.width - 74) / 5,
+          ? (_media.size.width - 137) / 8
+          : (_media.size.width - 74) / 4,
       child: child,
     );
   }
 
   Widget _buildRealServerCard(Server srv) {
+    final id = srv.spi.id;
+    final cardStatus = getCardNoti(id);
     final title = _buildServerCardTitle(srv.status, srv.state, srv.spi);
-    final List<Widget> children = [title];
 
-    if (srv.state == ServerState.finished) {
-      if (_flipedCardIds.contains(srv.spi.id)) {
-        children.addAll(_buildFlipedCard(srv));
-      } else {
-        children.addAll(_buildNormalCard(srv.status, srv.spi));
-      }
-    }
-
-    return AnimatedContainer(
-      duration: const Duration(milliseconds: 377),
-      curve: Curves.fastEaseInToSlowEaseOut,
-      height: _calcCardHeight(srv.state, srv.spi.id),
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        mainAxisAlignment: MainAxisAlignment.start,
-        crossAxisAlignment: CrossAxisAlignment.center,
-        children: children,
-      ),
+    return ValueBuilder(
+      listenable: cardStatus,
+      build: () {
+        late final List<Widget> children;
+        if (srv.state == ServerState.finished) {
+          if (cardStatus.value.flip) {
+            children = [title, ..._buildFlipedCard(srv)];
+          } else {
+            children = [title, ..._buildNormalCard(srv.status, srv.spi)];
+          }
+        } else {
+          children = [title];
+        }
+        return AnimatedContainer(
+          duration: const Duration(milliseconds: 377),
+          curve: Curves.fastEaseInToSlowEaseOut,
+          height: _calcCardHeight(srv.state, cardStatus.value.flip),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            mainAxisAlignment: MainAxisAlignment.start,
+            crossAxisAlignment: CrossAxisAlignment.center,
+            children: children,
+          ),
+        );
+      },
     );
   }
 
@@ -247,12 +256,12 @@ class _ServerPageState extends State<ServerPage>
           IconButton(
             onPressed: () => _askFor(
               func: () async {
-                if (Stores.first.showSuspendTip.fetch()) {
+                if (Stores.setting.showSuspendTip.fetch()) {
                   await context.showRoundDialog(
                     title: Text(l10n.attention),
                     child: Text(l10n.suspendTip),
                   );
-                  Stores.first.showSuspendTip.put(false);
+                  Stores.setting.showSuspendTip.put(false);
                 }
                 srv.client?.execWithPwd(
                   ShellFunc.suspend.exec,
@@ -300,23 +309,16 @@ class _ServerPageState extends State<ServerPage>
   }
 
   List<Widget> _buildNormalCard(ServerStatus ss, ServerPrivateInfo spi) {
-    final rootDisk = findRootDisk(ss.disk);
     return [
       UIs.height13,
-      Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 13),
-        child: Row(
-          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-          children: [
-            _wrapWithSizedbox(_buildPercentCircle(ss.cpu.usedPercent())),
-            _wrapWithSizedbox(_buildPercentCircle(ss.mem.usedPercent * 100)),
-            _wrapWithSizedbox(_buildNet(ss)),
-            _wrapWithSizedbox(_buildIOData(
-              'Total:\n${rootDisk?.size}',
-              'Used:\n${rootDisk?.usedPercent}%',
-            )),
-          ],
-        ),
+      Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        children: [
+          _wrapWithSizedbox(_buildPercentCircle(ss.cpu.usedPercent())),
+          _wrapWithSizedbox(_buildPercentCircle(ss.mem.usedPercent * 100)),
+          _wrapWithSizedbox(_buildNet(ss, spi.id)),
+          _wrapWithSizedbox(_buildDisk(ss, spi.id)),
+        ],
       ),
       UIs.height13,
       if (Stores.setting.moveOutServerTabFuncBtns.fetch() &&
@@ -335,7 +337,22 @@ class _ServerPageState extends State<ServerPage>
     ServerPrivateInfo spi,
   ) {
     Widget? rightCorner;
-    if (!(spi.autoConnect ?? true) && cs == ServerState.disconnected) {
+    if (cs == ServerState.failed) {
+      rightCorner = InkWell(
+        onTap: () {
+          TryLimiter.reset(spi.id);
+          Pros.server.refreshData(spi: spi);
+        },
+        child: const Padding(
+          padding: EdgeInsets.symmetric(horizontal: 7),
+          child: Icon(
+            Icons.refresh,
+            size: 21,
+            color: Colors.grey,
+          ),
+        ),
+      );
+    } else if (!(spi.autoConnect ?? true) && cs == ServerState.disconnected) {
       rightCorner = InkWell(
         onTap: () => Pros.server.refreshData(spi: spi),
         child: const Padding(
@@ -360,7 +377,6 @@ class _ServerPageState extends State<ServerPage>
               Text(
                 spi.name,
                 style: UIs.textSize13Bold,
-                textScaleFactor: 1.0,
               ),
               const Icon(
                 Icons.keyboard_arrow_right,
@@ -385,22 +401,20 @@ class _ServerPageState extends State<ServerPage>
       cs,
       ss.temps.first,
       ss.uptime,
-      ss.failedInfo,
+      ss.err,
     );
-    if (cs == ServerState.failed && ss.failedInfo != null) {
+    if (cs == ServerState.failed && ss.err != null) {
       return GestureDetector(
         onTap: () => _showFailReason(ss),
         child: Text(
           l10n.viewErr,
           style: UIs.textSize11Grey,
-          textScaleFactor: 1.0,
         ),
       );
     }
     return Text(
       topRightStr,
       style: UIs.textSize11Grey,
-      textScaleFactor: 1.0,
     );
   }
 
@@ -408,48 +422,94 @@ class _ServerPageState extends State<ServerPage>
     context.showRoundDialog(
       title: Text(l10n.error),
       child: SingleChildScrollView(
-        child: Text(ss.failedInfo ?? l10n.unknownError),
+        child: Text(ss.err ?? l10n.unknownError),
       ),
       actions: [
         TextButton(
-          onPressed: () => copy2Clipboard(ss.failedInfo!),
+          onPressed: () => Shares.copy(ss.err!),
           child: Text(l10n.copy),
         )
       ],
     );
   }
 
-  Widget _buildNet(ServerStatus ss) {
-    return ValueListenableBuilder<NetViewType>(
-      valueListenable: Stores.setting.netViewType.listenable(),
-      builder: (_, val, __) {
-        final data = val.build(ss);
+  Widget _buildDisk(ServerStatus ss, String id) {
+    final cardNoti = getCardNoti(id);
+    return ValueBuilder(
+      listenable: cardNoti,
+      build: () {
+        final rootDisk = findRootDisk(ss.disk);
+        final isSpeed = cardNoti.value.diskIO ??
+            !Stores.setting.serverTabPreferDiskAmount.fetch();
+
+        final (r, w) = ss.diskIO.getAllSpeed();
+
         return AnimatedSwitcher(
-          duration: const Duration(milliseconds: 177),
-          child: _buildIOData(data.up, data.down),
+          duration: const Duration(milliseconds: 377),
+          transitionBuilder: (Widget child, Animation<double> animation) {
+            return FadeTransition(opacity: animation, child: child);
+          },
+          child: _buildIOData(
+            isSpeed ? '${l10n.read}:\n$r' : 'Total:\n${rootDisk?.size}',
+            isSpeed ? '${l10n.write}:\n$w' : 'Used:\n${rootDisk?.usedPercent}%',
+            onTap: () {
+              cardNoti.value = cardNoti.value.copyWith(diskIO: !isSpeed);
+            },
+            key: ValueKey(isSpeed),
+          ),
         );
       },
     );
   }
 
-  Widget _buildIOData(String up, String down) {
-    return Column(
+  Widget _buildNet(ServerStatus ss, String id) {
+    final cardNoti = getCardNoti(id);
+    final type = cardNoti.value.net ?? Stores.setting.netViewType.fetch();
+    final (a, b) = type.build(ss);
+    return AnimatedSwitcher(
+      duration: const Duration(milliseconds: 377),
+      transitionBuilder: (Widget child, Animation<double> animation) {
+        return FadeTransition(opacity: animation, child: child);
+      },
+      child: _buildIOData(
+        a,
+        b,
+        onTap: () {
+          cardNoti.value = cardNoti.value.copyWith(net: type.next);
+        },
+        key: ValueKey(type),
+      ),
+    );
+  }
+
+  Widget _buildIOData(
+    String up,
+    String down, {
+    void Function()? onTap,
+    Key? key,
+  }) {
+    final child = Column(
       children: [
         const SizedBox(height: 5),
         Text(
           up,
           style: UIs.textSize9Grey,
           textAlign: TextAlign.center,
-          textScaleFactor: 1.0,
         ),
         const SizedBox(height: 3),
         Text(
           down,
           style: UIs.textSize9Grey,
           textAlign: TextAlign.center,
-          textScaleFactor: 1.0,
         )
       ],
+    );
+    if (onTap == null) return child;
+    return IconButton(
+      key: key,
+      padding: const EdgeInsets.symmetric(horizontal: 3),
+      onPressed: onTap,
+      icon: child,
     );
   }
 
@@ -474,7 +534,6 @@ class _ServerPageState extends State<ServerPage>
               '${percent.toStringAsFixed(1)}%',
               textAlign: TextAlign.center,
               style: UIs.textSize11,
-              textScaleFactor: 1.0,
             ),
           ),
         ),
@@ -523,18 +582,15 @@ class _ServerPageState extends State<ServerPage>
         if (failedInfo == null) {
           return l10n.serverTabFailed;
         }
-        if (failedInfo.contains('encypted')) {
-          return l10n.serverTabPlzSave;
-        }
         return failedInfo;
     }
   }
 
-  double _calcCardHeight(ServerState cs, String id) {
+  double _calcCardHeight(ServerState cs, bool flip) {
     if (cs != ServerState.finished) {
       return 23.0;
     }
-    if (_flipedCardIds.contains(id)) {
+    if (flip) {
       return 80.0;
     }
     if (Stores.setting.moveOutServerTabFuncBtns.fetch() &&
@@ -562,6 +618,37 @@ class _ServerPageState extends State<ServerPage>
           child: Text(l10n.ok),
         ),
       ],
+    );
+  }
+
+  _CardNotifier getCardNoti(String id) => _cardsStatus.putIfAbsent(
+        id,
+        () => _CardNotifier(const _CardStatus()),
+      );
+}
+
+typedef _CardNotifier = ValueNotifier<_CardStatus>;
+
+class _CardStatus {
+  final bool flip;
+  final bool? diskIO;
+  final NetViewType? net;
+
+  const _CardStatus({
+    this.flip = false,
+    this.diskIO,
+    this.net,
+  });
+
+  _CardStatus copyWith({
+    bool? flip,
+    bool? diskIO,
+    NetViewType? net,
+  }) {
+    return _CardStatus(
+      flip: flip ?? this.flip,
+      diskIO: diskIO ?? this.diskIO,
+      net: net ?? this.net,
     );
   }
 }

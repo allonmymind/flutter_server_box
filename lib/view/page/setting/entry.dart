@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_highlight/theme_map.dart';
 import 'package:flutter_gen/gen_l10n/l10n.dart';
 import 'package:provider/provider.dart';
+import 'package:toolbox/core/build_mode.dart';
 import 'package:toolbox/core/extension/colorx.dart';
 import 'package:toolbox/core/extension/context/common.dart';
 import 'package:toolbox/core/extension/context/locale.dart';
@@ -12,8 +13,8 @@ import 'package:toolbox/core/extension/locale.dart';
 import 'package:toolbox/core/extension/context/dialog.dart';
 import 'package:toolbox/core/extension/stringx.dart';
 import 'package:toolbox/core/utils/platform/base.dart';
-import 'package:toolbox/core/utils/rebuild.dart';
 import 'package:toolbox/data/res/provider.dart';
+import 'package:toolbox/data/res/rebuild.dart';
 import 'package:toolbox/data/res/store.dart';
 import 'package:toolbox/view/widget/expand_tile.dart';
 
@@ -28,14 +29,14 @@ import '../../../data/res/color.dart';
 import '../../../data/res/path.dart';
 import '../../../data/res/ui.dart';
 import '../../widget/color_picker.dart';
-import '../../widget/custom_appbar.dart';
+import '../../widget/appbar.dart';
 import '../../widget/input_field.dart';
-import '../../widget/round_rect_card.dart';
+import '../../widget/cardx.dart';
 import '../../widget/store_switch.dart';
 import '../../widget/value_notifier.dart';
 
 class SettingPage extends StatefulWidget {
-  const SettingPage({Key? key}) : super(key: key);
+  const SettingPage({super.key});
 
   @override
   _SettingPageState createState() => _SettingPageState();
@@ -123,25 +124,28 @@ class _SettingPageState extends State<SettingPage> {
               ),
 
               /// Only for debug, this will cause the app to crash
-              // onDoubleTap: () => context.showRoundDialog(
-              //   title: Text(l10n.attention),
-              //   child: Text(l10n.sureDelete(l10n.all)),
-              //   actions: [
-              //     TextButton(
-              //       onPressed: () {
-              //         Stores.docker.box.deleteFromDisk();
-              //         Stores.server.box.deleteFromDisk();
-              //         Stores.setting.box.deleteFromDisk();
-              //         Stores.history.box.deleteFromDisk();
-              //         Stores.snippet.box.deleteFromDisk();
-              //         Stores.key.box.deleteFromDisk();
-              //         exit(0);
-              //       },
-              //       child: Text(l10n.ok,
-              //           style: const TextStyle(color: Colors.red)),
-              //     ),
-              //   ],
-              // ),
+              onDoubleTap: () => context.showRoundDialog(
+                title: Text(l10n.attention),
+                child: Text(l10n.askContinue(
+                  'Delete all data from disk, and exit the app?',
+                )),
+                actions: [
+                  TextButton(
+                    onPressed: () {
+                      if (!BuildMode.isDebug) return;
+                      Stores.docker.box.deleteFromDisk();
+                      Stores.server.box.deleteFromDisk();
+                      Stores.setting.box.deleteFromDisk();
+                      Stores.history.box.deleteFromDisk();
+                      Stores.snippet.box.deleteFromDisk();
+                      Stores.key.box.deleteFromDisk();
+                      exit(0);
+                    },
+                    child: Text(l10n.ok,
+                        style: const TextStyle(color: Colors.red)),
+                  ),
+                ],
+              ),
               child: const Icon(Icons.delete),
             ),
           ),
@@ -160,8 +164,8 @@ class _SettingPageState extends State<SettingPage> {
           _buildSFTP(),
           _buildTitle(l10n.editor),
           _buildEditor(),
-          _buildTitle(l10n.fullScreen),
-          _buildFullScreen(),
+          if (isDesktop) _buildTitle(l10n.fullScreen),
+          if (isDesktop) _buildFullScreen(),
           const SizedBox(height: 37),
         ],
       ),
@@ -194,7 +198,7 @@ class _SettingPageState extends State<SettingPage> {
       children.add(_buildPlatformSetting());
     }
     return Column(
-      children: children.map((e) => RoundRectCard(e)).toList(),
+      children: children.map((e) => CardX(e)).toList(),
     );
   }
 
@@ -204,22 +208,22 @@ class _SettingPageState extends State<SettingPage> {
         _buildFullScreenSwitch(),
         _buildFullScreenJitter(),
         _buildFulScreenRotateQuarter(),
-      ].map((e) => RoundRectCard(e)).toList(),
+      ].map((e) => CardX(e)).toList(),
     );
   }
 
   Widget _buildServer() {
     return Column(
       children: [
-        _buildMoveOutServerFuncBtns(),
-        _buildServerOrder(),
+        _buildServerFuncBtns(),
+        _buildSequence(),
         _buildNetViewType(),
         _buildUpdateInterval(),
         _buildMaxRetry(),
         //_buildDiskIgnorePath(),
         _buildDeleteServers(),
         //if (isDesktop) _buildDoubleColumnServersPage(),
-      ].map((e) => RoundRectCard(e)).toList(),
+      ].map((e) => CardX(e)).toList(),
     );
   }
 
@@ -232,7 +236,7 @@ class _SettingPageState extends State<SettingPage> {
         // Use hardware keyboard on desktop, so there is no need to set it
         if (isMobile) _buildKeyboardType(),
         _buildSSHVirtKeys(),
-      ].map((e) => RoundRectCard(e)).toList(),
+      ].map((e) => CardX(e)).toList(),
     );
   }
 
@@ -243,7 +247,7 @@ class _SettingPageState extends State<SettingPage> {
         _buildEditorTheme(),
         _buildEditorDarkTheme(),
         _buildEditorHighlight(),
-      ].map((e) => RoundRectCard(e)).toList(),
+      ].map((e) => CardX(e)).toList(),
     );
   }
 
@@ -263,7 +267,7 @@ class _SettingPageState extends State<SettingPage> {
         return ListTile(
           title: Text(l10n.autoCheckUpdate),
           subtitle: Text(display, style: UIs.textGrey),
-          onTap: () => doUpdate(ctx, force: true),
+          onTap: () => doUpdate(ctx),
           trailing: StoreSwitch(prop: _setting.autoCheckAppUpdate),
         );
       },
@@ -339,7 +343,7 @@ class _SettingPageState extends State<SettingPage> {
                   title: Text(l10n.followSystem),
                   trailing: StoreSwitch(
                     prop: _setting.useSystemPrimaryColor,
-                    func: (_) => setState(() {}),
+                    callback: (_) => setState(() {}),
                   ),
                 )
             ];
@@ -480,7 +484,14 @@ class _SettingPageState extends State<SettingPage> {
         .toList();
     // Issue #57
     final len = ThemeMode.values.length;
+
+    /// Add AMOLED theme
     items.add(PopupMenuItem(value: len, child: Text(_buildThemeModeStr(len))));
+
+    /// Add AUTO-AMOLED theme
+    items.add(
+      PopupMenuItem(value: len + 1, child: Text(_buildThemeModeStr(len + 1))),
+    );
 
     return ListTile(
       title: Text(
@@ -518,6 +529,8 @@ class _SettingPageState extends State<SettingPage> {
         return l10n.dark;
       case 3:
         return 'AMOLED';
+      case 4:
+        return '${l10n.auto} AMOLED';
       default:
         return l10n.auto;
     }
@@ -738,7 +751,7 @@ class _SettingPageState extends State<SettingPage> {
       title: Text(l10n.fullScreen),
       trailing: StoreSwitch(
         prop: _setting.fullScreen,
-        func: (_) => RebuildNodes.app.rebuild(),
+        callback: (_) => RebuildNodes.app.rebuild(),
       ),
     );
   }
@@ -848,7 +861,7 @@ class _SettingPageState extends State<SettingPage> {
       children: [
         _buildSftpRmrDir(),
         _buildSftpOpenLastPath(),
-      ].map((e) => RoundRectCard(e)).toList(),
+      ].map((e) => CardX(e)).toList(),
     );
   }
 
@@ -896,49 +909,69 @@ class _SettingPageState extends State<SettingPage> {
       title: Text(l10n.deleteServers),
       trailing: const Icon(Icons.delete_forever),
       onTap: () async {
-        final all = Stores.server.box.keys.map(
-          (e) => TextButton(
-            onPressed: () => context.showRoundDialog(
-              title: Text(l10n.attention),
-              child: Text(l10n.askContinue(
-                '${l10n.delete} ${l10n.server}($e)',
-              )),
-              actions: [
-                TextButton(
-                  onPressed: () => Pros.server.delServer(e),
-                  child: Text(l10n.ok),
-                )
-              ],
-            ),
-            child: Text(e),
-          ),
-        );
         context.showRoundDialog<List<String>>(
           title: Text(l10n.choose),
           child: SingleChildScrollView(
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: all.toList(),
-            ),
+            child: StatefulBuilder(builder: (ctx, setState) {
+              final all = Stores.server.box.keys.map(
+                (e) => TextButton(
+                  onPressed: () => context.showRoundDialog(
+                    title: Text(l10n.attention),
+                    child: Text(l10n.askContinue(
+                      '${l10n.delete} ${l10n.server}($e)',
+                    )),
+                    actions: [
+                      TextButton(
+                        onPressed: () {
+                          Pros.server.delServer(e);
+                          ctx.pop();
+                          setState(() {});
+                        },
+                        child: Text(l10n.ok),
+                      )
+                    ],
+                  ),
+                  child: Text(e),
+                ),
+              );
+              return Column(
+                mainAxisSize: MainAxisSize.min,
+                children: all.toList(),
+              );
+            }),
           ),
         );
       },
     );
   }
 
-  Widget _buildMoveOutServerFuncBtns() {
-    return ListTile(
-      title: Text(l10n.moveOutServerFuncBtns),
-      subtitle: Text(l10n.moveOutServerFuncBtnsHelp, style: UIs.textSize13Grey),
-      trailing: StoreSwitch(prop: _setting.moveOutServerTabFuncBtns),
+  Widget _buildServerFuncBtns() {
+    return ExpandTile(
+      title: Text(l10n.serverFuncBtns),
+      subtitle: Text(
+        '${l10n.location} / ${l10n.displayName}',
+        style: UIs.textSize13Grey,
+      ),
+      children: [
+        ListTile(
+          title: Text(l10n.location),
+          subtitle:
+              Text(l10n.moveOutServerFuncBtnsHelp, style: UIs.textSize13Grey),
+          trailing: StoreSwitch(prop: _setting.moveOutServerTabFuncBtns),
+        ),
+        ListTile(
+          title: Text(l10n.displayName),
+          trailing: StoreSwitch(prop: _setting.serverFuncBtnsDisplayName),
+        ),
+      ],
     );
   }
 
-  Widget _buildServerOrder() {
+  Widget _buildSequence() {
     return ExpandTile(
-      title: Text(l10n.serverOrder),
+      title: Text(l10n.sequence),
       subtitle: Text(
-        '${l10n.serverOrder} / ${l10n.serverDetailOrder}',
+        '${l10n.serverOrder} / ${l10n.serverDetailOrder} ...',
         style: UIs.textGrey,
       ),
       children: [

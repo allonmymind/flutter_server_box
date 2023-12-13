@@ -6,12 +6,12 @@ import 'package:toolbox/core/utils/platform/base.dart';
 import 'package:toolbox/data/model/ssh/virtual_key.dart';
 import 'package:toolbox/data/res/store.dart';
 import 'package:toolbox/data/res/ui.dart';
-import 'package:toolbox/view/widget/round_rect_card.dart';
+import 'package:toolbox/view/widget/cardx.dart';
 
-import '../../widget/custom_appbar.dart';
+import '../../widget/appbar.dart';
 
 class SSHVirtKeySettingPage extends StatefulWidget {
-  const SSHVirtKeySettingPage({Key? key}) : super(key: key);
+  const SSHVirtKeySettingPage({super.key});
 
   @override
   _SSHVirtKeySettingPageState createState() => _SSHVirtKeySettingPageState();
@@ -41,7 +41,7 @@ class _SSHVirtKeySettingPageState extends State<SSHVirtKeySettingPage> {
       itemBuilder: (_, idx) {
         final key = allKeys[idx];
         final help = key.help;
-        return RoundRectCard(
+        return CardX(
           key: ValueKey(idx),
           ListTile(
             title: _buildTitle(key),

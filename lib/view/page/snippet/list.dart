@@ -6,17 +6,16 @@ import 'package:toolbox/core/extension/order.dart';
 import 'package:toolbox/data/res/provider.dart';
 import 'package:toolbox/data/res/store.dart';
 
-import '../../../core/utils/misc.dart';
 import '../../../data/model/server/server.dart';
 import '../../../data/model/server/snippet.dart';
 import '../../../data/res/ui.dart';
 import '../../widget/tag.dart';
 import '/core/route.dart';
 import '/data/provider/snippet.dart';
-import '/view/widget/round_rect_card.dart';
+import '../../widget/cardx.dart';
 
 class SnippetListPage extends StatefulWidget {
-  const SnippetListPage({Key? key}) : super(key: key);
+  const SnippetListPage({super.key});
 
   @override
   _SnippetListPageState createState() => _SnippetListPageState();
@@ -94,7 +93,7 @@ class _SnippetListPageState extends State<SnippetListPage> {
   }
 
   Widget _buildSnippetItem(Snippet snippet) {
-    return RoundRectCard(
+    return CardX(
       ListTile(
         contentPadding: const EdgeInsets.only(left: 23, right: 17),
         title: Text(
@@ -135,23 +134,9 @@ class _SnippetListPageState extends State<SnippetListPage> {
       return;
     }
     final ids = servers.map((e) => e.spi.id).toList();
-    final results = await Pros.server.runSnippetsMulti(ids, [snippet]);
+    final results = await Pros.server.runSnippetsMulti(ids, snippet);
     if (results.isNotEmpty) {
-      // SERVER_NAME: RESULT
-      final result = Map.fromIterables(
-        ids,
-        results,
-      ).entries.map((e) => '${e.key}:\n${e.value}').join('\n');
-      context.showRoundDialog(
-        title: Text(l10n.result),
-        child: Text(result),
-        actions: [
-          TextButton(
-            onPressed: () => copy2Clipboard(result),
-            child: Text(l10n.copy),
-          )
-        ],
-      );
+      AppRoute.snippetResult(results: results).go(context);
     }
   }
 }

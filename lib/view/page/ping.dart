@@ -6,7 +6,7 @@ import 'package:toolbox/core/extension/context/dialog.dart';
 import 'package:toolbox/core/extension/context/locale.dart';
 import 'package:toolbox/core/extension/context/snackbar.dart';
 import 'package:toolbox/core/extension/uint8list.dart';
-import 'package:toolbox/core/utils/misc.dart';
+import 'package:toolbox/core/utils/share.dart';
 import 'package:toolbox/data/res/provider.dart';
 import 'package:toolbox/view/widget/value_notifier.dart';
 
@@ -14,13 +14,13 @@ import '../../data/model/server/ping_result.dart';
 import '../../data/res/color.dart';
 import '../../data/res/ui.dart';
 import '../widget/input_field.dart';
-import '../widget/round_rect_card.dart';
+import '../widget/cardx.dart';
 
 /// Only permit ipv4 / ipv6 / domain chars
 final targetReg = RegExp(r'[a-zA-Z0-9\.-_:]+');
 
 class PingPage extends StatefulWidget {
-  const PingPage({Key? key}) : super(key: key);
+  const PingPage({super.key});
 
   @override
   _PingPageState createState() => _PingPageState();
@@ -89,7 +89,7 @@ class _PingPageState extends State<PingPage>
         child: Text(e.toString()),
         actions: [
           TextButton(
-            onPressed: () => copy2Clipboard(e.toString()),
+            onPressed: () => Shares.copy(e.toString()),
             child: Text(l10n.copy),
           ),
         ],
@@ -103,7 +103,7 @@ class _PingPageState extends State<PingPage>
       return Center(
         child: Text(
           l10n.noResult,
-          style: const TextStyle(fontSize: 18),
+          style: const TextStyle(fontSize: 15),
         ),
       );
     }
@@ -118,7 +118,7 @@ class _PingPageState extends State<PingPage>
   Widget _buildResultItem(PingResult result) {
     final unknown = l10n.unknown;
     final ms = l10n.ms;
-    return RoundRectCard(
+    return CardX(
       ListTile(
         contentPadding: const EdgeInsets.symmetric(vertical: 7, horizontal: 17),
         title: Text(

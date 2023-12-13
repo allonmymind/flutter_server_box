@@ -49,6 +49,9 @@ class SEn extends S {
   String get auto => 'Auto';
 
   @override
+  String get autoBackupConflict => 'Only one automatic backup can be turned on at the same time.';
+
+  @override
   String get autoCheckUpdate => 'Auto check update';
 
   @override
@@ -142,6 +145,9 @@ class SEn extends S {
   String get delete => 'Delete';
 
   @override
+  String get deleteScripts => 'Delete server scripts at the same time';
+
+  @override
   String get deleteServers => 'Batch delete servers';
 
   @override
@@ -154,7 +160,13 @@ class SEn extends S {
   String get disconnected => 'Disconnected';
 
   @override
+  String get disk => 'Disk';
+
+  @override
   String get diskIgnorePath => 'Ignore path for disk';
+
+  @override
+  String get displayName => 'Display name';
 
   @override
   String dl2Local(Object fileName) {
@@ -337,6 +349,9 @@ class SEn extends S {
   String get isBusy => 'Is busy now';
 
   @override
+  String get jumpServer => 'Jump server';
+
+  @override
   String get keepForeground => 'Keep app foreground!';
 
   @override
@@ -370,6 +385,9 @@ class SEn extends S {
   String get loadingFiles => 'Loading files...';
 
   @override
+  String get location => 'Location';
+
+  @override
   String get log => 'Log';
 
   @override
@@ -379,6 +397,9 @@ class SEn extends S {
   String madeWithLove(Object myGithub) {
     return 'Made with ❤️ by $myGithub';
   }
+
+  @override
+  String get manual => 'Manual';
 
   @override
   String get max => 'max';
@@ -396,9 +417,6 @@ class SEn extends S {
   String get mission => 'Mission';
 
   @override
-  String get moveOutServerFuncBtns => 'Server function button location';
-
-  @override
   String get moveOutServerFuncBtnsHelp => 'On: can be displayed below each card on the Server Tab page. Off: can be displayed at the top of the Server Details page.';
 
   @override
@@ -409,6 +427,9 @@ class SEn extends S {
 
   @override
   String get needRestart => 'Need to restart app';
+
+  @override
+  String get net => 'Net';
 
   @override
   String get netViewType => 'Net view type';
@@ -524,6 +545,9 @@ class SEn extends S {
   String get pwd => 'Password';
 
   @override
+  String get read => 'Read';
+
+  @override
   String get reboot => 'Reboot';
 
   @override
@@ -565,10 +589,16 @@ class SEn extends S {
   String get second => 's';
 
   @override
+  String get sequence => 'Sequence';
+
+  @override
   String get server => 'Server';
 
   @override
   String get serverDetailOrder => 'Detail page widget order';
+
+  @override
+  String get serverFuncBtns => 'Server func buttons';
 
   @override
   String get serverOrder => 'Server order';
@@ -647,7 +677,7 @@ class SEn extends S {
   String get suspendTip => 'The suspend function requires root privileges and systemd support.';
 
   @override
-  String get syncTip => 'After auto sync, a restart may be required for some changes to take effect.';
+  String get syncTip => 'A restart may be required for some changes to take effect.';
 
   @override
   String get system => 'System';
@@ -656,7 +686,13 @@ class SEn extends S {
   String get tag => 'Tags';
 
   @override
+  String get temperature => 'Temperature';
+
+  @override
   String get terminal => 'Terminal';
+
+  @override
+  String get test => 'Test';
 
   @override
   String get theme => 'Theme';
@@ -750,8 +786,14 @@ class SEn extends S {
   String get watchNotPaired => 'No paired Apple Watch';
 
   @override
+  String get webdavSettingEmpty => 'Webdav setting is empty';
+
+  @override
   String get whenOpenApp => 'When opening the app';
 
   @override
   String get willTakEeffectImmediately => 'Will take effect immediately';
+
+  @override
+  String get write => 'Write';
 }

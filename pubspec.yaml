@@ -4,7 +4,7 @@ publish_to: 'none'
 version: 1.0.0+1
 
 environment:
-  sdk: ">=2.17.0 <3.0.0"
+  sdk: ">=3.0.0"
 
 dependencies:
   archive: ^3.3.8
@@ -20,6 +20,10 @@ dependencies:
   url_launcher: ^6.1.8
   countly_flutter: ^23.6.0
   dartssh2: ^2.8.2
+    # newer version has some issues
+    # git:
+    #   ref: master
+    #   url: https://github.com/lollipopkit/dartssh2
   logging: ^1.0.2
   circle_chart:
     git:
@@ -39,13 +43,12 @@ dependencies:
     git:
       ref: master
       url: https://github.com/lollipopkit/xterm.dart
-  file_picker: ^5.3.2
+  file_picker: ^6.1.1
   plain_notification_token: ^0.0.4
   highlight: ^0.7.0
   flutter_highlight: ^0.7.0
   code_text_field: ^1.1.0
   shared_preferences: ^2.1.1
-  macos_window_utils: ^1.2.0
   dynamic_color: ^1.6.6
   icloud_storage: ^2.2.0
   local_auth: ^2.1.7
@@ -55,12 +58,19 @@ dependencies:
       ref: master
       url: https://github.com/lollipopkit/watch_connectivity
   choice: ^2.0.0
+  #flutter_secure_storage: ^9.0.0
+  xml: ^6.4.2 # for parsing nvidia-smi
+  webdav_client:
+    git:
+      ref: main
+      url: https://github.com/lollipopkit/webdav_client
+  window_manager: ^0.3.7
 
 dev_dependencies:
   flutter_native_splash: ^2.1.6
   hive_generator: ^2.0.0
   build_runner: ^2.3.2
-  flutter_lints: ^2.0.0
+  flutter_lints: ^3.0.0
   flutter_test:
     sdk: flutter
 

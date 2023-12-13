@@ -20,11 +20,10 @@ import '../../core/utils/ui.dart';
 import '../../data/model/app/net_view.dart';
 import '../../data/model/server/server.dart';
 import '../../data/model/server/server_private_info.dart';
-import '../../data/model/server/server_status.dart';
 import '../../data/res/color.dart';
 
 class FullScreenPage extends StatefulWidget {
-  const FullScreenPage({Key? key}) : super(key: key);
+  const FullScreenPage({super.key});
 
   @override
   _FullScreenPageState createState() => _FullScreenPageState();
@@ -216,9 +215,10 @@ class _FullScreenPageState extends State<FullScreenPage> with AfterLayoutMixin {
             children: [
               Text(
                 spi.name,
-                style:
-                    const TextStyle(fontWeight: FontWeight.bold, fontSize: 19),
-                textScaleFactor: 1.0,
+                style: const TextStyle(
+                  fontWeight: FontWeight.bold,
+                  fontSize: 19,
+                ),
                 textAlign: TextAlign.center,
               ),
               const Icon(
@@ -240,12 +240,11 @@ class _FullScreenPageState extends State<FullScreenPage> with AfterLayoutMixin {
       cs,
       ss.temps.first,
       ss.uptime,
-      ss.failedInfo,
+      ss.err,
     );
     return Text(
       topRightStr,
       style: UIs.textSize11Grey,
-      textScaleFactor: 1.0,
     );
   }
 
@@ -256,7 +255,6 @@ class _FullScreenPageState extends State<FullScreenPage> with AfterLayoutMixin {
         text,
         style: const TextStyle(fontSize: 13),
         textAlign: TextAlign.center,
-        textScaleFactor: 1.0,
       ),
     );
   }
@@ -295,10 +293,10 @@ class _FullScreenPageState extends State<FullScreenPage> with AfterLayoutMixin {
     return ValueListenableBuilder<NetViewType>(
       valueListenable: Stores.setting.netViewType.listenable(),
       builder: (_, val, __) {
-        final data = val.build(ss);
+        final (a, b) = val.build(ss);
         return AnimatedSwitcher(
           duration: const Duration(milliseconds: 177),
-          child: _buildIOData(data.up, data.down),
+          child: _buildIOData(a, b),
         );
       },
     );
@@ -316,14 +314,12 @@ class _FullScreenPageState extends State<FullScreenPage> with AfterLayoutMixin {
             up,
             style: statusTextStyle,
             textAlign: TextAlign.center,
-            textScaleFactor: 1.0,
           ),
           const SizedBox(height: 3),
           Text(
             down,
             style: statusTextStyle,
             textAlign: TextAlign.center,
-            textScaleFactor: 1.0,
           )
         ],
       ),
@@ -353,7 +349,6 @@ class _FullScreenPageState extends State<FullScreenPage> with AfterLayoutMixin {
                 '${percent.toStringAsFixed(1)}%',
                 textAlign: TextAlign.center,
                 style: const TextStyle(fontSize: 15),
-                textScaleFactor: 1.0,
               ),
             ),
           ),

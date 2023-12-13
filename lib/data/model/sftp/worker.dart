@@ -55,9 +55,9 @@ Future<void> isolateMessageHandler(
   SendPort mainSendPort,
   SendErrorFunction sendError,
 ) async {
-  switch (data.runtimeType) {
-    case SftpReq:
-      switch (data.type) {
+  switch (data) {
+    case SftpReq val:
+      switch (val.type) {
         case SftpReqType.download:
           await _download(data, mainSendPort, sendError);
           break;
@@ -81,7 +81,12 @@ Future<void> _download(
   try {
     mainSendPort.send(SftpWorkerStatus.preparing);
     final watch = Stopwatch()..start();
-    final client = await genClient(req.spi, privateKey: req.privateKey);
+    final client = await genClient(
+      req.spi,
+      privateKey: req.privateKey,
+      jumpSpi: req.jumpSpi,
+      jumpPrivateKey: req.jumpPrivateKey,
+    );
     mainSendPort.send(SftpWorkerStatus.sshConnectted);
 
     /// Create the directory if not exists
@@ -131,7 +136,12 @@ Future<void> _upload(
   try {
     mainSendPort.send(SftpWorkerStatus.preparing);
     final watch = Stopwatch()..start();
-    final client = await genClient(req.spi, privateKey: req.privateKey);
+    final client = await genClient(
+      req.spi,
+      privateKey: req.privateKey,
+      jumpSpi: req.jumpSpi,
+      jumpPrivateKey: req.jumpPrivateKey,
+    );
     mainSendPort.send(SftpWorkerStatus.sshConnectted);
 
     final local = File(req.localPath);

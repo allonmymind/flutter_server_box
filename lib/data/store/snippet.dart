@@ -1,7 +1,9 @@
 import '../../core/persistant_store.dart';
 import '../model/server/snippet.dart';
 
-class SnippetStore extends PersistentStore<Snippet> {
+class SnippetStore extends PersistentStore {
+  SnippetStore() : super('snippet');
+
   void put(Snippet snippet) {
     box.put(snippet.name, snippet);
   }
@@ -11,7 +13,7 @@ class SnippetStore extends PersistentStore<Snippet> {
     final ss = <Snippet>[];
     for (final key in keys) {
       final s = box.get(key);
-      if (s != null) {
+      if (s != null && s is Snippet) {
         ss.add(s);
       }
     }

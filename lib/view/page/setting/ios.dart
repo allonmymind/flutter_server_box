@@ -7,19 +7,20 @@ import 'package:toolbox/core/extension/context/snackbar.dart';
 import 'package:toolbox/core/route.dart';
 import 'package:toolbox/core/utils/misc.dart';
 import 'package:toolbox/core/utils/platform/auth.dart';
+import 'package:toolbox/core/utils/share.dart';
 import 'package:toolbox/data/res/logger.dart';
 import 'package:toolbox/data/res/misc.dart';
 import 'package:toolbox/data/res/store.dart';
 import 'package:toolbox/data/res/ui.dart';
 import 'package:toolbox/view/page/setting/platform_pub.dart';
-import 'package:toolbox/view/widget/custom_appbar.dart';
+import 'package:toolbox/view/widget/appbar.dart';
 import 'package:toolbox/view/widget/future_widget.dart';
-import 'package:toolbox/view/widget/round_rect_card.dart';
+import 'package:toolbox/view/widget/cardx.dart';
 import 'package:toolbox/view/widget/store_switch.dart';
 import 'package:watch_connectivity/watch_connectivity.dart';
 
 class IOSSettingsPage extends StatefulWidget {
-  const IOSSettingsPage({Key? key}) : super(key: key);
+  const IOSSettingsPage({super.key});
 
   @override
   _IOSSettingsPageState createState() => _IOSSettingsPageState();
@@ -33,8 +34,8 @@ class _IOSSettingsPageState extends State<IOSSettingsPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: CustomAppBar(
-        title: const Text('iOS'),
+      appBar: const CustomAppBar(
+        title: Text('iOS'),
       ),
       body: ListView(
         padding: const EdgeInsets.symmetric(horizontal: 17),
@@ -44,7 +45,7 @@ class _IOSSettingsPageState extends State<IOSSettingsPage> {
           _buildWatchApp(),
           if (BioAuth.isPlatformSupported)
             PlatformPublicSettings.buildBioAuth(),
-        ].map((e) => RoundRectCard(e)).toList(),
+        ].map((e) => CardX(e)).toList(),
       ),
     );
   }
@@ -58,7 +59,7 @@ class _IOSSettingsPageState extends State<IOSSettingsPage> {
         padding: EdgeInsets.zero,
         onPressed: () {
           if (_pushToken.value != null) {
-            copy2Clipboard(_pushToken.value!);
+            Shares.copy(_pushToken.value!);
             context.showSnackBar(l10n.success);
           } else {
             context.showSnackBar(l10n.getPushTokenFailed);

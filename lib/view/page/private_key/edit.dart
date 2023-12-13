@@ -16,12 +16,12 @@ import 'package:toolbox/view/widget/input_field.dart';
 import '../../../core/utils/server.dart';
 import '../../../data/model/server/private_key_info.dart';
 import '../../../data/res/ui.dart';
-import '../../widget/custom_appbar.dart';
+import '../../widget/appbar.dart';
 
 const _format = 'text/plain';
 
 class PrivateKeyEditPage extends StatefulWidget {
-  const PrivateKeyEditPage({Key? key, this.pki}) : super(key: key);
+  const PrivateKeyEditPage({super.key, this.pki});
 
   final PrivateKeyInfo? pki;
 

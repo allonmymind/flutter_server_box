@@ -9,13 +9,13 @@ import 'package:toolbox/core/extension/context/snackbar.dart';
 import 'package:toolbox/core/utils/platform/auth.dart';
 import 'package:toolbox/data/res/store.dart';
 import 'package:toolbox/view/page/setting/platform_pub.dart';
-import 'package:toolbox/view/widget/custom_appbar.dart';
+import 'package:toolbox/view/widget/appbar.dart';
 import 'package:toolbox/view/widget/input_field.dart';
-import 'package:toolbox/view/widget/round_rect_card.dart';
+import 'package:toolbox/view/widget/cardx.dart';
 import 'package:toolbox/view/widget/store_switch.dart';
 
 class AndroidSettingsPage extends StatefulWidget {
-  const AndroidSettingsPage({Key? key}) : super(key: key);
+  const AndroidSettingsPage({super.key});
 
   @override
   _AndroidSettingsPageState createState() => _AndroidSettingsPageState();
@@ -33,8 +33,8 @@ class _AndroidSettingsPageState extends State<AndroidSettingsPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: CustomAppBar(
-        title: const Text('Android'),
+      appBar: const CustomAppBar(
+        title: Text('Android'),
       ),
       body: ListView(
         padding: const EdgeInsets.symmetric(horizontal: 17),
@@ -43,7 +43,7 @@ class _AndroidSettingsPageState extends State<AndroidSettingsPage> {
           _buildAndroidWidgetSharedPreference(),
           if (BioAuth.isPlatformSupported)
             PlatformPublicSettings.buildBioAuth(),
-        ].map((e) => RoundRectCard(e)).toList(),
+        ].map((e) => CardX(e)).toList(),
       ),
     );
   }

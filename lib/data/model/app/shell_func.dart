@@ -3,30 +3,50 @@ import '../server/system.dart';
 
 const seperator = 'SrvBoxSep';
 
+/// The suffix `\t` is for formatting
 const _cmdDivider = '\necho $seperator\n\t';
-
-const _serverBoxDir = r'$HOME/.config/server_box';
-
-/// Issue #159
-/// Use script commit count as version of shell script.
-/// So different version of app can run at the same time.
-const installShellPath = '$_serverBoxDir/mobile_v${BuildData.script}.sh';
+const _homeVar = '\$HOME';
 
 enum ShellFunc {
   status,
-  docker,
+  //docker,
   process,
   shutdown,
   reboot,
   suspend,
   ;
 
+  static const _srvBoxDir = '.config/server_box';
+  static const _scriptFile = 'mobile_v${BuildData.script}.sh';
+
+  /// Issue #159
+  ///
+  /// Use script commit count as version of shell script.
+  ///
+  /// So different version of app can run at the same time.
+  ///
+  /// **Can't** use it in SFTP, because SFTP can't recognize `$HOME`
+  static String getShellPath(String home) => '$home/$_srvBoxDir/$_scriptFile';
+
+  static const srvBoxDir = '$_homeVar/$_srvBoxDir';
+  static const _installShellPath = '$_homeVar/$_srvBoxDir/$_scriptFile';
+
+  /// Issue #168
+  /// Use `sh` for compatibility
+  static final installShellCmd = """
+mkdir -p $_homeVar/$_srvBoxDir
+cat << 'EOF' > $_installShellPath
+${ShellFunc.allScript}
+EOF
+chmod +x $_installShellPath
+""";
+
   String get flag {
     switch (this) {
       case ShellFunc.status:
         return 's';
-      case ShellFunc.docker:
-        return 'd';
+      // case ShellFunc.docker:
+      //   return 'd';
       case ShellFunc.process:
         return 'p';
       case ShellFunc.shutdown:
@@ -38,16 +58,16 @@ enum ShellFunc {
     }
   }
 
-  String get exec => 'sh $installShellPath -$flag';
+  String get exec => 'sh $_installShellPath -$flag';
 
   String get name {
     switch (this) {
       case ShellFunc.status:
         return 'status';
-      case ShellFunc.docker:
-        // `dockeR` -> avoid conflict with `docker` command
-        // 以防止循环递归
-        return 'dockeR';
+      // case ShellFunc.docker:
+      //   // `dockeR` -> avoid conflict with `docker` command
+      //   // 以防止循环递归
+      //   return 'dockeR';
       case ShellFunc.process:
         return 'process';
       case ShellFunc.shutdown:
@@ -68,14 +88,14 @@ if [ "\$macSign" = "" ] && [ "\$bsdSign" = "" ]; then
 else
 \t${_bsdStatusCmd.join(_cmdDivider)}
 fi''';
-      case ShellFunc.docker:
-        return '''
-result=\$(docker version 2>&1 | grep "permission denied")
-if [ "\$result" != "" ]; then
-\t${_dockerCmds.join(_cmdDivider)}
-else
-\t${_dockerCmds.map((e) => "sudo -S $e").join(_cmdDivider)}
-fi''';
+//       case ShellFunc.docker:
+//         return '''
+// result=\$(docker version 2>&1 | grep "permission denied")
+// if [ "\$result" != "" ]; then
+// \t${_dockerCmds.join(_cmdDivider)}
+// else
+// \t${_dockerCmds.map((e) => "sudo -S $e").join(_cmdDivider)}
+// fi''';
       case ShellFunc.process:
         return '''
 if [ "\$macSign" = "" ] && [ "\$bsdSign" = "" ]; then
@@ -179,6 +199,8 @@ enum StatusCmdType {
   tempType,
   tempVal,
   host,
+  diskio,
+  nvdia,
   ;
 }
 
@@ -192,10 +214,12 @@ const _statusCmds = [
   'uptime',
   'cat /proc/net/snmp',
   'df -h',
-  'cat /proc/meminfo | grep Mem',
+  "cat /proc/meminfo | grep -E 'Mem|Swap'",
   'cat /sys/class/thermal/thermal_zone*/type',
   'cat /sys/class/thermal/thermal_zone*/temp',
   'hostname',
+  'cat /proc/diskstats',
+  'nvidia-smi -q -x',
 ];
 
 enum DockerCmdType {
@@ -204,14 +228,23 @@ enum DockerCmdType {
   //stats,
   images,
   ;
-}
 
-const _dockerCmds = [
-  'docker version',
-  'docker ps -a',
-  //'docker stats --no-stream',
-  'docker image ls',
-];
+  String get exec {
+    switch (this) {
+      case DockerCmdType.version:
+        return 'docker version';
+      case DockerCmdType.ps:
+        return 'docker ps -a';
+      // case DockerCmdType.stats:
+      //   return 'docker stats --no-stream';
+      case DockerCmdType.images:
+        return 'docker image ls';
+    }
+  }
+
+  static final execAll =
+      values.map((e) => e.exec).join(' && echo $seperator && ');
+}
 
 enum BSDStatusCmdType {
   echo,
@@ -240,13 +273,3 @@ const _bsdStatusCmd = [
   //'sysctl -a | grep temperature',
   'hostname',
 ];
-
-/// Issue #168
-/// Use `sh` for compatibility
-final installShellCmd = """
-mkdir -p $_serverBoxDir
-cat << 'EOF' > $installShellPath
-${ShellFunc.allScript}
-EOF
-chmod +x $installShellPath
-""";

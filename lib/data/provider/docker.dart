@@ -48,8 +48,8 @@ class DockerProvider extends ChangeNotifier {
 
   Future<void> refresh() async {
     var raw = '';
-    await client!.execWithPwd(
-      ShellFunc.docker.exec,
+    await client?.execWithPwd(
+      _wrap(DockerCmdType.execAll),
       context: context,
       onStdout: (data, _) => raw = '$raw$data',
     );
@@ -64,7 +64,7 @@ class DockerProvider extends ChangeNotifier {
     final segments = raw.split(seperator);
     if (segments.length != DockerCmdType.values.length) {
       error = DockerErr(type: DockerErrType.segmentsNotMatch);
-      Loggers.parse.warning('Docker segments: ${segments.length}');
+      Loggers.parse.warning('Docker segments: ${segments.length}\n$raw');
       notifyListeners();
       return;
     }
@@ -137,7 +137,12 @@ class DockerProvider extends ChangeNotifier {
 
   Future<DockerErr?> start(String id) async => await run('docker start $id');
 
-  Future<DockerErr?> delete(String id) async => await run('docker rm $id');
+  Future<DockerErr?> delete(String id, bool force) async {
+    if (force) {
+      return await run('docker rm -f $id');
+    }
+    return await run('docker rm $id');
+  }
 
   Future<DockerErr?> restart(String id) async =>
       await run('docker restart $id');
@@ -149,7 +154,7 @@ class DockerProvider extends ChangeNotifier {
 
     runLog = '';
     final errs = <String>[];
-    final code = await client!.execWithPwd(
+    final code = await client?.execWithPwd(
       _wrap(cmd),
       context: context,
       onStdout: (data, _) {
@@ -171,13 +176,14 @@ class DockerProvider extends ChangeNotifier {
     return null;
   }
 
-  // judge whether to use DOCKER_HOST
+  /// wrap cmd with `docker host`
   String _wrap(String cmd) {
-    final dockerHost = Stores.docker.fetch(hostId!);
+    final dockerHost = Stores.docker.fetch(hostId);
     cmd = 'export LANG=en_US.UTF-8 && $cmd';
-    if (dockerHost == null || dockerHost.isEmpty) {
-      return cmd;
+    final noDockerHost = dockerHost?.isEmpty ?? true;
+    if (!noDockerHost) {
+      cmd = 'export DOCKER_HOST=$dockerHost && $cmd';
     }
-    return 'export DOCKER_HOST=$dockerHost && $cmd';
+    return cmd;
   }
 }

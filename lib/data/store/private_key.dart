@@ -1,7 +1,9 @@
 import '../../core/persistant_store.dart';
 import '../model/server/private_key_info.dart';
 
-class PrivateKeyStore extends PersistentStore<PrivateKeyInfo> {
+class PrivateKeyStore extends PersistentStore {
+  PrivateKeyStore() : super('key');
+
   void put(PrivateKeyInfo info) {
     box.put(info.id, info);
   }
@@ -11,7 +13,7 @@ class PrivateKeyStore extends PersistentStore<PrivateKeyInfo> {
     final ps = <PrivateKeyInfo>[];
     for (final key in keys) {
       final s = box.get(key);
-      if (s != null) {
+      if (s != null && s is PrivateKeyInfo) {
         ps.add(s);
       }
     }

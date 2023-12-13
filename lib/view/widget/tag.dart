@@ -4,7 +4,7 @@ import 'package:toolbox/core/extension/context/dialog.dart';
 import 'package:toolbox/core/extension/context/locale.dart';
 import 'package:toolbox/data/res/ui.dart';
 import 'package:toolbox/view/widget/input_field.dart';
-import 'package:toolbox/view/widget/round_rect_card.dart';
+import 'package:toolbox/view/widget/cardx.dart';
 
 import '../../data/res/color.dart';
 
@@ -28,7 +28,6 @@ class TagBtn extends StatelessWidget {
       Text(
         content,
         textAlign: TextAlign.center,
-        textScaleFactor: 1.0,
         style: isEnable ? UIs.textSize13 : UIs.textSize13Grey,
       ),
       onTap: onTap,
@@ -57,7 +56,7 @@ class TagEditor extends StatefulWidget {
 class _TagEditorState extends State<TagEditor> {
   @override
   Widget build(BuildContext context) {
-    return RoundRectCard(ListTile(
+    return CardX(ListTile(
       leading: const Icon(Icons.tag),
       title: _buildTags(widget.tags),
       trailing: InkWell(
@@ -106,7 +105,6 @@ class _TagEditorState extends State<TagEditor> {
             '#$tag',
             textAlign: TextAlign.center,
             style: isAdd ? UIs.textSize13Grey : UIs.textSize13,
-            textScaleFactor: 1.0,
           ),
           const SizedBox(width: 4.0),
           Icon(
@@ -186,13 +184,13 @@ class TagSwitcher extends StatelessWidget {
   final String all;
 
   const TagSwitcher({
-    Key? key,
+    super.key,
     required this.tags,
     required this.width,
     required this.onTagChanged,
     required this.all,
     this.initTag,
-  }) : super(key: key);
+  });
 
   @override
   Widget build(BuildContext context) {

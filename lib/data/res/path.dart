@@ -4,9 +4,7 @@ import 'package:path_provider/path_provider.dart';
 import 'package:toolbox/core/utils/platform/base.dart';
 import 'package:toolbox/core/utils/platform/path.dart';
 
-class Paths {
-  const Paths._();
-
+abstract final class Paths {
   static String? _docDir;
   static String? _sftpDir;
   static String? _fontDir;
@@ -48,7 +46,9 @@ class Paths {
     return _fontDir!;
   }
 
-  static Future<String> get bak async => '${await doc}/srvbox_bak.json';
+  static const String bakName = 'srvbox_bak.json';
+
+  static Future<String> get bak async => '${await doc}/$bakName';
 
   static Future<String> get dl async => joinPath(await doc, 'dl');
 }

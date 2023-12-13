@@ -49,6 +49,9 @@ class SZh extends S {
   String get auto => '自动';
 
   @override
+  String get autoBackupConflict => '只能同时开启一个自动备份';
+
+  @override
   String get autoCheckUpdate => '自动检查更新';
 
   @override
@@ -142,6 +145,9 @@ class SZh extends S {
   String get delete => '删除';
 
   @override
+  String get deleteScripts => '同时删除服务器脚本';
+
+  @override
   String get deleteServers => '批量删除服务器';
 
   @override
@@ -154,7 +160,13 @@ class SZh extends S {
   String get disconnected => '连接断开';
 
   @override
+  String get disk => '硬盘';
+
+  @override
   String get diskIgnorePath => '忽略的磁盘路径';
+
+  @override
+  String get displayName => '显示名称';
 
   @override
   String dl2Local(Object fileName) {
@@ -337,6 +349,9 @@ class SZh extends S {
   String get isBusy => '当前正忙';
 
   @override
+  String get jumpServer => '跳板服务器';
+
+  @override
   String get keepForeground => '请保持应用处于前台！';
 
   @override
@@ -370,6 +385,9 @@ class SZh extends S {
   String get loadingFiles => '正在加载目录。。。';
 
   @override
+  String get location => '位置';
+
+  @override
   String get log => '日志';
 
   @override
@@ -379,6 +397,9 @@ class SZh extends S {
   String madeWithLove(Object myGithub) {
     return '用❤️制作 by $myGithub';
   }
+
+  @override
+  String get manual => '手动';
 
   @override
   String get max => '最大';
@@ -396,9 +417,6 @@ class SZh extends S {
   String get mission => '任务';
 
   @override
-  String get moveOutServerFuncBtns => '服务器功能按钮位置';
-
-  @override
   String get moveOutServerFuncBtnsHelp => '开启：可以在服务器 Tab 页的每个卡片下方显示。关闭：在服务器详情页顶部显示。';
 
   @override
@@ -409,6 +427,9 @@ class SZh extends S {
 
   @override
   String get needRestart => '需要重启 App';
+
+  @override
+  String get net => '网络';
 
   @override
   String get netViewType => '网络视图类型';
@@ -524,6 +545,9 @@ class SZh extends S {
   String get pwd => '密码';
 
   @override
+  String get read => '读';
+
+  @override
   String get reboot => '重启';
 
   @override
@@ -565,10 +589,16 @@ class SZh extends S {
   String get second => '秒';
 
   @override
+  String get sequence => '顺序';
+
+  @override
   String get server => '服务器';
 
   @override
   String get serverDetailOrder => '详情页部件顺序';
+
+  @override
+  String get serverFuncBtns => '服务器功能按钮';
 
   @override
   String get serverOrder => '服务器顺序';
@@ -647,7 +677,7 @@ class SZh extends S {
   String get suspendTip => 'suspend 功能需要 root 权限及 systemd 支持。';
 
   @override
-  String get syncTip => '在自动同步后，可能需要重新启动，某些更改才能生效。';
+  String get syncTip => '可能需要重新启动，某些更改才能生效。';
 
   @override
   String get system => '系统';
@@ -656,7 +686,13 @@ class SZh extends S {
   String get tag => '标签';
 
   @override
+  String get temperature => '温度';
+
+  @override
   String get terminal => '终端';
+
+  @override
+  String get test => '测试';
 
   @override
   String get theme => '主题';
@@ -750,10 +786,16 @@ class SZh extends S {
   String get watchNotPaired => '没有已配对的 Apple Watch';
 
   @override
+  String get webdavSettingEmpty => 'Webdav 设置项为空';
+
+  @override
   String get whenOpenApp => '当打开 App 时';
 
   @override
   String get willTakEeffectImmediately => '更改将会立即生效';
+
+  @override
+  String get write => '写';
 }
 
 /// The translations for Chinese, as used in Taiwan (`zh_TW`).
@@ -803,6 +845,9 @@ class SZhTw extends SZh {
 
   @override
   String get auto => '自動';
+
+  @override
+  String get autoBackupConflict => '只能同時開啓壹個自動備份';
 
   @override
   String get autoCheckUpdate => '自動檢查更新';
@@ -898,6 +943,9 @@ class SZhTw extends SZh {
   String get delete => '刪除';
 
   @override
+  String get deleteScripts => '同時刪除服務器腳本';
+
+  @override
   String get deleteServers => '批量刪除服務器';
 
   @override
@@ -910,7 +958,13 @@ class SZhTw extends SZh {
   String get disconnected => '連接斷開';
 
   @override
+  String get disk => '硬盤';
+
+  @override
   String get diskIgnorePath => '忽略的磁盤路徑';
+
+  @override
+  String get displayName => '顯示名稱';
 
   @override
   String dl2Local(Object fileName) {
@@ -1093,6 +1147,9 @@ class SZhTw extends SZh {
   String get isBusy => '當前正忙';
 
   @override
+  String get jumpServer => '跳板服務器';
+
+  @override
   String get keepForeground => '請保持應用處於前台！';
 
   @override
@@ -1126,6 +1183,9 @@ class SZhTw extends SZh {
   String get loadingFiles => '正在加載目錄。。。';
 
   @override
+  String get location => '位置';
+
+  @override
   String get log => '日誌';
 
   @override
@@ -1135,6 +1195,9 @@ class SZhTw extends SZh {
   String madeWithLove(Object myGithub) {
     return '用❤️製作 by $myGithub';
   }
+
+  @override
+  String get manual => '手動';
 
   @override
   String get max => '最大';
@@ -1152,9 +1215,6 @@ class SZhTw extends SZh {
   String get mission => '任務';
 
   @override
-  String get moveOutServerFuncBtns => '服務器功能按鈕位置';
-
-  @override
   String get moveOutServerFuncBtnsHelp => '開啟：可以在服務器 Tab 頁的每個卡片下方顯示。關閉：在服務器詳情頁頂部顯示。';
 
   @override
@@ -1165,6 +1225,9 @@ class SZhTw extends SZh {
 
   @override
   String get needRestart => '需要重啓 App';
+
+  @override
+  String get net => '網絡';
 
   @override
   String get netViewType => '網絡視圖類型';
@@ -1280,6 +1343,9 @@ class SZhTw extends SZh {
   String get pwd => '密碼';
 
   @override
+  String get read => '读';
+
+  @override
   String get reboot => '重启';
 
   @override
@@ -1321,10 +1387,16 @@ class SZhTw extends SZh {
   String get second => '秒';
 
   @override
+  String get sequence => '順序';
+
+  @override
   String get server => '服務器';
 
   @override
   String get serverDetailOrder => '詳情頁部件順序';
+
+  @override
+  String get serverFuncBtns => '服務器功能按鈕';
 
   @override
   String get serverOrder => '服務器順序';
@@ -1403,7 +1475,7 @@ class SZhTw extends SZh {
   String get suspendTip => 'suspend 功能需要 root 權限及 systemd 支持。';
 
   @override
-  String get syncTip => '在自動同步後，可能需要重新啟動，某些更改才能生效。';
+  String get syncTip => '可能需要重新啟動，某些更改才能生效。';
 
   @override
   String get system => '系統';
@@ -1412,7 +1484,13 @@ class SZhTw extends SZh {
   String get tag => '标签';
 
   @override
+  String get temperature => '溫度';
+
+  @override
   String get terminal => '终端機';
+
+  @override
+  String get test => '測試';
 
   @override
   String get theme => '主題';
@@ -1506,8 +1584,14 @@ class SZhTw extends SZh {
   String get watchNotPaired => '沒有已配對的 Apple Watch';
 
   @override
+  String get webdavSettingEmpty => 'Webdav 設置項爲空';
+
+  @override
   String get whenOpenApp => '當打開 App 時';
 
   @override
   String get willTakEeffectImmediately => '更改將會立即生效';
+
+  @override
+  String get write => '写';
 }

@@ -14,7 +14,7 @@ import 'package:toolbox/data/res/misc.dart';
 import 'package:toolbox/data/res/provider.dart';
 import 'package:toolbox/data/res/store.dart';
 import 'package:toolbox/view/widget/omit_start_text.dart';
-import 'package:toolbox/view/widget/round_rect_card.dart';
+import 'package:toolbox/view/widget/cardx.dart';
 
 import '../../../core/extension/numx.dart';
 import '../../../core/route.dart';
@@ -25,7 +25,7 @@ import '../../../data/model/sftp/browser_status.dart';
 import '../../../data/model/sftp/req.dart';
 import '../../../data/res/path.dart';
 import '../../../data/res/ui.dart';
-import '../../widget/custom_appbar.dart';
+import '../../widget/appbar.dart';
 import '../../widget/fade_in.dart';
 import '../../widget/input_field.dart';
 import '../../widget/two_line_text.dart';
@@ -36,11 +36,11 @@ class SftpPage extends StatefulWidget {
   final bool isSelect;
 
   const SftpPage({
-    Key? key,
+    super.key,
     required this.spi,
     required this.isSelect,
     this.initPath,
-  }) : super(key: key);
+  });
 
   @override
   _SftpPageState createState() => _SftpPageState();
@@ -69,21 +69,8 @@ class _SftpPageState extends State<SftpPage> with AfterLayoutMixin {
           ),
         ],
       ),
-      body: _buildBody(),
+      body: _buildFileView(),
       bottomNavigationBar: _buildBottom(),
-    );
-  }
-
-  Widget _buildBody() {
-    return WillPopScope(
-      onWillPop: () async {
-        if (_status.path == null || _status.path?.path == '/') {
-          return true;
-        }
-        await _backward();
-        return false;
-      },
-      child: _buildFileView(),
     );
   }
 
@@ -208,9 +195,9 @@ class _SftpPageState extends State<SftpPage> with AfterLayoutMixin {
               if (!Stores.setting.recordHistory.fetch()) {
                 return [];
               }
-              return Stores.history.sftpGoPath.all.where(
-                (element) => element.contains(val.text),
-              );
+              return Stores.history.sftpGoPath.all.cast<String>().where(
+                    (element) => element.contains(val.text),
+                  );
             },
             fieldViewBuilder: (_, controller, node, __) {
               return Input(
@@ -277,7 +264,7 @@ class _SftpPageState extends State<SftpPage> with AfterLayoutMixin {
       style: UIs.textGrey,
       textAlign: TextAlign.right,
     );
-    return RoundRectCard(ListTile(
+    return CardX(ListTile(
       leading: Icon(isDir ? Icons.folder : Icons.insert_drive_file),
       title: Text(file.filename),
       trailing: trailing,

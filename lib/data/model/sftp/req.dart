@@ -1,5 +1,8 @@
 import 'dart:async';
 
+import 'package:toolbox/data/res/logger.dart';
+import 'package:toolbox/data/res/store.dart';
+
 import '../../../core/utils/server.dart';
 import '../server/server_private_info.dart';
 import 'worker.dart';
@@ -10,6 +13,8 @@ class SftpReq {
   final String localPath;
   final SftpReqType type;
   String? privateKey;
+  ServerPrivateInfo? jumpSpi;
+  String? jumpPrivateKey;
 
   SftpReq(
     this.spi,
@@ -17,8 +22,13 @@ class SftpReq {
     this.localPath,
     this.type,
   ) {
-    if (spi.pubKeyId != null) {
-      privateKey = getPrivateKey(spi.pubKeyId!);
+    final keyId = spi.keyId;
+    if (keyId != null) {
+      privateKey = getPrivateKey(keyId);
+    }
+    if (spi.jumpId != null) {
+      jumpSpi = Stores.server.box.get(spi.jumpId);
+      jumpPrivateKey = Stores.key.get(jumpSpi?.keyId)?.key;
     }
   }
 }
@@ -65,29 +75,30 @@ class SftpReqStatus {
   }
 
   void onNotify(dynamic event) {
-    switch (event.runtimeType) {
-      case SftpWorkerStatus:
-        status = event;
+    var shouldDispose = false;
+    switch (event) {
+      case SftpWorkerStatus val:
+        status = val;
         if (status == SftpWorkerStatus.finished) {
           dispose();
         }
         break;
-      case double:
-        progress = event;
+      case double val:
+        progress = val;
         break;
-      case int:
-        size = event;
+      case int val:
+        size = val;
         break;
-      case Exception:
-        error = event;
-        break;
-      case Duration:
-        spentTime = event;
+      case Duration d:
+        spentTime = d;
         break;
       default:
-        error = Exception('unknown event: $event');
+        error = Exception('sftp worker event: $event');
+        Loggers.app.warning(error);
+        shouldDispose = true;
     }
     notifyListeners();
+    if (shouldDispose) dispose();
   }
 }
 

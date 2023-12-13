@@ -3,11 +3,11 @@ import 'package:flutter/material.dart';
 
 class ChoiceChipX<T> extends StatelessWidget {
   const ChoiceChipX({
-    Key? key,
+    super.key,
     required this.label,
     required this.state,
     required this.value,
-  }) : super(key: key);
+  });
 
   final String label;
   final ChoiceController<T> state;
@@ -21,7 +21,6 @@ class ChoiceChipX<T> extends StatelessWidget {
         label: Text(label),
         side: BorderSide.none,
         selected: state.selected(value),
-        selectedColor: Theme.of(context).colorScheme.primary,
         onSelected: state.onSelected(value),
       ),
     );

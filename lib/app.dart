@@ -3,7 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_gen/gen_l10n/l10n.dart';
 import 'package:toolbox/core/extension/context/common.dart';
 import 'package:toolbox/core/extension/locale.dart';
-import 'package:toolbox/core/utils/rebuild.dart';
+import 'package:toolbox/data/res/rebuild.dart';
 import 'package:toolbox/data/res/store.dart';
 import 'package:toolbox/view/widget/value_notifier.dart';
 
@@ -13,16 +13,8 @@ import 'data/res/color.dart';
 import 'view/page/full_screen.dart';
 import 'view/page/home.dart';
 
-/// After upgrading to flutter 3.13,
-/// the shadow color of the drawer is white (maybe a bug).
-/// Only on [iOS].
-/// TODO: remember to remove it after the bug is fixed.
-const _drawerTheme = DrawerThemeData(
-  shadowColor: Colors.black12,
-);
-
 class MyApp extends StatelessWidget {
-  const MyApp({Key? key}) : super(key: key);
+  const MyApp({super.key});
 
   @override
   Widget build(BuildContext context) {
@@ -39,16 +31,21 @@ class MyApp extends StatelessWidget {
       listenable: RebuildNodes.app,
       build: () {
         final tMode = Stores.setting.themeMode.fetch();
-        final isAMOLED = tMode >= 0 && tMode <= ThemeMode.values.length - 1;
         // Issue #57
-        // if not [ok] -> [AMOLED] mode, use [ThemeMode.dark]
-        final themeMode = isAMOLED ? ThemeMode.values[tMode] : ThemeMode.dark;
+        var themeMode = ThemeMode.system;
+        switch (tMode) {
+          case 1 || 2:
+            themeMode = ThemeMode.values[tMode];
+            break;
+          case 3:
+            themeMode = ThemeMode.dark;
+            break;
+        }
         final locale = Stores.setting.locale.fetch().toLocale;
         final darkTheme = ThemeData(
           useMaterial3: true,
           brightness: Brightness.dark,
           colorSchemeSeed: primaryColor,
-          drawerTheme: _drawerTheme,
         );
 
         return MaterialApp(
@@ -62,7 +59,7 @@ class MyApp extends StatelessWidget {
             useMaterial3: true,
             colorSchemeSeed: primaryColor,
           ),
-          darkTheme: isAMOLED ? darkTheme : _getAmoledTheme(darkTheme),
+          darkTheme: tMode < 3 ? darkTheme : _getAmoledTheme(darkTheme),
           home: Stores.setting.fullScreen.fetch()
               ? const FullScreenPage()
               : const HomePage(),
@@ -86,7 +83,7 @@ class MyApp extends StatelessWidget {
 ThemeData _getAmoledTheme(ThemeData darkTheme) => darkTheme.copyWith(
       scaffoldBackgroundColor: Colors.black,
       dialogBackgroundColor: Colors.black,
-      drawerTheme: _drawerTheme.copyWith(backgroundColor: Colors.black),
+      drawerTheme: const DrawerThemeData(backgroundColor: Colors.black),
       appBarTheme: const AppBarTheme(backgroundColor: Colors.black),
       dialogTheme: const DialogTheme(backgroundColor: Colors.black),
       bottomSheetTheme:

@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 
-class RoundRectCard extends StatelessWidget {
-  const RoundRectCard(this.child, {Key? key, this.color}) : super(key: key);
+class CardX extends StatelessWidget {
+  const CardX(this.child, {super.key, this.color});
 
   final Widget child;
   final Color? color;

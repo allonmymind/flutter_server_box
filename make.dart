@@ -5,12 +5,14 @@ import 'dart:convert';
 import 'dart:io';
 
 const appName = 'ServerBox';
+final appNameLower = appName.toLowerCase();
 
 const buildDataFilePath = 'lib/data/res/build_data.dart';
 const apkPath = 'build/app/outputs/flutter-apk/app-release.apk';
 const appleXCConfigPath = 'Runner.xcodeproj/project.pbxproj';
 const macOSArchievePath = 'build/macos/Build/Products/Release/server_box.app';
 const releaseDir = '/Volumes/pm981/release/serverbox';
+const shellScriptPath = 'lib/data/model/app/shell_func.dart';
 
 var regAppleProjectVer = RegExp(r'CURRENT_PROJECT_VERSION = .+;');
 var regAppleMarketVer = RegExp(r'MARKETING_VERSION = .+');
@@ -34,8 +36,12 @@ Future<void> getGitCommitCount() async {
 }
 
 Future<int> getScriptCommitCount() async {
-  final result = await Process.run(
-      'git', ['log', '--oneline', 'lib/data/model/app/shell_func.dart']);
+  if (!await File(shellScriptPath).exists()) {
+    print('File not found: $shellScriptPath');
+    exit(1);
+  }
+  final result =
+      await Process.run('git', ['log', '--oneline', shellScriptPath]);
   return (result.stdout as String)
       .split('\n')
       .where((line) => line.isNotEmpty)
@@ -67,7 +73,7 @@ Future<int> getGitModificationCount() async {
 }
 
 Future<String> getFlutterVersion() async {
-  final result = await Process.run('flutter', ['--version']);
+  final result = await Process.run('flutter', ['--version'], runInShell: true);
   final stdout = result.stdout as String;
   return stdout.split('\n')[0].split('•')[0].split(' ')[1].trim();
 }
@@ -77,7 +83,7 @@ Future<Map<String, dynamic>> getBuildData() async {
     'name': appName,
     'build': build,
     'engine': await getFlutterVersion(),
-    'buildAt': DateTime.now().toString().split('.')[0],
+    'buildAt': DateTime.now().toString().split('.').firstOrNull,
     'modifications': await getGitModificationCount(),
     'script': await getScriptCommitCount(),
   };
@@ -97,7 +103,7 @@ Future<void> updateBuildData() async {
 }
 
 Future<void> dartFormat() async {
-  final result = await Process.run('dart', ['format', '.']);
+  final result = await Process.run('dart', ['format', '.'], runInShell: true);
   print(result.stdout);
   if (result.exitCode != 0) {
     print(result.stderr);
@@ -128,13 +134,12 @@ Future<void> flutterBuild(String buildType) async {
     args.add('--target-platform=android-arm64');
   }
   print('\n[$buildType]\nBuilding with args: ${args.join(' ')}');
-  final buildResult = await Process.run('flutter', args);
+  final buildResult = await Process.run('flutter', args, runInShell: true);
   final exitCode = buildResult.exitCode;
 
   if (exitCode != 0) {
     print(buildResult.stdout);
     print(buildResult.stderr);
-    print('\nBuild failed with exit code $exitCode');
     exit(exitCode);
   }
 }
@@ -155,47 +160,49 @@ Future<void> flutterBuildAndroid() async {
 
 Future<void> flutterBuildLinux() async {
   await flutterBuild('linux');
-  // mkdir ServerBox.AppDir
-  await Process.run('mkdir', ['ServerBox.AppDir']);
-  // cp -r build/linux/x64/release/bundle/* ServerBox.AppDir
+  const appDirName = '$appName.AppDir';
+  // mkdir appName.AppDir
+  await Process.run('mkdir', [appDirName]);
+  // cp -r build/linux/x64/release/bundle/* appName.AppDir
   await Process.run('cp', [
     '-r',
     './build/linux/x64/release/bundle/*',
-    'ServerBox.AppDir',
+    appDirName,
   ]);
   // cp -r assets/app_icon.png ServerBox.AppDir
   await Process.run('cp', [
     '-r',
     './assets/app_icon.png',
-    'ServerBox.AppDir',
+    appDirName,
   ]);
   // Create AppRun
   const appRun = '''
 #!/bin/sh
 cd "\$(dirname "\$0")"
-exec ./ServerBox
+exec ./$appName
 ''';
-  await File('ServerBox.AppDir/AppRun').writeAsString(appRun);
+  const appRunName = '$appDirName/AppRun';
+  await File(appRunName).writeAsString(appRun);
   // chmod +x AppRun
-  await Process.run('chmod', ['+x', 'ServerBox.AppDir/AppRun']);
+  await Process.run('chmod', ['+x', appRunName]);
   // Create .desktop
   const desktop = '''
 [Desktop Entry]
-Name=ServerBox
-Exec=ServerBox
+Name=$appName
+Exec=$appName
 Icon=app_icon
 Type=Application
 Categories=Network;
 ''';
-  await File('ServerBox.AppDir/ServerBox.desktop').writeAsString(desktop);
+  await File('$appDirName/$appName.desktop').writeAsString(desktop);
   // Run appimagetool
-  await Process.run('appimagetool', ['ServerBox.AppDir']);
+  await Process.run('appimagetool', [appDirName]);
 
   await scpLinux2CDN();
 
   // Clean build files
-  await Process.run('rm', ['-r', 'ServerBox.AppDir']);
-  await Process.run('rm', ['ServerBox-x86_64.AppImage']);
+  await Process.run('rm', ['-r', appDirName]);
+  await Process.run('rm', ['$appName-x86_64.AppImage']);
 }
 
 Future<void> flutterBuildWin() async {
@@ -208,7 +215,7 @@ Future<void> scpApk2CDN() async {
   print('SHA256: $sha256');
   final result = await Process.run(
     'scp',
-    [apkPath, 'hk:/var/www/res/serverbox/$sha256.apk'],
+    [apkPath, 'hk:/var/www/res/$appNameLower/$sha256.apk'],
     runInShell: true,
   );
   if (result.exitCode != 0) {
@@ -221,8 +228,8 @@ Future<void> scpLinux2CDN() async {
   final result = await Process.run(
     'scp',
     [
-      'ServerBox-x86_64.AppImage',
-      'hk:/var/www/res/serverbox/$build.AppImage',
+      '$appName-x86_64.AppImage',
+      'hk:/var/www/res/$appNameLower/$build.AppImage',
     ],
     runInShell: true,
   );
@@ -237,8 +244,8 @@ Future<void> scpWindows2CDN() async {
   final result = await Process.run(
     'scp',
     [
-      './build/windows/runner/Release/server_box.zip',
-      'hk:/var/www/res/serverbox/$build.zip',
+      './build/windows/runner/Release/$appName.zip',
+      'hk:/var/www/res/$appNameLower/$build.zip',
     ],
     runInShell: true,
   );

@@ -1,7 +1,9 @@
 import '../../core/persistant_store.dart';
 import '../model/server/server_private_info.dart';
 
-class ServerStore extends PersistentStore<ServerPrivateInfo> {
+class ServerStore extends PersistentStore {
+  ServerStore() : super('server');
+
   void put(ServerPrivateInfo info) {
     box.put(info.id, info);
   }
@@ -11,7 +13,7 @@ class ServerStore extends PersistentStore<ServerPrivateInfo> {
     final List<ServerPrivateInfo> ss = [];
     for (final id in ids) {
       final s = box.get(id);
-      if (s != null) {
+      if (s != null && s is ServerPrivateInfo) {
         ss.add(s);
       }
     }

@@ -182,6 +182,12 @@ abstract class S {
   /// **'Auto'**
   String get auto;
 
+  /// No description provided for @autoBackupConflict.
+  ///
+  /// In en, this message translates to:
+  /// **'Only one automatic backup can be turned on at the same time.'**
+  String get autoBackupConflict;
+
   /// No description provided for @autoCheckUpdate.
   ///
   /// In en, this message translates to:
@@ -368,6 +374,12 @@ abstract class S {
   /// **'Delete'**
   String get delete;
 
+  /// No description provided for @deleteScripts.
+  ///
+  /// In en, this message translates to:
+  /// **'Delete server scripts at the same time'**
+  String get deleteScripts;
+
   /// No description provided for @deleteServers.
   ///
   /// In en, this message translates to:
@@ -392,11 +404,23 @@ abstract class S {
   /// **'Disconnected'**
   String get disconnected;
 
+  /// No description provided for @disk.
+  ///
+  /// In en, this message translates to:
+  /// **'Disk'**
+  String get disk;
+
   /// No description provided for @diskIgnorePath.
   ///
   /// In en, this message translates to:
   /// **'Ignore path for disk'**
   String get diskIgnorePath;
+
+  /// No description provided for @displayName.
+  ///
+  /// In en, this message translates to:
+  /// **'Display name'**
+  String get displayName;
 
   /// No description provided for @dl2Local.
   ///
@@ -722,6 +746,12 @@ abstract class S {
   /// **'Is busy now'**
   String get isBusy;
 
+  /// No description provided for @jumpServer.
+  ///
+  /// In en, this message translates to:
+  /// **'Jump server'**
+  String get jumpServer;
+
   /// No description provided for @keepForeground.
   ///
   /// In en, this message translates to:
@@ -788,6 +818,12 @@ abstract class S {
   /// **'Loading files...'**
   String get loadingFiles;
 
+  /// No description provided for @location.
+  ///
+  /// In en, this message translates to:
+  /// **'Location'**
+  String get location;
+
   /// No description provided for @log.
   ///
   /// In en, this message translates to:
@@ -805,6 +841,12 @@ abstract class S {
   /// In en, this message translates to:
   /// **'Made with ❤️ by {myGithub}'**
   String madeWithLove(Object myGithub);
+
+  /// No description provided for @manual.
+  ///
+  /// In en, this message translates to:
+  /// **'Manual'**
+  String get manual;
 
   /// No description provided for @max.
   ///
@@ -836,12 +878,6 @@ abstract class S {
   /// **'Mission'**
   String get mission;
 
-  /// No description provided for @moveOutServerFuncBtns.
-  ///
-  /// In en, this message translates to:
-  /// **'Server function button location'**
-  String get moveOutServerFuncBtns;
-
   /// No description provided for @moveOutServerFuncBtnsHelp.
   ///
   /// In en, this message translates to:
@@ -865,6 +901,12 @@ abstract class S {
   /// In en, this message translates to:
   /// **'Need to restart app'**
   String get needRestart;
+
+  /// No description provided for @net.
+  ///
+  /// In en, this message translates to:
+  /// **'Net'**
+  String get net;
 
   /// No description provided for @netViewType.
   ///
@@ -1088,6 +1130,12 @@ abstract class S {
   /// **'Password'**
   String get pwd;
 
+  /// No description provided for @read.
+  ///
+  /// In en, this message translates to:
+  /// **'Read'**
+  String get read;
+
   /// No description provided for @reboot.
   ///
   /// In en, this message translates to:
@@ -1166,6 +1214,12 @@ abstract class S {
   /// **'s'**
   String get second;
 
+  /// No description provided for @sequence.
+  ///
+  /// In en, this message translates to:
+  /// **'Sequence'**
+  String get sequence;
+
   /// No description provided for @server.
   ///
   /// In en, this message translates to:
@@ -1177,6 +1231,12 @@ abstract class S {
   /// In en, this message translates to:
   /// **'Detail page widget order'**
   String get serverDetailOrder;
+
+  /// No description provided for @serverFuncBtns.
+  ///
+  /// In en, this message translates to:
+  /// **'Server func buttons'**
+  String get serverFuncBtns;
 
   /// No description provided for @serverOrder.
   ///
@@ -1325,7 +1385,7 @@ abstract class S {
   /// No description provided for @syncTip.
   ///
   /// In en, this message translates to:
-  /// **'After auto sync, a restart may be required for some changes to take effect.'**
+  /// **'A restart may be required for some changes to take effect.'**
   String get syncTip;
 
   /// No description provided for @system.
@@ -1340,11 +1400,23 @@ abstract class S {
   /// **'Tags'**
   String get tag;
 
+  /// No description provided for @temperature.
+  ///
+  /// In en, this message translates to:
+  /// **'Temperature'**
+  String get temperature;
+
   /// No description provided for @terminal.
   ///
   /// In en, this message translates to:
   /// **'Terminal'**
   String get terminal;
+
+  /// No description provided for @test.
+  ///
+  /// In en, this message translates to:
+  /// **'Test'**
+  String get test;
 
   /// No description provided for @theme.
   ///
@@ -1508,6 +1580,12 @@ abstract class S {
   /// **'No paired Apple Watch'**
   String get watchNotPaired;
 
+  /// No description provided for @webdavSettingEmpty.
+  ///
+  /// In en, this message translates to:
+  /// **'Webdav setting is empty'**
+  String get webdavSettingEmpty;
+
   /// No description provided for @whenOpenApp.
   ///
   /// In en, this message translates to:
@@ -1519,6 +1597,12 @@ abstract class S {
   /// In en, this message translates to:
   /// **'Will take effect immediately'**
   String get willTakEeffectImmediately;
+
+  /// No description provided for @write.
+  ///
+  /// In en, this message translates to:
+  /// **'Write'**
+  String get write;
 }
 
 class _SDelegate extends LocalizationsDelegate<S> {

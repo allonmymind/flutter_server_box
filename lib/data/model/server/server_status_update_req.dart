@@ -1,3 +1,5 @@
+import 'package:toolbox/data/model/server/nvdia.dart';
+import 'package:toolbox/data/model/server/server.dart';
 import 'package:toolbox/data/model/server/system.dart';
 import 'package:toolbox/data/res/logger.dart';
 
@@ -6,7 +8,6 @@ import 'cpu.dart';
 import 'disk.dart';
 import 'memory.dart';
 import 'net_speed.dart';
-import 'server_status.dart';
 import 'conn.dart';
 
 class ServerStatusUpdateReq {
@@ -35,8 +36,10 @@ Future<ServerStatus> getStatus(ServerStatusUpdateReq req) async {
 Future<ServerStatus> _getLinuxStatus(ServerStatusUpdateReq req) async {
   final segments = req.segments;
 
+  final time = int.tryParse(StatusCmdType.time.find(segments)) ??
+      DateTime.now().millisecondsSinceEpoch ~/ 1000;
+
   try {
-    final time = int.parse(StatusCmdType.time.find(segments));
     final net = parseNetSpeed(StatusCmdType.net.find(segments), time);
     req.ss.netSpeed.update(net);
   } catch (e, s) {
@@ -98,6 +101,20 @@ Future<ServerStatus> _getLinuxStatus(ServerStatusUpdateReq req) async {
 
   try {
     req.ss.swap = parseSwap(StatusCmdType.mem.find(segments));
+  } catch (e, s) {
+    Loggers.parse.warning(e, s);
+  }
+
+  try {
+    final diskio = DiskIO.parse(StatusCmdType.diskio.find(segments), time);
+    req.ss.diskIO.update(diskio);
+  } catch (e, s) {
+    Loggers.parse.warning(e, s);
+  }
+
+  try {
+    final nvdia = NvidiaSmi.fromXml(StatusCmdType.nvdia.find(segments));
+    req.ss.nvdia = nvdia;
   } catch (e, s) {
     Loggers.parse.warning(e, s);
   }

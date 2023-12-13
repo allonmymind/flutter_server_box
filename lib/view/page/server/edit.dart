@@ -4,21 +4,23 @@ import 'package:toolbox/core/extension/context/common.dart';
 import 'package:toolbox/core/extension/context/dialog.dart';
 import 'package:toolbox/core/extension/context/locale.dart';
 import 'package:toolbox/core/extension/context/snackbar.dart';
+import 'package:toolbox/data/model/app/shell_func.dart';
 import 'package:toolbox/data/res/provider.dart';
+import 'package:toolbox/view/widget/expand_tile.dart';
 
 import '../../../core/route.dart';
 import '../../../data/model/server/private_key_info.dart';
 import '../../../data/model/server/server_private_info.dart';
 import '../../../data/provider/private_key.dart';
 import '../../../data/res/ui.dart';
-import '../../widget/custom_appbar.dart';
+import '../../widget/appbar.dart';
 import '../../widget/input_field.dart';
-import '../../widget/round_rect_card.dart';
+import '../../widget/cardx.dart';
 import '../../widget/tag.dart';
 import '../../widget/value_notifier.dart';
 
 class ServerEditPage extends StatefulWidget {
-  const ServerEditPage({Key? key, this.spi}) : super(key: key);
+  const ServerEditPage({super.key, this.spi});
 
   final ServerPrivateInfo? spi;
 
@@ -43,6 +45,7 @@ class _ServerEditPageState extends State<ServerEditPage> {
 
   final _keyIdx = ValueNotifier<int?>(null);
   final _autoConnect = ValueNotifier(true);
+  final _jumpServer = ValueNotifier<String?>(null);
 
   var _tags = <String>[];
 
@@ -50,28 +53,26 @@ class _ServerEditPageState extends State<ServerEditPage> {
   void initState() {
     super.initState();
 
-    if (widget.spi != null) {
-      _nameController.text = widget.spi?.name ?? '';
-      _ipController.text = widget.spi?.ip ?? '';
-      _portController.text = (widget.spi?.port ?? 22).toString();
-      _usernameController.text = widget.spi?.user ?? '';
-      if (widget.spi?.pubKeyId == null) {
-        _passwordController.text = widget.spi?.pwd ?? '';
+    final spi = widget.spi;
+    if (spi != null) {
+      _nameController.text = spi.name;
+      _ipController.text = spi.ip;
+      _portController.text = spi.port.toString();
+      _usernameController.text = spi.user;
+      if (spi.keyId == null) {
+        _passwordController.text = spi.pwd ?? '';
       } else {
         _keyIdx.value = Pros.key.pkis.indexWhere(
-          (e) => e.id == widget.spi!.pubKeyId,
+          (e) => e.id == widget.spi!.keyId,
         );
       }
-      if (widget.spi?.tags != null) {
-        /// List in dart is passed by pointer, so you need to copy it here
-        _tags.addAll(widget.spi!.tags!);
-      }
-      if (widget.spi?.alterUrl != null) {
-        _altUrlController.text = widget.spi!.alterUrl!;
-      }
-      if (widget.spi?.autoConnect != null) {
-        _autoConnect.value = widget.spi!.autoConnect!;
-      }
+
+      /// List in dart is passed by pointer, so you need to copy it here
+      _tags.addAll(spi.tags ?? []);
+
+      _altUrlController.text = spi.alterUrl ?? '';
+      _autoConnect.value = spi.autoConnect ?? true;
+      _jumpServer.value = spi.jumpId;
     }
   }
 
@@ -107,31 +108,60 @@ class _ServerEditPageState extends State<ServerEditPage> {
   }
 
   PreferredSizeWidget _buildAppBar() {
-    final delBtn = IconButton(
-      onPressed: () {
-        context.showRoundDialog(
-          title: Text(l10n.attention),
-          child: Text(l10n.askContinue(
-            '${l10n.delete} ${l10n.server}(${widget.spi!.name})',
-          )),
-          actions: [
-            TextButton(
-              onPressed: () {
-                Pros.server.delServer(widget.spi!.id);
-                context.pop();
-                context.pop(true);
-              },
-              child: Text(l10n.ok, style: UIs.textRed),
-            ),
-          ],
-        );
-      },
-      icon: const Icon(Icons.delete),
-    );
-    final actions = widget.spi != null ? [delBtn] : null;
     return CustomAppBar(
       title: Text(l10n.edit, style: UIs.textSize18),
-      actions: actions,
+      actions: widget.spi != null
+          ? [
+              IconButton(
+                onPressed: () {
+                  var delScripts = false;
+                  context.showRoundDialog(
+                    title: Text(l10n.attention),
+                    child: StatefulBuilder(builder: (ctx, setState) {
+                      return Column(
+                        mainAxisSize: MainAxisSize.min,
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(l10n.askContinue(
+                            '${l10n.delete} ${l10n.server}(${widget.spi!.name})',
+                          )),
+                          UIs.height13,
+                          if (widget.spi?.server?.canViewDetails ?? false)
+                            Row(
+                              children: [
+                                Checkbox(
+                                  value: delScripts,
+                                  onChanged: (_) => setState(
+                                    () => delScripts = !delScripts,
+                                  ),
+                                ),
+                                Text(l10n.deleteScripts),
+                              ],
+                            )
+                        ],
+                      );
+                    }),
+                    actions: [
+                      TextButton(
+                        onPressed: () async {
+                          if (delScripts) {
+                            const cmd =
+                                'rm ${ShellFunc.srvBoxDir}/mobile_v*.sh';
+                            await widget.spi?.server?.client?.run(cmd);
+                          }
+                          Pros.server.delServer(widget.spi!.id);
+                          context.pop();
+                          context.pop(true);
+                        },
+                        child: Text(l10n.ok, style: UIs.textRed),
+                      ),
+                    ],
+                  );
+                },
+                icon: const Icon(Icons.delete),
+              ),
+            ]
+          : null,
     );
   }
 
@@ -189,6 +219,7 @@ class _ServerEditPageState extends State<ServerEditPage> {
         onRenameTag: Pros.server.renameTag,
       ),
       _buildAuth(),
+      _buildJumpServer(),
       ListTile(
         title: Text(l10n.autoConnect),
         trailing: ValueBuilder(
@@ -283,7 +314,7 @@ class _ServerEditPageState extends State<ServerEditPage> {
             ),
           ),
         );
-        return RoundRectCard(
+        return CardX(
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: 17),
             child: Column(
@@ -313,6 +344,49 @@ class _ServerEditPageState extends State<ServerEditPage> {
           _keyIdx.value = value;
         },
       ),
+    );
+  }
+
+  Widget _buildJumpServer() {
+    return ValueBuilder(
+      listenable: _jumpServer,
+      build: () {
+        final children = Pros.server.servers
+            .where((element) => element.spi.jumpId == null)
+            .where((element) => element.spi.id != widget.spi?.id)
+            .map(
+              (e) => ListTile(
+                title: Text(e.spi.name),
+                subtitle: Text(e.spi.id, style: UIs.textGrey),
+                trailing: Radio<String>(
+                  groupValue: _jumpServer.value,
+                  value: e.spi.id,
+                  onChanged: (val) => _jumpServer.value = val,
+                ),
+                onTap: () {
+                  _jumpServer.value = e.spi.id;
+                },
+              ),
+            )
+            .toList();
+        children.add(ListTile(
+          title: Text(l10n.clear),
+          trailing: const Icon(Icons.clear),
+          onTap: () => _jumpServer.value = null,
+        ));
+        return CardX(
+          ExpandTile(
+            leading: const Icon(Icons.map),
+            initiallyExpanded: _jumpServer.value != null,
+            title: Text(l10n.jumpServer),
+            subtitle: const Text(
+              "It was temporarily disabled because it has some bugs (Issues #210)",
+              style: UIs.textGrey,
+            ),
+            children: children,
+          ),
+        );
+      },
     );
   }
 
@@ -353,17 +427,20 @@ class _ServerEditPageState extends State<ServerEditPage> {
     }
 
     final spi = ServerPrivateInfo(
-      name: _nameController.text,
+      name: _nameController.text.isEmpty
+          ? _ipController.text
+          : _nameController.text,
       ip: _ipController.text,
       port: int.parse(_portController.text),
       user: _usernameController.text,
       pwd: _passwordController.text.isEmpty ? null : _passwordController.text,
-      pubKeyId: _keyIdx.value != null
+      keyId: _keyIdx.value != null
           ? Pros.key.pkis.elementAt(_keyIdx.value!).id
           : null,
       tags: _tags,
       alterUrl: _altUrlController.text.isEmpty ? null : _altUrlController.text,
       autoConnect: _autoConnect.value,
+      jumpId: _jumpServer.value,
     );
 
     if (widget.spi == null) {

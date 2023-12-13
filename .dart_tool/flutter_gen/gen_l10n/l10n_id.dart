@@ -49,6 +49,9 @@ class SId extends S {
   String get auto => 'Auto';
 
   @override
+  String get autoBackupConflict => 'Hanya satu pencadangan otomatis yang dapat diaktifkan pada saat yang bersamaan.';
+
+  @override
   String get autoCheckUpdate => 'Periksa pembaruan otomatis';
 
   @override
@@ -142,6 +145,9 @@ class SId extends S {
   String get delete => 'Menghapus';
 
   @override
+  String get deleteScripts => 'Menghapus skrip server secara bersamaan';
+
+  @override
   String get deleteServers => 'Penghapusan server secara batch';
 
   @override
@@ -154,7 +160,13 @@ class SId extends S {
   String get disconnected => 'Terputus';
 
   @override
+  String get disk => 'Disk';
+
+  @override
   String get diskIgnorePath => 'Abaikan jalan untuk disk';
+
+  @override
+  String get displayName => 'Nama tampilan';
 
   @override
   String dl2Local(Object fileName) {
@@ -337,6 +349,9 @@ class SId extends S {
   String get isBusy => 'Sibuk sekarang';
 
   @override
+  String get jumpServer => 'Lompat server';
+
+  @override
   String get keepForeground => 'Simpan Aplikasi Foreground!';
 
   @override
@@ -370,6 +385,9 @@ class SId extends S {
   String get loadingFiles => 'Memuat file ...';
 
   @override
+  String get location => 'Lokasi';
+
+  @override
   String get log => 'Catatan';
 
   @override
@@ -379,6 +397,9 @@ class SId extends S {
   String madeWithLove(Object myGithub) {
     return 'Dibuat dengan ❤️ oleh $myGithub';
   }
+
+  @override
+  String get manual => 'Manual';
 
   @override
   String get max => 'Max';
@@ -396,9 +417,6 @@ class SId extends S {
   String get mission => 'Misi';
 
   @override
-  String get moveOutServerFuncBtns => 'Lokasi tombol fungsi server';
-
-  @override
   String get moveOutServerFuncBtnsHelp => 'Aktif: dapat ditampilkan di bawah setiap kartu pada halaman Tab Server. Nonaktif: dapat ditampilkan di bagian atas halaman Rincian Server.';
 
   @override
@@ -409,6 +427,9 @@ class SId extends S {
 
   @override
   String get needRestart => 'Perlu memulai ulang aplikasi';
+
+  @override
+  String get net => 'Net';
 
   @override
   String get netViewType => 'Jenis tampilan bersih';
@@ -524,6 +545,9 @@ class SId extends S {
   String get pwd => 'Kata sandi';
 
   @override
+  String get read => 'Baca';
+
+  @override
   String get reboot => 'Reboot';
 
   @override
@@ -565,10 +589,16 @@ class SId extends S {
   String get second => 'S';
 
   @override
+  String get sequence => 'Urutan';
+
+  @override
   String get server => 'Server';
 
   @override
   String get serverDetailOrder => 'Detail pesanan widget halaman';
+
+  @override
+  String get serverFuncBtns => 'Tombol fungsi server';
 
   @override
   String get serverOrder => 'Pesanan server';
@@ -647,7 +677,7 @@ class SId extends S {
   String get suspendTip => 'Fungsi penangguhan memerlukan hak akses root dan dukungan systemd.';
 
   @override
-  String get syncTip => 'Setelah sinkronisasi otomatis, mungkin perlu memulai ulang aplikasi agar perubahan tertentu dapat diterapkan.';
+  String get syncTip => 'Pengaktifan ulang mungkin diperlukan agar beberapa perubahan dapat diterapkan.';
 
   @override
   String get system => 'Sistem';
@@ -656,7 +686,13 @@ class SId extends S {
   String get tag => 'Tag';
 
   @override
+  String get temperature => 'Suhu';
+
+  @override
   String get terminal => 'Terminal';
+
+  @override
+  String get test => 'pengujian';
 
   @override
   String get theme => ' Tema';
@@ -750,8 +786,14 @@ class SId extends S {
   String get watchNotPaired => 'Tidak ada Apple Watch yang dipasangkan';
 
   @override
+  String get webdavSettingEmpty => 'Pengaturan webdav kosong';
+
+  @override
   String get whenOpenApp => 'Saat membuka aplikasi';
 
   @override
   String get willTakEeffectImmediately => 'Akan segera berlaku';
+
+  @override
+  String get write => 'Tulis';
 }

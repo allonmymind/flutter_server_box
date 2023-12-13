@@ -3,12 +3,13 @@ import 'package:toolbox/core/extension/context/locale.dart';
 import 'package:toolbox/core/extension/order.dart';
 import 'package:toolbox/data/res/provider.dart';
 import 'package:toolbox/data/res/store.dart';
-import 'package:toolbox/view/widget/round_rect_card.dart';
+import 'package:toolbox/data/res/ui.dart';
+import 'package:toolbox/view/widget/cardx.dart';
 
-import '../../widget/custom_appbar.dart';
+import '../../widget/appbar.dart';
 
 class ServerOrderPage extends StatefulWidget {
-  const ServerOrderPage({Key? key}) : super(key: key);
+  const ServerOrderPage({super.key});
 
   @override
   _ServerOrderPageState createState() => _ServerOrderPageState();
@@ -40,8 +41,7 @@ class _ServerOrderPageState extends State<ServerOrderPage> {
       }),
       padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 3),
       buildDefaultDragHandles: false,
-      itemBuilder: (_, index) =>
-          _buildItem(index, Pros.server.serverOrder[index]),
+      itemBuilder: (_, idx) => _buildItem(idx, Pros.server.serverOrder[idx]),
       itemCount: Pros.server.serverOrder.length,
     );
   }
@@ -54,9 +54,9 @@ class _ServerOrderPageState extends State<ServerOrderPage> {
     return ReorderableDelayedDragStartListener(
       key: ValueKey('$index'),
       index: index,
-      child: RoundRectCard(ListTile(
+      child: CardX(ListTile(
         title: Text(spi.name),
-        subtitle: Text(spi.id),
+        subtitle: Text(spi.id, style: UIs.textGrey),
         leading: CircleAvatar(
           child: Text(spi.name[0]),
         ),

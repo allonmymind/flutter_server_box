@@ -1,18 +1,19 @@
 import 'dart:async';
 import 'dart:io';
 
+import 'package:flutter/foundation.dart';
 import 'package:icloud_storage/icloud_storage.dart';
-import 'package:toolbox/core/utils/platform/base.dart';
-import 'package:toolbox/data/res/logger.dart';
+import 'package:logging/logging.dart';
+import 'package:toolbox/data/model/app/backup.dart';
+import 'package:toolbox/data/model/app/sync.dart';
 
-import '../../data/model/app/error.dart';
-import '../../data/model/app/json.dart';
-import '../../data/res/path.dart';
+import '../../../data/model/app/error.dart';
+import '../../../data/res/path.dart';
 
-class ICloud {
+abstract final class ICloud {
   static const _containerId = 'iCloud.tech.lolli.serverbox';
 
-  const ICloud._();
+  static final _logger = Logger('iCloud');
 
   /// Upload file to iCloud
   ///
@@ -91,41 +92,42 @@ class ICloud {
   ///
   /// - [relativePath] is the path relative to [docDir],
   /// must not starts with `/`
+  /// - [bakSuffix] is the suffix of backup file, default to [null].
+  /// All files downloaded from cloud will be suffixed with [bakSuffix].
   ///
   /// Return `null` if upload success, `ICloudErr` otherwise
-  ///
-  /// TODO: consider merge strategy, use [SyncAble] and [JsonSerializable]
-  static Future<Iterable<ICloudErr>?> sync({
+  static Future<SyncResult<String, ICloudErr>> syncFiles({
     required Iterable<String> relativePaths,
+    String? bakPrefix,
   }) async {
     final uploadFiles = <String>[];
     final downloadFiles = <String>[];
 
     try {
-      final errs = <ICloudErr>[];
+      final errs = <String, ICloudErr>{};
 
       final allFiles = await getAll();
 
       /// remove files not in relativePaths
       allFiles.removeWhere((e) => !relativePaths.contains(e.relativePath));
 
-      final mission = <Future<void>>[];
+      final missions = <Future<void>>[];
 
       /// upload files not in iCloud
       final missed = relativePaths.where((e) {
         return !allFiles.any((f) => f.relativePath == e);
       });
-      mission.addAll(missed.map((e) async {
+      missions.addAll(missed.map((e) async {
         final err = await upload(relativePath: e);
         if (err != null) {
-          errs.add(err);
+          errs[e] = err;
         }
       }));
 
       final docPath = await Paths.doc;
 
       /// compare files in iCloud and local
-      mission.addAll(allFiles.map((file) async {
+      missions.addAll(allFiles.map((file) async {
         final relativePath = file.relativePath;
 
         /// Check date
@@ -134,7 +136,7 @@ class ICloud {
           /// Local file not found, download remote file
           final err = await download(relativePath: relativePath);
           if (err != null) {
-            errs.add(err);
+            errs[relativePath] = err;
           }
           return;
         }
@@ -149,39 +151,66 @@ class ICloud {
           await delete(relativePath);
           final err = await upload(relativePath: relativePath);
           if (err != null) {
-            errs.add(err);
+            errs[relativePath] = err;
           }
           uploadFiles.add(relativePath);
           return;
         }
 
         /// Remote is newer than local, so download remote
-        final err = await download(relativePath: relativePath);
+        final localPath = '$docPath/${bakPrefix ?? ''}$relativePath';
+        final err = await download(
+          relativePath: relativePath,
+          localPath: localPath,
+        );
         if (err != null) {
-          errs.add(err);
+          errs[relativePath] = err;
         }
         downloadFiles.add(relativePath);
       }));
 
-      await Future.wait(mission);
+      await Future.wait(missions);
 
-      return errs.isEmpty ? null : errs;
+      return SyncResult(up: uploadFiles, down: downloadFiles, err: errs);
     } catch (e, s) {
-      Loggers.app.warning('iCloud sync: $relativePaths failed', e, s);
-      return [ICloudErr(type: ICloudErrType.generic, message: '$e')];
+      _logger.warning('Sync: $relativePaths failed', e, s);
+      return SyncResult(up: uploadFiles, down: downloadFiles, err: {
+        'Generic': ICloudErr(type: ICloudErrType.generic, message: '$e')
+      });
     } finally {
-      Loggers.app.info('iCloud sync, up: $uploadFiles, down: $downloadFiles');
+      _logger.info('Sync, up: $uploadFiles, down: $downloadFiles');
     }
   }
 
-  static Future<void> syncDb() async {
-    if (!isIOS && !isMacOS) return;
-    final docPath = await Paths.doc;
-    final dir = Directory(docPath);
-    final files = await dir.list().toList();
-    // filter out non-hive(db) files
-    files.removeWhere((e) => !e.path.endsWith('.hive'));
-    final paths = files.map((e) => e.path.replaceFirst('$docPath/', ''));
-    await ICloud.sync(relativePaths: paths);
+  static Future<void> sync() async {
+    try {
+      final result = await download(relativePath: Paths.bakName);
+      if (result != null) {
+        _logger.warning('Download backup failed: $result');
+        return;
+      }
+    } catch (e, s) {
+      _logger.warning('Download backup failed', e, s);
+    }
+    final dlFile = await File(await Paths.bak).readAsString();
+    final dlBak = await compute(Backup.fromJsonString, dlFile);
+    final restore = await dlBak.restore();
+    switch (restore) {
+      case true:
+        _logger.info('Restore from ${dlBak.lastModTime} success');
+        break;
+      case false:
+        await Backup.backup();
+        final uploadResult = await upload(relativePath: Paths.bakName);
+        if (uploadResult != null) {
+          _logger.warning('Upload backup failed: $uploadResult');
+        } else {
+          _logger.info('Upload backup success');
+        }
+        break;
+      case null:
+        _logger.info('Skip sync');
+        break;
+    }
   }
 }
