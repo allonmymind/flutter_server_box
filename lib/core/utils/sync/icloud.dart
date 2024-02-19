@@ -1,7 +1,7 @@
 import 'dart:async';
 import 'dart:io';
 
-import 'package:flutter/foundation.dart';
+import 'package:computer/computer.dart';
 import 'package:icloud_storage/icloud_storage.dart';
 import 'package:logging/logging.dart';
 import 'package:toolbox/data/model/app/backup.dart';
@@ -28,20 +28,26 @@ abstract final class ICloud {
     String? localPath,
   }) async {
     final completer = Completer<ICloudErr?>();
-    await ICloudStorage.upload(
-      containerId: _containerId,
-      filePath: localPath ?? '${await Paths.doc}/$relativePath',
-      destinationRelativePath: relativePath,
-      onProgress: (stream) {
-        stream.listen(
-          null,
-          onDone: () => completer.complete(null),
-          onError: (e) => completer.complete(
-            ICloudErr(type: ICloudErrType.generic, message: '$e'),
-          ),
-        );
-      },
-    );
+    try {
+      await ICloudStorage.upload(
+        containerId: _containerId,
+        filePath: localPath ?? '${await Paths.doc}/$relativePath',
+        destinationRelativePath: relativePath,
+        onProgress: (stream) {
+          stream.listen(
+            null,
+            onDone: () => completer.complete(null),
+            onError: (e) => completer.complete(
+              ICloudErr(type: ICloudErrType.generic, message: '$e'),
+            ),
+          );
+        },
+      );
+    } catch (e, s) {
+      _logger.warning('Upload $relativePath failed', e, s);
+      completer.complete(ICloudErr(type: ICloudErrType.generic, message: '$e'));
+    }
+
     return completer.future;
   }
 
@@ -52,10 +58,14 @@ abstract final class ICloud {
   }
 
   static Future<void> delete(String relativePath) async {
-    await ICloudStorage.delete(
-      containerId: _containerId,
-      relativePath: relativePath,
-    );
+    try {
+      await ICloudStorage.delete(
+        containerId: _containerId,
+        relativePath: relativePath,
+      );
+    } catch (e, s) {
+      _logger.warning('Delete $relativePath failed', e, s);
+    }
   }
 
   /// Download file from iCloud
@@ -71,20 +81,25 @@ abstract final class ICloud {
     String? localPath,
   }) async {
     final completer = Completer<ICloudErr?>();
-    await ICloudStorage.download(
-      containerId: _containerId,
-      relativePath: relativePath,
-      destinationFilePath: localPath ?? '${await Paths.doc}/$relativePath',
-      onProgress: (stream) {
-        stream.listen(
-          null,
-          onDone: () => completer.complete(null),
-          onError: (e) => completer.complete(
-            ICloudErr(type: ICloudErrType.generic, message: '$e'),
-          ),
-        );
-      },
-    );
+    try {
+      await ICloudStorage.download(
+        containerId: _containerId,
+        relativePath: relativePath,
+        destinationFilePath: localPath ?? '${await Paths.doc}/$relativePath',
+        onProgress: (stream) {
+          stream.listen(
+            null,
+            onDone: () => completer.complete(null),
+            onError: (e) => completer.complete(
+              ICloudErr(type: ICloudErrType.generic, message: '$e'),
+            ),
+          );
+        },
+      );
+    } catch (e, s) {
+      _logger.warning('Download $relativePath failed', e, s);
+      completer.complete(ICloudErr(type: ICloudErrType.generic, message: '$e'));
+    }
     return completer.future;
   }
 
@@ -183,34 +198,27 @@ abstract final class ICloud {
   }
 
   static Future<void> sync() async {
-    try {
-      final result = await download(relativePath: Paths.bakName);
-      if (result != null) {
-        _logger.warning('Download backup failed: $result');
-        return;
-      }
-    } catch (e, s) {
-      _logger.warning('Download backup failed', e, s);
+    final result = await download(relativePath: Paths.bakName);
+    if (result != null) {
+      _logger.warning('Download backup failed: $result');
+      await backup();
+      return;
     }
+
     final dlFile = await File(await Paths.bak).readAsString();
-    final dlBak = await compute(Backup.fromJsonString, dlFile);
-    final restore = await dlBak.restore();
-    switch (restore) {
-      case true:
-        _logger.info('Restore from ${dlBak.lastModTime} success');
-        break;
-      case false:
-        await Backup.backup();
-        final uploadResult = await upload(relativePath: Paths.bakName);
-        if (uploadResult != null) {
-          _logger.warning('Upload backup failed: $uploadResult');
-        } else {
-          _logger.info('Upload backup success');
-        }
-        break;
-      case null:
-        _logger.info('Skip sync');
-        break;
+    final dlBak = await Computer.shared.start(Backup.fromJsonString, dlFile);
+    await dlBak.restore();
+
+    await backup();
+  }
+
+  static Future<void> backup() async {
+    await Backup.backup();
+    final uploadResult = await upload(relativePath: Paths.bakName);
+    if (uploadResult != null) {
+      _logger.warning('Upload backup failed: $uploadResult');
+    } else {
+      _logger.info('Upload backup success');
     }
   }
 }

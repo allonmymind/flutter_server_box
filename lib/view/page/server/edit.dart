@@ -6,7 +6,6 @@ import 'package:toolbox/core/extension/context/locale.dart';
 import 'package:toolbox/core/extension/context/snackbar.dart';
 import 'package:toolbox/data/model/app/shell_func.dart';
 import 'package:toolbox/data/res/provider.dart';
-import 'package:toolbox/view/widget/expand_tile.dart';
 
 import '../../../core/route.dart';
 import '../../../data/model/server/private_key_info.dart';
@@ -17,7 +16,6 @@ import '../../widget/appbar.dart';
 import '../../widget/input_field.dart';
 import '../../widget/cardx.dart';
 import '../../widget/tag.dart';
-import '../../widget/value_notifier.dart';
 
 class ServerEditPage extends StatefulWidget {
   const ServerEditPage({super.key, this.spi});
@@ -109,7 +107,7 @@ class _ServerEditPageState extends State<ServerEditPage> {
 
   PreferredSizeWidget _buildAppBar() {
     return CustomAppBar(
-      title: Text(l10n.edit, style: UIs.textSize18),
+      title: Text(l10n.edit, style: UIs.text18),
       actions: widget.spi != null
           ? [
               IconButton(
@@ -127,16 +125,15 @@ class _ServerEditPageState extends State<ServerEditPage> {
                           )),
                           UIs.height13,
                           if (widget.spi?.server?.canViewDetails ?? false)
-                            Row(
-                              children: [
-                                Checkbox(
-                                  value: delScripts,
-                                  onChanged: (_) => setState(
-                                    () => delScripts = !delScripts,
-                                  ),
-                                ),
-                                Text(l10n.deleteScripts),
-                              ],
+                            CheckboxListTile(
+                              value: delScripts,
+                              onChanged: (_) => setState(
+                                () => delScripts = !delScripts,
+                              ),
+                              controlAffinity: ListTileControlAffinity.leading,
+                              title: Text(l10n.deleteScripts),
+                              tileColor: Colors.transparent,
+                              contentPadding: EdgeInsets.zero,
                             )
                         ],
                       );
@@ -144,13 +141,15 @@ class _ServerEditPageState extends State<ServerEditPage> {
                     actions: [
                       TextButton(
                         onPressed: () async {
+                          context.pop();
                           if (delScripts) {
+                            context.showLoadingDialog();
                             const cmd =
                                 'rm ${ShellFunc.srvBoxDir}/mobile_v*.sh';
                             await widget.spi?.server?.client?.run(cmd);
+                            context.pop();
                           }
                           Pros.server.delServer(widget.spi!.id);
-                          context.pop();
                           context.pop(true);
                         },
                         child: Text(l10n.ok, style: UIs.textRed),
@@ -176,10 +175,13 @@ class _ServerEditPageState extends State<ServerEditPage> {
         hint: l10n.exampleName,
         label: l10n.name,
         icon: Icons.info,
+        obscureText: false,
+        autoCorrect: true,
+        suggestiion: true,
       ),
       Input(
         controller: _ipController,
-        type: TextInputType.text,
+        type: TextInputType.url,
         onSubmitted: (_) => _focusScope.requestFocus(_portFocus),
         node: _ipFocus,
         label: l10n.host,
@@ -206,7 +208,7 @@ class _ServerEditPageState extends State<ServerEditPage> {
       ),
       Input(
         controller: _altUrlController,
-        type: TextInputType.text,
+        type: TextInputType.url,
         node: _alterUrlFocus,
         label: l10n.alterUrl,
         icon: Icons.computer,
@@ -219,12 +221,12 @@ class _ServerEditPageState extends State<ServerEditPage> {
         onRenameTag: Pros.server.renameTag,
       ),
       _buildAuth(),
-      _buildJumpServer(),
+      //_buildJumpServer(),
       ListTile(
         title: Text(l10n.autoConnect),
-        trailing: ValueBuilder(
+        trailing: ListenableBuilder(
           listenable: _autoConnect,
-          build: () => Switch(
+          builder: (_, __) => Switch(
             value: _autoConnect.value,
             onChanged: (val) {
               _autoConnect.value = val;
@@ -246,9 +248,9 @@ class _ServerEditPageState extends State<ServerEditPage> {
   Widget _buildAuth() {
     final switch_ = ListTile(
       title: Text(l10n.keyAuth),
-      trailing: ValueBuilder(
+      trailing: ListenableBuilder(
         listenable: _keyIdx,
-        build: () => Switch(
+        builder: (_, __) => Switch(
           value: _keyIdx.value != null,
           onChanged: (val) {
             if (val) {
@@ -262,9 +264,9 @@ class _ServerEditPageState extends State<ServerEditPage> {
     );
 
     /// Put [switch_] out of [ValueBuilder] to avoid rebuild
-    return ValueBuilder(
+    return ListenableBuilder(
       listenable: _keyIdx,
-      build: () {
+      builder: (_, __) {
         final children = <Widget>[switch_];
         if (_keyIdx.value != null) {
           children.add(_buildKeyAuth());
@@ -315,7 +317,7 @@ class _ServerEditPageState extends State<ServerEditPage> {
           ),
         );
         return CardX(
-          Padding(
+          child: Padding(
             padding: const EdgeInsets.symmetric(horizontal: 17),
             child: Column(
               children: tiles,
@@ -335,9 +337,9 @@ class _ServerEditPageState extends State<ServerEditPage> {
   }
 
   Widget _buildRadio(int index, PrivateKeyInfo pki) {
-    return ValueBuilder(
+    return ListenableBuilder(
       listenable: _keyIdx,
-      build: () => Radio<int>(
+      builder: (_, __) => Radio<int>(
         value: index,
         groupValue: _keyIdx.value,
         onChanged: (value) {
@@ -347,48 +349,48 @@ class _ServerEditPageState extends State<ServerEditPage> {
     );
   }
 
-  Widget _buildJumpServer() {
-    return ValueBuilder(
-      listenable: _jumpServer,
-      build: () {
-        final children = Pros.server.servers
-            .where((element) => element.spi.jumpId == null)
-            .where((element) => element.spi.id != widget.spi?.id)
-            .map(
-              (e) => ListTile(
-                title: Text(e.spi.name),
-                subtitle: Text(e.spi.id, style: UIs.textGrey),
-                trailing: Radio<String>(
-                  groupValue: _jumpServer.value,
-                  value: e.spi.id,
-                  onChanged: (val) => _jumpServer.value = val,
-                ),
-                onTap: () {
-                  _jumpServer.value = e.spi.id;
-                },
-              ),
-            )
-            .toList();
-        children.add(ListTile(
-          title: Text(l10n.clear),
-          trailing: const Icon(Icons.clear),
-          onTap: () => _jumpServer.value = null,
-        ));
-        return CardX(
-          ExpandTile(
-            leading: const Icon(Icons.map),
-            initiallyExpanded: _jumpServer.value != null,
-            title: Text(l10n.jumpServer),
-            subtitle: const Text(
-              "It was temporarily disabled because it has some bugs (Issues #210)",
-              style: UIs.textGrey,
-            ),
-            children: children,
-          ),
-        );
-      },
-    );
-  }
+  // Widget _buildJumpServer() {
+  //   return ListenableBuilder(
+  //     listenable: _jumpServer,
+  //     builder: (_, __) {
+  //       final children = Pros.server.servers
+  //           .where((element) => element.spi.jumpId == null)
+  //           .where((element) => element.spi.id != widget.spi?.id)
+  //           .map(
+  //             (e) => ListTile(
+  //               title: Text(e.spi.name),
+  //               subtitle: Text(e.spi.id, style: UIs.textGrey),
+  //               trailing: Radio<String>(
+  //                 groupValue: _jumpServer.value,
+  //                 value: e.spi.id,
+  //                 onChanged: (val) => _jumpServer.value = val,
+  //               ),
+  //               onTap: () {
+  //                 _jumpServer.value = e.spi.id;
+  //               },
+  //             ),
+  //           )
+  //           .toList();
+  //       children.add(ListTile(
+  //         title: Text(l10n.clear),
+  //         trailing: const Icon(Icons.clear),
+  //         onTap: () => _jumpServer.value = null,
+  //       ));
+  //       return CardX(
+  //         child: ExpandTile(
+  //           leading: const Icon(Icons.map),
+  //           initiallyExpanded: _jumpServer.value != null,
+  //           title: Text(l10n.jumpServer),
+  //           subtitle: const Text(
+  //             "It was temporarily disabled because it has some bugs (Issues #210)",
+  //             style: UIs.textGrey,
+  //           ),
+  //           children: children,
+  //         ),
+  //       );
+  //     },
+  //   );
+  // }
 
   void _onSave() async {
     if (_ipController.text.isEmpty) {

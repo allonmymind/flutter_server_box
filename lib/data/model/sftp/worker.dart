@@ -56,7 +56,7 @@ Future<void> isolateMessageHandler(
   SendErrorFunction sendError,
 ) async {
   switch (data) {
-    case SftpReq val:
+    case final SftpReq val:
       switch (val.type) {
         case SftpReqType.download:
           await _download(data, mainSendPort, sendError);
@@ -154,9 +154,12 @@ Future<void> _upload(
     mainSendPort.send(SftpWorkerStatus.loading);
     final localFile = local.openRead().cast<Uint8List>();
     final sftp = await client.sftp();
+    // If remote exists, overwrite it
     final file = await sftp.open(
       req.remotePath,
-      mode: SftpFileOpenMode.write | SftpFileOpenMode.create,
+      mode: SftpFileOpenMode.truncate |
+          SftpFileOpenMode.create |
+          SftpFileOpenMode.write,
     );
     final writer = file.write(
       localFile,

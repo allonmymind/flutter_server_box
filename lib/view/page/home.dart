@@ -3,22 +3,23 @@ import 'dart:convert';
 import 'package:after_layout/after_layout.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_gen/gen_l10n/l10n.dart';
+import 'package:flutter_markdown/flutter_markdown.dart';
 import 'package:get_it/get_it.dart';
 import 'package:toolbox/core/channel/bg_run.dart';
 import 'package:toolbox/core/channel/home_widget.dart';
 import 'package:toolbox/core/extension/context/dialog.dart';
 import 'package:toolbox/core/extension/context/locale.dart';
 import 'package:toolbox/core/persistant_store.dart';
+import 'package:toolbox/core/update.dart';
 import 'package:toolbox/core/utils/platform/auth.dart';
 import 'package:toolbox/core/utils/platform/base.dart';
+import 'package:toolbox/data/res/color.dart';
 import 'package:toolbox/data/res/github_id.dart';
 import 'package:toolbox/data/res/logger.dart';
 import 'package:toolbox/data/res/provider.dart';
 import 'package:toolbox/data/res/store.dart';
 
-import '../../core/analysis.dart';
 import '../../core/route.dart';
-import '../../core/update.dart';
 import '../../core/utils/ui.dart';
 import '../../data/model/app/github_id.dart';
 import '../../data/model/app/tab.dart';
@@ -28,8 +29,6 @@ import '../../data/res/ui.dart';
 import '../../data/res/url.dart';
 import '../widget/appbar.dart';
 import '../widget/cardx.dart';
-import '../widget/url_text.dart';
-import '../widget/value_notifier.dart';
 
 class HomePage extends StatefulWidget {
   const HomePage({super.key});
@@ -88,7 +87,7 @@ class _HomePageState extends State<HomePage>
         if (!Pros.server.isAutoRefreshOn) {
           Pros.server.startAutoRefresh();
         }
-        updateHomeWidget();
+        HomeWidgetMC.update();
         break;
       case AppLifecycleState.paused:
         // Keep running in background on Android device
@@ -114,6 +113,7 @@ class _HomePageState extends State<HomePage>
     return Scaffold(
       drawer: _buildDrawer(),
       appBar: CustomAppBar(
+        centerTitle: false,
         title: const Text(BuildData.name),
         actions: <Widget>[
           IconButton(
@@ -133,9 +133,9 @@ class _HomePageState extends State<HomePage>
           }
         },
       ),
-      bottomNavigationBar: ValueBuilder(
+      bottomNavigationBar: ListenableBuilder(
         listenable: _selectIndex,
-        build: _buildBottomBar,
+        builder: (_, __) => _buildBottomBar(),
       ),
     );
   }
@@ -200,7 +200,7 @@ class _HomePageState extends State<HomePage>
             child: Text(
               '${BuildData.name}\n$_versionStr',
               textAlign: TextAlign.center,
-              style: UIs.textSize13,
+              style: UIs.text15,
             ),
           ),
           const SizedBox(height: 37),
@@ -233,7 +233,7 @@ class _HomePageState extends State<HomePage>
           ),
           ListTile(
             leading: const Icon(Icons.import_export),
-            title: Text(l10n.backupAndRestore),
+            title: Text(l10n.backup),
             onTap: () => AppRoute.backup().go(context),
           ),
           ListTile(
@@ -241,7 +241,7 @@ class _HomePageState extends State<HomePage>
             title: Text('${l10n.about} & ${l10n.feedback}'),
             onTap: _showAboutDialog,
           )
-        ].map((e) => CardX(e)).toList(),
+        ].map((e) => CardX(child: e)).toList(),
       ),
     );
   }
@@ -269,34 +269,28 @@ class _HomePageState extends State<HomePage>
 
   Widget _buildAboutContent() {
     return SingleChildScrollView(
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          UrlText(
-            text: l10n.madeWithLove(Urls.myGithub),
-            replace: 'lollipopkit',
-          ),
-          UIs.height13,
-          // Use [UrlText] for same text style
-          Text(l10n.aboutThanks),
-          UIs.height13,
-          const Text('Contributors:'),
-          ...GithubIds.contributors.map(
-            (name) => UrlText(
-              text: name.url,
-              replace: name,
-            ),
-          ),
-          UIs.height13,
-          const Text('Participants:'),
-          ...GithubIds.participants.map(
-            (name) => UrlText(
-              text: name.url,
-              replace: name,
-            ),
-          )
-        ],
+      child: SizedBox(
+        width: MediaQuery.of(context).size.width * 0.8,
+        child: MarkdownBody(
+          styleSheet: MarkdownStyleSheet(a: TextStyle(color: primaryColor)),
+          onTapLink: (text, href, title) {
+            if (href != null) {
+              openUrl(href);
+            }
+          },
+          data: '''
+${l10n.madeWithLove('[lollipopkit](${Urls.myGithub})')}
+
+#### Contributors
+${GithubIds.contributors.map((e) => '[$e](${e.url})').join(' ')}
+
+#### Participants
+${GithubIds.participants.map((e) => '[$e](${e.url})').join(' ')}
+
+#### My other apps
+- [GPT Box](https://github.com/lollipopkit/flutter_gpt_box)
+''',
+        ),
       ),
     );
   }
@@ -323,22 +317,14 @@ class _HomePageState extends State<HomePage>
   Future<void> afterFirstLayout(BuildContext context) async {
     // Auth required for first launch
     _auth();
+
     if (Stores.setting.autoCheckAppUpdate.fetch()) {
       doUpdate(context);
     }
-    updateHomeWidget();
+    HomeWidgetMC.update();
     await GetIt.I.allReady();
     await Pros.server.load();
-    await Pros.server.refreshData();
-    if (!Analysis.enabled) {
-      Analysis.init();
-    }
-  }
-
-  void updateHomeWidget() {
-    if (Stores.setting.autoUpdateHomeWidget.fetch()) {
-      HomeWidgetMC.update();
-    }
+    await Pros.server.refresh();
   }
 
   Future<void> _onLongPressSetting() async {

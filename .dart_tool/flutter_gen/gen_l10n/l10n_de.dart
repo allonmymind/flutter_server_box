@@ -36,7 +36,7 @@ class SDe extends S {
 
   @override
   String askContinue(Object msg) {
-    return '$msg, weiter?';
+    return '$msg. Weiter?';
   }
 
   @override
@@ -58,13 +58,13 @@ class SDe extends S {
   String get autoConnect => 'Automatisch verbinden';
 
   @override
+  String get autoRun => 'Automatischer Start';
+
+  @override
   String get autoUpdateHomeWidget => 'Home-Widget automatisch aktualisieren';
 
   @override
   String get backup => 'Backup';
-
-  @override
-  String get backupAndRestore => 'Backup und Wiederherstellung';
 
   @override
   String get backupTip => 'Das Backup wird nur einfach verschlüsselt.\nBitte bewahre die Datei sicher auf.';
@@ -73,7 +73,13 @@ class SDe extends S {
   String get backupVersionNotMatch => 'Die Backup-Version stimmt nicht überein.';
 
   @override
+  String get battery => 'Batterie';
+
+  @override
   String get bgRun => 'Hintergrundaktualisierung';
+
+  @override
+  String get bgRunTip => 'Dieser Schalter bedeutet nur, dass die App versuchen wird, im Hintergrund zu laufen. Ob sie im Hintergrund laufen kann, hängt davon ab, ob die Berechtigungen aktiviert sind oder nicht. Bei nativem Android deaktivieren Sie bitte \"Batterieoptimierung\" in dieser App, und bei miui ändern Sie bitte die Energiesparrichtlinie auf \"Unbegrenzt\".';
 
   @override
   String get bioAuth => 'Biozertifizierung';
@@ -97,10 +103,19 @@ class SDe extends S {
   String get clear => 'Entfernen';
 
   @override
+  String get clipboard => 'Zwischenablage';
+
+  @override
   String get close => 'Schließen';
 
   @override
   String get cmd => 'Command';
+
+  @override
+  String get collapseUI => 'Zusammenbrechen';
+
+  @override
+  String get collapseUITip => 'Ob lange Listen in der Benutzeroberfläche standardmäßig eingeklappt werden sollen oder nicht';
 
   @override
   String get conn => 'Verbindung';
@@ -109,10 +124,16 @@ class SDe extends S {
   String get connected => 'in Verbindung gebracht';
 
   @override
+  String get container => 'Container';
+
+  @override
   String get containerName => 'Container Name';
 
   @override
   String get containerStatus => 'Container Status';
+
+  @override
+  String get containerTrySudoTip => 'Zum Beispiel: In der App ist der Benutzer auf aaa eingestellt, aber Docker ist unter dem Root-Benutzer installiert. In diesem Fall müssen Sie diese Option aktivieren';
 
   @override
   String get convert => 'Konvertieren';
@@ -177,7 +198,7 @@ class SDe extends S {
   String get dockerEditHost => 'DOCKER_HOST bearbeiten';
 
   @override
-  String get dockerEmptyRunningItems => 'Keine aktiven Container.\n\nWomöglich wird die Umgebungsvariable DOCKER_HOST nicht richtig erkannt. Du kannst sie finden, indem du `echo \$DOCKER_HOST` im Terminal ausführst.';
+  String get dockerEmptyRunningItems => 'Es gibt keine laufenden Container.\nDas könnte daran liegen:\n- Der Docker-Installationsbenutzer ist nicht mit dem in der App konfigurierten Benutzernamen identisch.\n- Die Umgebungsvariable DOCKER_HOST wurde nicht korrekt gelesen. Sie können sie ermitteln, indem Sie `echo \$DOCKER_HOST` im Terminal ausführen.';
 
   @override
   String dockerImagesFmt(Object count) {
@@ -269,6 +290,9 @@ class SDe extends S {
 
   @override
   String get fontSize => 'Schriftgröße';
+
+  @override
+  String get force => 'freiwillig';
 
   @override
   String foundNUpdate(Object count) {
@@ -580,6 +604,9 @@ class SDe extends S {
   String get run => 'Ausführen';
 
   @override
+  String get running => 'läuft';
+
+  @override
   String get save => 'Speichern';
 
   @override
@@ -634,10 +661,16 @@ class SDe extends S {
   String get sftpSSHConnected => 'SFTP Verbunden';
 
   @override
+  String get sftpShowFoldersFirst => 'Ordner zuerst anzeigen';
+
+  @override
   String get showDistLogo => 'Distributionslogo anzeigen';
 
   @override
   String get shutdown => 'Abschaltung';
+
+  @override
+  String get size => 'Größe';
 
   @override
   String get snippet => 'Snippet';
@@ -668,13 +701,24 @@ class SDe extends S {
   String get stop => 'Stop';
 
   @override
+  String get stopped => 'Ausgelaufen';
+
+  @override
   String get success => 'Erfolgreich';
+
+  @override
+  String get supportFmtArgs => 'Die folgenden Formatierungsparameter werden unterstützt:';
 
   @override
   String get suspend => 'Suspend';
 
   @override
   String get suspendTip => 'Die Suspend-Funktion erfordert Root-Rechte und systemd-Unterstützung.';
+
+  @override
+  String switchTo(Object val) {
+    return 'Wechseln zu $val';
+  }
 
   @override
   String get syncTip => 'Damit einige Änderungen wirksam werden, kann ein Neustart erforderlich sein.';
@@ -695,16 +739,31 @@ class SDe extends S {
   String get test => 'Prüfung';
 
   @override
+  String get textScaler => 'Skalierung der Schriftart';
+
+  @override
+  String get textScalerTip => '1.0 => 100% (Originalgröße), funktioniert nur auf der Serverseite Teil der Schrift, nicht empfohlen zu ändern.';
+
+  @override
   String get theme => 'Themen';
 
   @override
   String get themeMode => 'Themen-Modus';
 
   @override
+  String get time => 'Zeit';
+
+  @override
   String get times => 'x';
 
   @override
+  String get total => 'Total';
+
+  @override
   String get traffic => 'Durchflussmenge';
+
+  @override
+  String get trySudo => 'Versuche es mit sudo';
 
   @override
   String get ttl => 'ttl';
@@ -747,10 +806,19 @@ class SDe extends S {
   String get upsideDown => 'Upside Down';
 
   @override
+  String get uptime => 'Betriebszeit';
+
+  @override
   String get urlOrJson => 'URL oder JSON';
 
   @override
-  String get useNoPwd => 'Es wird kein Passwort verwendet.';
+  String get useNoPwd => 'Es wird kein Passwort verwendet';
+
+  @override
+  String get usePodmanByDefault => 'Standardmäßige Verwendung von Podman';
+
+  @override
+  String get used => 'Gebraucht';
 
   @override
   String get user => 'Benutzer';

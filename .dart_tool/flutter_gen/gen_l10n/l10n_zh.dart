@@ -58,13 +58,13 @@ class SZh extends S {
   String get autoConnect => '自动连接';
 
   @override
+  String get autoRun => '自动运行';
+
+  @override
   String get autoUpdateHomeWidget => '自动更新桌面小部件';
 
   @override
   String get backup => '备份';
-
-  @override
-  String get backupAndRestore => '备份和恢复';
 
   @override
   String get backupTip => '导出的数据仅进行了简单加密，请妥善保管。';
@@ -73,7 +73,13 @@ class SZh extends S {
   String get backupVersionNotMatch => '备份版本不匹配，无法恢复';
 
   @override
+  String get battery => '电池';
+
+  @override
   String get bgRun => '后台运行';
+
+  @override
+  String get bgRunTip => '此开关只代表程序会尝试在后台运行，具体能否后台运行取决于是否开启了权限。原生 Android 请关闭本 App 的“电池优化”，MIUI 请修改省电策略为“无限制”。';
 
   @override
   String get bioAuth => '生物认证';
@@ -97,10 +103,19 @@ class SZh extends S {
   String get clear => '清除';
 
   @override
+  String get clipboard => '剪切板';
+
+  @override
   String get close => '关闭';
 
   @override
   String get cmd => '命令';
+
+  @override
+  String get collapseUI => '折叠';
+
+  @override
+  String get collapseUITip => '是否默认折叠UI中存在的长列表';
 
   @override
   String get conn => '连接';
@@ -109,10 +124,16 @@ class SZh extends S {
   String get connected => '已连接';
 
   @override
+  String get container => '容器';
+
+  @override
   String get containerName => '容器名';
 
   @override
   String get containerStatus => '容器状态';
+
+  @override
+  String get containerTrySudoTip => '例如：在应用内将用户设置为aaa，但是Docker安装在root用户下，这时就需要启用此选项';
 
   @override
   String get convert => '转换';
@@ -177,7 +198,7 @@ class SZh extends S {
   String get dockerEditHost => '编辑 DOCKER_HOST';
 
   @override
-  String get dockerEmptyRunningItems => '没有正在运行的容器。\n这可能是因为环境变量 DOCKER_HOST 没有被正确读取。你可以通过在终端内运行 `echo \$DOCKER_HOST` 来获取。';
+  String get dockerEmptyRunningItems => '没有正在运行的容器。\n这可能是因为：\n- Docker 安装用户与 App 内配置的用户名不同\n- 环境变量 DOCKER_HOST 没有被正确读取。你可以通过在终端内运行 `echo \$DOCKER_HOST` 来获取。';
 
   @override
   String dockerImagesFmt(Object count) {
@@ -269,6 +290,9 @@ class SZh extends S {
 
   @override
   String get fontSize => '字体大小';
+
+  @override
+  String get force => '强制';
 
   @override
   String foundNUpdate(Object count) {
@@ -580,6 +604,9 @@ class SZh extends S {
   String get run => '运行';
 
   @override
+  String get running => '运行中';
+
+  @override
   String get save => '保存';
 
   @override
@@ -634,10 +661,16 @@ class SZh extends S {
   String get sftpSSHConnected => 'SFTP 已连接...';
 
   @override
+  String get sftpShowFoldersFirst => '文件夹显示在前';
+
+  @override
   String get showDistLogo => '显示发行版 Logo';
 
   @override
   String get shutdown => '关机';
+
+  @override
+  String get size => '大小';
 
   @override
   String get snippet => '代码片段';
@@ -668,13 +701,24 @@ class SZh extends S {
   String get stop => '停止';
 
   @override
+  String get stopped => '已停止';
+
+  @override
   String get success => '成功';
+
+  @override
+  String get supportFmtArgs => '支持以下格式化参数：';
 
   @override
   String get suspend => '挂起';
 
   @override
   String get suspendTip => 'suspend 功能需要 root 权限及 systemd 支持。';
+
+  @override
+  String switchTo(Object val) {
+    return '切换到 $val';
+  }
 
   @override
   String get syncTip => '可能需要重新启动，某些更改才能生效。';
@@ -695,16 +739,31 @@ class SZh extends S {
   String get test => '测试';
 
   @override
+  String get textScaler => '字体缩放';
+
+  @override
+  String get textScalerTip => '1.0 => 100%（原大小），仅作用于服务器页面部分字体，不建议修改。';
+
+  @override
   String get theme => '主题';
 
   @override
   String get themeMode => '主题模式';
 
   @override
+  String get time => '时间';
+
+  @override
   String get times => '次';
 
   @override
+  String get total => '总共';
+
+  @override
   String get traffic => '流量';
+
+  @override
+  String get trySudo => '尝试使用sudo';
 
   @override
   String get ttl => '缓存时间';
@@ -747,10 +806,19 @@ class SZh extends S {
   String get upsideDown => '上下交换';
 
   @override
+  String get uptime => '启动时长';
+
+  @override
   String get urlOrJson => '链接或JSON';
 
   @override
-  String get useNoPwd => '将会使用无密码。';
+  String get useNoPwd => '将会使用无密码';
+
+  @override
+  String get usePodmanByDefault => '默认使用 Podman';
+
+  @override
+  String get used => '已用';
 
   @override
   String get user => '用户';
@@ -856,13 +924,13 @@ class SZhTw extends SZh {
   String get autoConnect => '自動連接';
 
   @override
+  String get autoRun => '自動運行';
+
+  @override
   String get autoUpdateHomeWidget => '自動更新桌面小部件';
 
   @override
   String get backup => '備份';
-
-  @override
-  String get backupAndRestore => '備份和還原';
 
   @override
   String get backupTip => '導出的數據僅進行了簡單加密，請妥善保管。';
@@ -871,7 +939,13 @@ class SZhTw extends SZh {
   String get backupVersionNotMatch => '備份版本不匹配，無法還原';
 
   @override
+  String get battery => '電池';
+
+  @override
   String get bgRun => '背景運行';
+
+  @override
+  String get bgRunTip => '此開關只代表程式會嘗試在背景執行，具體能否背景運行取決於是否開啟了權限。 原生 Android 請關閉本 App 的“電池優化”，MIUI 請修改省電策略為“無限制”。';
 
   @override
   String get bioAuth => '生物認證';
@@ -895,10 +969,19 @@ class SZhTw extends SZh {
   String get clear => '清除';
 
   @override
+  String get clipboard => '剪切板';
+
+  @override
   String get close => '關閉';
 
   @override
   String get cmd => '命令';
+
+  @override
+  String get collapseUI => '折疊';
+
+  @override
+  String get collapseUITip => '是否預設折疊UI中存在的長列表';
 
   @override
   String get conn => '連接';
@@ -907,10 +990,16 @@ class SZhTw extends SZh {
   String get connected => '已連接';
 
   @override
+  String get container => '容器';
+
+  @override
   String get containerName => '容器名稱';
 
   @override
   String get containerStatus => '容器狀態';
+
+  @override
+  String get containerTrySudoTip => '例如：App内设置用户为aaa，但是Docker安装在root用户，这时就需要开启此选项';
 
   @override
   String get convert => '轉換';
@@ -975,7 +1064,7 @@ class SZhTw extends SZh {
   String get dockerEditHost => '編輯 DOCKER_HOST';
 
   @override
-  String get dockerEmptyRunningItems => '沒有正在運行的容器。\n這可能是因為環境變量 DOCKER_HOST 沒有被正確讀取。你可以通過在終端內運行 `echo \$DOCKER_HOST` 來獲取。';
+  String get dockerEmptyRunningItems => '沒有正在運行的容器。\n這可能是因為：\n- Docker 安裝使用者與 App 內配置的使用者名稱不同\n- 環境變量 DOCKER_HOST 沒有被正確讀取。你可以通過在終端內運行 `echo \$DOCKER_HOST` 來獲取。';
 
   @override
   String dockerImagesFmt(Object count) {
@@ -1067,6 +1156,9 @@ class SZhTw extends SZh {
 
   @override
   String get fontSize => '字體大小';
+
+  @override
+  String get force => '強制';
 
   @override
   String foundNUpdate(Object count) {
@@ -1378,6 +1470,9 @@ class SZhTw extends SZh {
   String get run => '運行';
 
   @override
+  String get running => '運作中';
+
+  @override
   String get save => '保存';
 
   @override
@@ -1432,10 +1527,16 @@ class SZhTw extends SZh {
   String get sftpSSHConnected => 'SFTP 已連接...';
 
   @override
+  String get sftpShowFoldersFirst => '文件夾顯示在前';
+
+  @override
   String get showDistLogo => '顯示發行版 Logo';
 
   @override
   String get shutdown => '关机';
+
+  @override
+  String get size => '大小';
 
   @override
   String get snippet => '程式片段';
@@ -1466,13 +1567,24 @@ class SZhTw extends SZh {
   String get stop => '停止';
 
   @override
+  String get stopped => '已停止';
+
+  @override
   String get success => '成功';
+
+  @override
+  String get supportFmtArgs => '支援以下格式化參數：';
 
   @override
   String get suspend => '挂起';
 
   @override
   String get suspendTip => 'suspend 功能需要 root 權限及 systemd 支持。';
+
+  @override
+  String switchTo(Object val) {
+    return '切換到 $val';
+  }
 
   @override
   String get syncTip => '可能需要重新啟動，某些更改才能生效。';
@@ -1493,16 +1605,31 @@ class SZhTw extends SZh {
   String get test => '測試';
 
   @override
+  String get textScaler => '字體縮放';
+
+  @override
+  String get textScalerTip => '1.0 => 100%（原大小），僅作用於伺服器頁面部分字體，不建議修改。';
+
+  @override
   String get theme => '主題';
 
   @override
   String get themeMode => '主題模式';
 
   @override
+  String get time => '時間';
+
+  @override
   String get times => '次';
 
   @override
+  String get total => '總共';
+
+  @override
   String get traffic => '流量';
+
+  @override
+  String get trySudo => '嘗試使用sudo';
 
   @override
   String get ttl => '緩存時間';
@@ -1545,10 +1672,19 @@ class SZhTw extends SZh {
   String get upsideDown => '上下交換';
 
   @override
+  String get uptime => '啟動時長';
+
+  @override
   String get urlOrJson => '鏈接或JSON';
 
   @override
-  String get useNoPwd => '将使用無密碼。';
+  String get useNoPwd => '将使用無密碼';
+
+  @override
+  String get usePodmanByDefault => '默認使用 Podman';
+
+  @override
+  String get used => '已用';
 
   @override
   String get user => '用戶';

@@ -1,6 +1,6 @@
 import 'dart:io';
 
-import 'package:flutter/foundation.dart';
+import 'package:computer/computer.dart';
 import 'package:logging/logging.dart';
 import 'package:toolbox/data/model/app/backup.dart';
 import 'package:toolbox/data/model/app/error.dart';
@@ -9,6 +9,9 @@ import 'package:toolbox/data/res/store.dart';
 import 'package:webdav_client/webdav_client.dart';
 
 abstract final class Webdav {
+  /// Some WebDAV provider only support non-root path
+  static const _prefix = 'srvbox/';
+
   static var _client = WebdavClient(
     url: Stores.setting.webdavUrl.fetch(),
     user: Stores.setting.webdavUser.fetch(),
@@ -35,7 +38,7 @@ abstract final class Webdav {
     try {
       await _client.writeFile(
         localPath ?? '${await Paths.doc}/$relativePath',
-        relativePath,
+        _prefix + relativePath,
       );
     } catch (e, s) {
       _logger.warning('Upload $relativePath failed', e, s);
@@ -46,7 +49,7 @@ abstract final class Webdav {
 
   static Future<WebdavErr?> delete(String relativePath) async {
     try {
-      await _client.remove(relativePath);
+      await _client.remove(_prefix + relativePath);
     } catch (e, s) {
       _logger.warning('Delete $relativePath failed', e, s);
       return WebdavErr(type: WebdavErrType.generic, message: '$e');
@@ -60,7 +63,7 @@ abstract final class Webdav {
   }) async {
     try {
       await _client.readFile(
-        relativePath,
+        _prefix + relativePath,
         localPath ?? '${await Paths.doc}/$relativePath',
       );
     } catch (e) {
@@ -68,6 +71,21 @@ abstract final class Webdav {
       return WebdavErr(type: WebdavErrType.generic, message: '$e');
     }
     return null;
+  }
+
+  static Future<List<String>> list() async {
+    try {
+      final list = await _client.readDir(_prefix);
+      final names = <String>[];
+      for (final item in list) {
+        if ((item.isDir ?? true) || item.name == null) continue;
+        names.add(item.name!);
+      }
+      return names;
+    } catch (e, s) {
+      _logger.warning('List failed', e, s);
+      return [];
+    }
   }
 
   static void changeClient(String url, String user, String pwd) {
@@ -80,37 +98,20 @@ abstract final class Webdav {
   static Future<void> sync() async {
     final result = await download(relativePath: Paths.bakName);
     if (result != null) {
+      _logger.warning('Download failed: $result');
       await backup();
       return;
     }
-    final dlFile = await compute(
-      (message) async {
-        try {
-          final file = await File(message).readAsString();
-          final bak = Backup.fromJsonString(file);
-          return bak;
-        } catch (_) {
-          return null;
-        }
-      },
-      await Paths.bak,
-    );
-    if (dlFile == null) {
-      await backup();
-      return;
+
+    try {
+      final dlFile = await File(await Paths.bak).readAsString();
+      final dlBak = await Computer.shared.start(Backup.fromJsonString, dlFile);
+      await dlBak.restore();
+    } catch (e) {
+      _logger.warning('Restore failed: $e');
     }
-    final restore = await dlFile.restore();
-    switch (restore) {
-      case true:
-        _logger.info('Restore from ${dlFile.lastModTime} success');
-        break;
-      case false:
-        await backup();
-        break;
-      case null:
-        _logger.info('Skip sync');
-        break;
-    }
+
+    await backup();
   }
 
   /// Create a local backup and upload it to WebDAV

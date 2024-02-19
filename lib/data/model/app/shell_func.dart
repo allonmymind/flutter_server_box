@@ -33,13 +33,17 @@ enum ShellFunc {
 
   /// Issue #168
   /// Use `sh` for compatibility
-  static final installShellCmd = """
-mkdir -p $_homeVar/$_srvBoxDir
-cat << 'EOF' > $_installShellPath
-${ShellFunc.allScript}
-EOF
-chmod +x $_installShellPath
-""";
+  // static final installShellCmd = """
+// mkdir -p $_homeVar/$_srvBoxDir
+// cat << 'EOF' > $_installShellPath
+// ${ShellFunc.allScript}
+// EOF
+// chmod +x $_installShellPath
+// """;
+
+  static const installerMkdirs = "mkdir -p $_homeVar/$_srvBoxDir";
+  static const installerShellWriter = "cat > $_installShellPath";
+  static const installerPermissionModifier = "chmod +x $_installShellPath";
 
   String get flag {
     switch (this) {
@@ -200,7 +204,8 @@ enum StatusCmdType {
   tempVal,
   host,
   diskio,
-  nvdia,
+  battery,
+  nvidia,
   ;
 }
 
@@ -213,38 +218,15 @@ const _statusCmds = [
   'cat /proc/stat | grep cpu',
   'uptime',
   'cat /proc/net/snmp',
-  'df -h',
+  'df',
   "cat /proc/meminfo | grep -E 'Mem|Swap'",
   'cat /sys/class/thermal/thermal_zone*/type',
   'cat /sys/class/thermal/thermal_zone*/temp',
   'hostname',
   'cat /proc/diskstats',
+  'for f in /sys/class/power_supply/*/uevent; do cat "\$f"; echo; done',
   'nvidia-smi -q -x',
 ];
-
-enum DockerCmdType {
-  version,
-  ps,
-  //stats,
-  images,
-  ;
-
-  String get exec {
-    switch (this) {
-      case DockerCmdType.version:
-        return 'docker version';
-      case DockerCmdType.ps:
-        return 'docker ps -a';
-      // case DockerCmdType.stats:
-      //   return 'docker stats --no-stream';
-      case DockerCmdType.images:
-        return 'docker image ls';
-    }
-  }
-
-  static final execAll =
-      values.map((e) => e.exec).join(' && echo $seperator && ');
-}
 
 enum BSDStatusCmdType {
   echo,
@@ -268,7 +250,7 @@ const _bsdStatusCmd = [
   'uname -or',
   'top -l 1 | grep "CPU usage"',
   'uptime',
-  'df -h',
+  'df -k',
   'top -l 1 | grep PhysMem',
   //'sysctl -a | grep temperature',
   'hostname',

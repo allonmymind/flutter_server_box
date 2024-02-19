@@ -36,7 +36,7 @@ class SEn extends S {
 
   @override
   String askContinue(Object msg) {
-    return '$msg, continue?';
+    return '$msg. Continue?';
   }
 
   @override
@@ -58,13 +58,13 @@ class SEn extends S {
   String get autoConnect => 'Auto connect';
 
   @override
+  String get autoRun => 'Automatic Run';
+
+  @override
   String get autoUpdateHomeWidget => 'Auto update home widget';
 
   @override
   String get backup => 'Backup';
-
-  @override
-  String get backupAndRestore => 'Backup and Restore';
 
   @override
   String get backupTip => 'The exported data is simply encrypted. \nPlease keep it safe.';
@@ -73,7 +73,13 @@ class SEn extends S {
   String get backupVersionNotMatch => 'Backup version is not match.';
 
   @override
+  String get battery => 'Battery';
+
+  @override
   String get bgRun => 'Run in backgroud';
+
+  @override
+  String get bgRunTip => 'This switch only means the program will try to run in the background, whether it can run in the background depends on whether the permission is enabled or not. For native Android, please disable \"Battery Optimization\" in this app, and for miui, please change the power saving policy to \"Unlimited\".';
 
   @override
   String get bioAuth => 'Biometric auth';
@@ -97,10 +103,19 @@ class SEn extends S {
   String get clear => 'Clear';
 
   @override
+  String get clipboard => 'Clipboard';
+
+  @override
   String get close => 'Close';
 
   @override
   String get cmd => 'Command';
+
+  @override
+  String get collapseUI => 'Collapse';
+
+  @override
+  String get collapseUITip => 'Whether to collapse long lists present in the UI by default';
 
   @override
   String get conn => 'Connection';
@@ -109,10 +124,16 @@ class SEn extends S {
   String get connected => 'Connected';
 
   @override
+  String get container => 'Container';
+
+  @override
   String get containerName => 'Container name';
 
   @override
   String get containerStatus => 'Container status';
+
+  @override
+  String get containerTrySudoTip => 'For example: In the app, the user is set to aaa, but Docker is installed under the root user. In this case, you need to enable this option.';
 
   @override
   String get convert => 'Convert';
@@ -177,7 +198,7 @@ class SEn extends S {
   String get dockerEditHost => 'Edit DOCKER_HOST';
 
   @override
-  String get dockerEmptyRunningItems => 'No running container. \nIt may be that the env DOCKER_HOST is not read correctly. You can found it by running `echo \$DOCKER_HOST` in terminal.';
+  String get dockerEmptyRunningItems => 'There are no running containers.\nThis could be because:\n- The Docker installation user is not the same as the username configured within the App.\n- The environment variable DOCKER_HOST was not read correctly. You can get it by running `echo \$DOCKER_HOST` in the terminal.';
 
   @override
   String dockerImagesFmt(Object count) {
@@ -269,6 +290,9 @@ class SEn extends S {
 
   @override
   String get fontSize => 'Font size';
+
+  @override
+  String get force => 'Force';
 
   @override
   String foundNUpdate(Object count) {
@@ -580,6 +604,9 @@ class SEn extends S {
   String get run => 'Run';
 
   @override
+  String get running => 'Running';
+
+  @override
   String get save => 'Save';
 
   @override
@@ -634,10 +661,16 @@ class SEn extends S {
   String get sftpSSHConnected => 'SFTP Connected';
 
   @override
+  String get sftpShowFoldersFirst => 'Display folders first';
+
+  @override
   String get showDistLogo => 'Show distribution logo';
 
   @override
   String get shutdown => 'Shutdown';
+
+  @override
+  String get size => 'Size';
 
   @override
   String get snippet => 'Snippet';
@@ -668,13 +701,24 @@ class SEn extends S {
   String get stop => 'Stop';
 
   @override
+  String get stopped => 'Stopped';
+
+  @override
   String get success => 'Success';
+
+  @override
+  String get supportFmtArgs => 'The following formatting parameters are supported:';
 
   @override
   String get suspend => 'Suspend';
 
   @override
   String get suspendTip => 'The suspend function requires root privileges and systemd support.';
+
+  @override
+  String switchTo(Object val) {
+    return 'Switch to $val';
+  }
 
   @override
   String get syncTip => 'A restart may be required for some changes to take effect.';
@@ -695,16 +739,31 @@ class SEn extends S {
   String get test => 'Test';
 
   @override
+  String get textScaler => 'Text scaler';
+
+  @override
+  String get textScalerTip => '1.0 => 100% (original size), only works on server page part of the font, not recommended to change.';
+
+  @override
   String get theme => 'Theme';
 
   @override
   String get themeMode => 'Theme mode';
 
   @override
+  String get time => 'Time';
+
+  @override
   String get times => 'Times';
 
   @override
+  String get total => 'Total';
+
+  @override
   String get traffic => 'Traffic';
+
+  @override
+  String get trySudo => 'Try using sudo';
 
   @override
   String get ttl => 'ttl';
@@ -747,10 +806,19 @@ class SEn extends S {
   String get upsideDown => 'Upside Down';
 
   @override
+  String get uptime => 'Uptime';
+
+  @override
   String get urlOrJson => 'URL or JSON';
 
   @override
-  String get useNoPwd => 'No password will be used.';
+  String get useNoPwd => 'No password will be used';
+
+  @override
+  String get usePodmanByDefault => 'Defaulting to Podman';
+
+  @override
+  String get used => 'Used';
 
   @override
   String get user => 'User';

@@ -8,7 +8,6 @@ import 'package:toolbox/core/extension/context/snackbar.dart';
 import 'package:toolbox/core/extension/uint8list.dart';
 import 'package:toolbox/core/utils/share.dart';
 import 'package:toolbox/data/res/provider.dart';
-import 'package:toolbox/view/widget/value_notifier.dart';
 
 import '../../data/model/server/ping_result.dart';
 import '../../data/res/color.dart';
@@ -49,9 +48,9 @@ class _PingPageState extends State<PingPage>
   Widget build(BuildContext context) {
     super.build(context);
     return Scaffold(
-      body: ValueBuilder(
+      body: ListenableBuilder(
         listenable: _results,
-        build: _buildBody,
+        builder: (_, __) => _buildBody(),
       ),
       floatingActionButton: _buildFAB(),
     );
@@ -119,7 +118,7 @@ class _PingPageState extends State<PingPage>
     final unknown = l10n.unknown;
     final ms = l10n.ms;
     return CardX(
-      ListTile(
+      child: ListTile(
         contentPadding: const EdgeInsets.symmetric(vertical: 7, horizontal: 17),
         title: Text(
           result.serverName,
@@ -131,7 +130,7 @@ class _PingPageState extends State<PingPage>
         ),
         subtitle: Text(
           _buildPingSummary(result, unknown, ms),
-          style: UIs.textSize11,
+          style: UIs.text11,
         ),
         trailing: Text(
           '${l10n.pingAvg}${result.statistic?.avg?.toStringAsFixed(2) ?? l10n.unknown} $ms',

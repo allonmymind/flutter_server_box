@@ -1,8 +1,11 @@
 import 'dart:async';
 import 'dart:io';
 
-import 'package:flutter/foundation.dart';
+import 'package:computer/computer.dart';
+import 'package:dartssh2/dartssh2.dart';
 import 'package:flutter/material.dart';
+import 'package:toolbox/core/extension/ssh_client.dart';
+import 'package:toolbox/core/extension/stringx.dart';
 import 'package:toolbox/core/utils/platform/path.dart';
 import 'package:toolbox/data/model/app/shell_func.dart';
 import 'package:toolbox/data/model/server/system.dart';
@@ -35,12 +38,22 @@ class ServerProvider extends ChangeNotifier {
   Future<void> load() async {
     // Issue #147
     // Clear all servers because of restarting app will cause duplicate servers
+    final oldServers = Map<String, Server>.from(_servers);
     _servers.clear();
     _serverOrder.clear();
 
     final spis = Stores.server.fetch();
     for (int idx = 0; idx < spis.length; idx++) {
-      _servers[spis[idx].id] = genServer(spis[idx]);
+      final spi = spis[idx];
+      final originServer = oldServers[spi.id];
+      final newServer = genServer(spi);
+
+      /// Issues #258
+      /// If not [shouldReconnect], then keep the old state.
+      if (originServer != null && !originServer.spi.shouldReconnect(spi)) {
+        newServer.state = originServer.state;
+      }
+      _servers[spi.id] = newServer;
     }
     final serverOrder_ = Stores.setting.serverOrder.fetch();
     if (serverOrder_.isNotEmpty) {
@@ -106,7 +119,7 @@ class ServerProvider extends ChangeNotifier {
 
   /// if [spi] is specificed then only refresh this server
   /// [onlyFailed] only refresh failed servers
-  Future<void> refreshData({
+  Future<void> refresh({
     ServerPrivateInfo? spi,
     bool onlyFailed = false,
   }) async {
@@ -139,12 +152,16 @@ class ServerProvider extends ChangeNotifier {
   static final refreshKey = GlobalKey<RefreshIndicatorState>();
 
   Future<void> startAutoRefresh() async {
-    final duration = Stores.setting.serverStatusUpdateInterval.fetch();
+    var duration = Stores.setting.serverStatusUpdateInterval.fetch();
     stopAutoRefresh();
     if (duration == 0) return;
+    if (duration < 0 || duration > 10 || duration == 1) {
+      duration = 3;
+      Loggers.app.warning('Invalid duration: $duration, use default 3');
+    }
     refreshKey.currentState?.show();
     _timer = Timer.periodic(Duration(seconds: duration), (_) async {
-      await refreshData();
+      await refresh();
     });
   }
 
@@ -153,16 +170,6 @@ class ServerProvider extends ChangeNotifier {
       _timer!.cancel();
       _timer = null;
     }
-  }
-
-  void setNotBusy([String? id]) {
-    if (id == null) {
-      for (final s in _servers.values) {
-        s.isBusy = false;
-      }
-      return;
-    }
-    _servers[id]?.isBusy = false;
   }
 
   bool get isAutoRefreshOn => _timer != null;
@@ -197,7 +204,7 @@ class ServerProvider extends ChangeNotifier {
     _serverOrder.add(spi.id);
     Stores.setting.serverOrder.put(_serverOrder);
     _updateTags();
-    refreshData(spi: spi);
+    refresh(spi: spi);
   }
 
   void delServer(String id) {
@@ -238,7 +245,7 @@ class ServerProvider extends ChangeNotifier {
       if (newSpi.shouldReconnect(old)) {
         // Use [newSpi.id] instead of [old.id] because [old.id] may be changed
         TryLimiter.reset(newSpi.id);
-        refreshData(spi: newSpi);
+        refresh(spi: newSpi);
       }
 
       // Only update if [spi.tags] changed
@@ -248,16 +255,34 @@ class ServerProvider extends ChangeNotifier {
 
   void _setServerState(Server s, ServerState ss) {
     s.state = ss;
-
-    /// Only set [Sever.isBusy] to false when err occurs or finished.
-    switch (ss) {
-      case ServerState.failed || ServerState.finished:
-        s.isBusy = false;
-        break;
-      default:
-        break;
-    }
     notifyListeners();
+  }
+
+  Future<void> _writeInstallerScript(Server s) async {
+    /// TODO: Find a better way to judge if the write is successful
+
+    // Issues #275
+    // Can't use writeResult to judge if the write is successful
+
+    // void ensure(String? writeResult) {
+    //   if (writeResult == null || writeResult.isNotEmpty) {
+    //     throw Exception("Failed to write installer script: $writeResult");
+    //   }
+    // }
+
+    final client = s.client;
+    if (client == null) {
+      throw Exception("Invalid state: s.client cannot be null");
+    }
+
+    await client.run(ShellFunc.installerMkdirs).string;
+
+    await client.runForOutput(ShellFunc.installerShellWriter,
+        action: (session) async {
+      session.stdin.add(ShellFunc.allScript.uint8List);
+    }).string;
+
+    await client.run(ShellFunc.installerPermissionModifier).string;
   }
 
   Future<void> _getData(ServerPrivateInfo spi) async {
@@ -274,11 +299,6 @@ class ServerProvider extends ChangeNotifier {
     }
 
     s.status.err = null;
-
-    /// If busy, it may be because of network reasons that the last request
-    /// has not been completed, and the request should not be made again at this time.
-    if (s.isBusy) return;
-    s.isBusy = true;
 
     if (s.needGenClient || (s.client?.isClosed ?? true)) {
       _setServerState(s, ServerState.connecting);
@@ -313,18 +333,19 @@ class ServerProvider extends ChangeNotifier {
       // Write script to server
       // by ssh
       try {
-        final writeResult =
-            await s.client?.run(ShellFunc.installShellCmd).string;
-        if (writeResult == null || writeResult.isNotEmpty) {
-          throw Exception('$writeResult');
-        }
+        await _writeInstallerScript(s);
+      } on SSHAuthAbortError catch (e) {
+        TryLimiter.inc(sid);
+        s.status.err = e.toString();
+        _setServerState(s, ServerState.failed);
+        return;
       } catch (e) {
         Loggers.app.warning('Write script to ${spi.name} by shell', e);
-        // by sftp
+
+        /// by sftp
         final localPath = joinPath(await Paths.doc, 'install.sh');
         final file = File(localPath);
         try {
-          Loggers.app.info('Using SFTP to write script to ${spi.name}');
           file.writeAsString(ShellFunc.allScript);
           final completer = Completer();
           final homePath = (await s.client?.run('echo \$HOME').string)?.trim();
@@ -396,7 +417,11 @@ class ServerProvider extends ChangeNotifier {
         segments: segments,
         system: systemType,
       );
-      s.status = await compute(getStatus, req);
+      s.status = await Computer.shared.start(
+        getStatus,
+        req,
+        taskName: 'StatusUpdateReq<${s.id}>',
+      );
     } catch (e, trace) {
       TryLimiter.inc(sid);
       s.status.err = 'Parse failed: $e\n\n$raw';
@@ -411,15 +436,14 @@ class ServerProvider extends ChangeNotifier {
     TryLimiter.reset(sid);
   }
 
-  Future<SnippetResult?> runSnippets(String id, Snippet snippet) async {
-    final client = _servers[id]?.client;
-    if (client == null) {
-      return null;
-    }
+  Future<SnippetResult?> runSnippet(String id, Snippet snippet) async {
+    final server = _servers[id];
+    if (server == null) return null;
     final watch = Stopwatch()..start();
-    final result = await client.run(snippet.script).string;
+    final result = await server.client?.run(snippet.fmtWith(server.spi)).string;
     final time = watch.elapsed;
     watch.stop();
+    if (result == null) return null;
     return SnippetResult(
       dest: _servers[id]?.spi.name,
       result: result,
@@ -427,10 +451,10 @@ class ServerProvider extends ChangeNotifier {
     );
   }
 
-  Future<List<SnippetResult?>> runSnippetsMulti(
-    List<String> ids,
-    Snippet snippet,
-  ) async {
-    return await Future.wait(ids.map((id) async => runSnippets(id, snippet)));
-  }
+  // Future<List<SnippetResult?>> runSnippetsMulti(
+  //   List<String> ids,
+  //   Snippet snippet,
+  // ) async {
+  //   return await Future.wait(ids.map((id) async => runSnippet(id, snippet)));
+  // }
 }

@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:toolbox/core/persistant_store.dart';
 import 'package:toolbox/core/utils/platform/base.dart';
+import 'package:toolbox/data/model/app/menu/server_func.dart';
 
 import '../model/app/net_view.dart';
 import '../res/default.dart';
@@ -32,14 +33,6 @@ class SettingStore extends PersistentStore {
     true,
   );
 
-  /// Bigger for bigger font size
-  /// 1.0 means 100%
-  /// Warning: This may cause some UI issues
-  late final textFactor = property(
-    'textFactor',
-    1.0,
-  );
-
   /// Lanch page idx
   late final launchPage = property(
     'launchPage',
@@ -51,10 +44,10 @@ class SettingStore extends PersistentStore {
       property('diskIgnorePath', Defaults.diskIgnorePath);
 
   /// Use double column servers page on Desktop
-  late final doubleColumnServersPage = property(
-    'doubleColumnServersPage',
-    isDesktop,
-  );
+  // late final doubleColumnServersPage = property(
+  //   'doubleColumnServersPage',
+  //   isDesktop,
+  // );
 
   /// Disk view: amount / IO
   late final serverTabPreferDiskAmount = property(
@@ -63,6 +56,14 @@ class SettingStore extends PersistentStore {
   );
 
   // ------END------
+
+  /// Bigger for bigger font size
+  /// 1.0 means 100%
+  /// Warning: This may cause some UI issues
+  late final textFactor = property(
+    'textFactor',
+    1.0,
+  );
 
   late final primaryColor = property(
     'primaryColor',
@@ -93,13 +94,13 @@ class SettingStore extends PersistentStore {
 
   // Server details page cards order
   late final detailCardOrder =
-      listProperty('detailCardPrder', Defaults.detailCardOrder);
+      listProperty('detailCardOrder', Defaults.detailCardOrder);
 
   // SSH term font size
   late final termFontSize = property('termFontSize', 13.0);
 
   // Locale
-  late final locale = property<String>('locale', '');
+  late final locale = property('locale', '');
 
   // SSH virtual key (ctrl | alt) auto turn off
   late final sshVirtualKeyAutoOff = property('sshVirtualKeyAutoOff', true);
@@ -117,20 +118,20 @@ class SettingStore extends PersistentStore {
     Defaults.editorDarkTheme,
   );
 
-  late final fullScreen = property(
-    'fullScreen',
-    false,
-  );
+  // late final fullScreen = property(
+  //   'fullScreen',
+  //   false,
+  // );
 
-  late final fullScreenJitter = property(
-    'fullScreenJitter',
-    true,
-  );
+  // late final fullScreenJitter = property(
+  //   'fullScreenJitter',
+  //   true,
+  // );
 
-  late final fullScreenRotateQuarter = property(
-    'fullScreenRotateQuarter',
-    1,
-  );
+  // late final fullScreenRotateQuarter = property(
+  //   'fullScreenRotateQuarter',
+  //   1,
+  // );
 
   late final keyboardType = property(
     'keyboardType',
@@ -139,7 +140,7 @@ class SettingStore extends PersistentStore {
 
   late final sshVirtKeys = listProperty(
     'sshVirtKeys',
-    Defaults.sshVirtKeys,
+    Defaults.sshVirtKeys.map((e) => e.index).toList(),
   );
 
   late final netViewType = property(
@@ -196,18 +197,38 @@ class SettingStore extends PersistentStore {
   /// Open SFTP with last viewed path
   late final sftpOpenLastPath = property('sftpOpenLastPath', true);
 
+  /// Show folders first in SFTP file browser
+  late final sftpShowFoldersFirst = property('sftpShowFoldersFirst', true);
+
   /// Show tip of suspend
   late final showSuspendTip = property('showSuspendTip', true);
-
-  /// Server func btns display name
-  late final serverFuncBtnsDisplayName =
-      property('serverFuncBtnsDisplayName', false);
 
   /// Webdav sync
   late final webdavSync = property('webdavSync', false);
   late final webdavUrl = property('webdavUrl', '');
   late final webdavUser = property('webdavUser', '');
   late final webdavPwd = property('webdavPwd', '');
+
+  /// Whether collapse UI items by default
+  late final collapseUIDefault = property('collapseUIDefault', true);
+
+  late final serverFuncBtns = listProperty(
+    'serverBtns',
+    [
+      ServerFuncBtn.terminal,
+      ServerFuncBtn.sftp,
+      ServerFuncBtn.container,
+      ServerFuncBtn.process,
+      ServerFuncBtn.pkg,
+      ServerFuncBtn.snippet,
+    ].map((e) => e.index).toList(),
+  );
+
+  /// Docker is more popular than podman, set to `false` to use docker
+  late final usePodman = property('usePodman', false);
+
+  /// Try to use `sudo` to run docker command
+  late final containerTrySudo = property('containerTrySudo', true);
 
   // Never show these settings for users
   //

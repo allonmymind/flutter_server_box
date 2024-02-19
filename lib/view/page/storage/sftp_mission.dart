@@ -27,7 +27,7 @@ class _SftpMissionPageState extends State<SftpMissionPage> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: CustomAppBar(
-        title: Text(l10n.mission, style: UIs.textSize18),
+        title: Text(l10n.mission, style: UIs.text18),
       ),
       body: _buildBody(),
     );
@@ -94,7 +94,7 @@ class _SftpMissionPageState extends State<SftpMissionPage> {
         );
       case SftpWorkerStatus.loading:
         final percentStr = (status.progress ?? 0.0).toStringAsFixed(2);
-        final size = (status.size ?? 0).convertBytes;
+        final size = (status.size ?? 0).bytes2Str;
         return _wrapInCard(
           status: status,
           subtitle: l10n.percentOfSize(percentStr, size),
@@ -134,7 +134,7 @@ class _SftpMissionPageState extends State<SftpMissionPage> {
   }) {
     final time = DateTime.fromMicrosecondsSinceEpoch(status.id);
     return CardX(
-      ListTile(
+      child: ListTile(
         leading: Text(time.hourMinute),
         title: Text(
           status.fileName,

@@ -4,11 +4,13 @@ import 'dart:convert';
 import 'package:dartssh2/dartssh2.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:flutter_background_service/flutter_background_service.dart';
 import 'package:provider/provider.dart';
 import 'package:toolbox/core/extension/context/common.dart';
 import 'package:toolbox/core/extension/context/dialog.dart';
 import 'package:toolbox/core/extension/context/locale.dart';
 import 'package:toolbox/core/utils/platform/base.dart';
+import 'package:toolbox/core/utils/server.dart';
 import 'package:toolbox/core/utils/share.dart';
 import 'package:toolbox/data/model/server/server.dart';
 import 'package:toolbox/data/model/server/snippet.dart';
@@ -31,11 +33,14 @@ class SSHPage extends StatefulWidget {
   final ServerPrivateInfo spi;
   final String? initCmd;
   final bool pop;
+  final Function()? onSessionEnd;
+
   const SSHPage({
     super.key,
     required this.spi,
     this.initCmd,
     this.pop = true,
+    this.onSessionEnd,
   });
 
   @override
@@ -58,7 +63,7 @@ class _SSHPageState extends State<SSHPage> with AutomaticKeepAliveClientMixin {
   bool _isDark = false;
   Timer? _virtKeyLongPressTimer;
   late final Server? _server = widget.spi.server;
-  late final SSHClient? _client = _server?.client;
+  late SSHClient? _client = _server?.client;
   Timer? _discontinuityTimer;
 
   @override
@@ -101,7 +106,7 @@ class _SSHPageState extends State<SSHPage> with AutomaticKeepAliveClientMixin {
     _terminalTheme = _isDark ? TerminalThemes.dark : TerminalThemes.light;
 
     // Because the virtual keyboard only displayed on mobile devices
-    if (isMobile) {
+    if (isMobile || isDebuggingMobileLayoutOnDesktop) {
       _virtKeyWidth = _media.size.width / 7;
       _virtKeysHeight = _media.size.height * 0.043 * _virtKeysList.length;
     }
@@ -113,7 +118,9 @@ class _SSHPageState extends State<SSHPage> with AutomaticKeepAliveClientMixin {
     Widget child = Scaffold(
       backgroundColor: _terminalTheme.background,
       body: _buildBody(),
-      bottomNavigationBar: isDesktop ? null : _buildBottom(),
+      bottomNavigationBar: isDesktop && !isDebuggingMobileLayoutOnDesktop
+          ? null
+          : _buildBottom(),
     );
     if (isIOS) {
       child = AnnotatedRegion(
@@ -138,10 +145,10 @@ class _SSHPageState extends State<SSHPage> with AutomaticKeepAliveClientMixin {
           keyboardType: _keyboardType,
           textStyle: _terminalStyle,
           theme: _terminalTheme,
-          deleteDetection: isIOS,
+          deleteDetection: isMobile,
           autofocus: true,
           keyboardAppearance: _isDark ? Brightness.dark : Brightness.light,
-          hideScrollBar: false,
+          //hideScrollBar: false,
         ),
       ),
     );
@@ -227,10 +234,12 @@ class _SSHPageState extends State<SSHPage> with AutomaticKeepAliveClientMixin {
 
   void _doVirtualKey(VirtKey item) {
     if (item.func != null) {
+      HapticFeedback.mediumImpact();
       _doVirtualKeyFunc(item.func!);
       return;
     }
     if (item.key != null) {
+      HapticFeedback.mediumImpact();
       _doVirtualKeyInput(item.key!);
     }
   }
@@ -316,7 +325,16 @@ class _SSHPageState extends State<SSHPage> with AutomaticKeepAliveClientMixin {
   }
 
   void _initVirtKeys() {
-    final virtKeys = List<VirtKey>.from(Stores.setting.sshVirtKeys.fetch());
+    final virtKeys = () {
+      try {
+        return Stores.setting.sshVirtKeys
+            .fetch()
+            .map((e) => VirtKey.values[e])
+            .toList();
+      } catch (_) {
+        return VirtKey.values;
+      }
+    }();
 
     for (int len = 0; len < virtKeys.length; len += 7) {
       if (len + 7 > virtKeys.length) {
@@ -329,9 +347,7 @@ class _SSHPageState extends State<SSHPage> with AutomaticKeepAliveClientMixin {
 
   Future<void> _initTerminal() async {
     _writeLn('Connecting...\r\n');
-    if (_client == null) {
-      await Pros.server.refreshData(spi: widget.spi);
-    }
+    _client ??= await genClient(widget.spi);
     _writeLn('Starting shell...\r\n');
 
     final session = await _client?.shell(
@@ -341,7 +357,7 @@ class _SSHPageState extends State<SSHPage> with AutomaticKeepAliveClientMixin {
       ),
     );
 
-    _setupDiscontinuityTimer();
+    //_setupDiscontinuityTimer();
 
     if (session == null) {
       _writeLn(_server?.status.err ?? 'Null session');
@@ -361,15 +377,25 @@ class _SSHPageState extends State<SSHPage> with AutomaticKeepAliveClientMixin {
     _listen(session.stdout);
     _listen(session.stderr);
 
+    _initService();
+
     if (widget.initCmd != null) {
       _terminal.textInput(widget.initCmd!);
       _terminal.keyInput(TerminalKey.enter);
+    } else {
+      for (final snippet in Pros.snippet.snippets) {
+        if (snippet.autoRunOn?.contains(widget.spi.id) == true) {
+          _terminal.textInput(snippet.script);
+          _terminal.keyInput(TerminalKey.enter);
+        }
+      }
     }
 
     await session.done;
     if (mounted && widget.pop) {
       context.pop();
     }
+    widget.onSessionEnd?.call();
   }
 
   void _listen(Stream<Uint8List>? stream) {
@@ -382,44 +408,63 @@ class _SSHPageState extends State<SSHPage> with AutomaticKeepAliveClientMixin {
         .listen(_terminal.write);
   }
 
-  void _setupDiscontinuityTimer() {
-    _discontinuityTimer = Timer.periodic(
-      const Duration(seconds: 5),
-      (_) async {
-        var throwTimeout = true;
-        Future.delayed(const Duration(seconds: 3), () {
-          if (throwTimeout) {
-            _catchTimeout();
-          }
-        });
-        await _client?.ping();
-        throwTimeout = false;
-      },
-    );
-  }
+  // void _setupDiscontinuityTimer() {
+  //   _discontinuityTimer = Timer.periodic(
+  //     const Duration(seconds: 5),
+  //     (_) async {
+  //       var throwTimeout = true;
+  //       Future.delayed(const Duration(seconds: 3), () {
+  //         if (throwTimeout) {
+  //           _catchTimeout();
+  //         }
+  //       });
+  //       await _client?.ping();
+  //       throwTimeout = false;
+  //     },
+  //   );
+  // }
 
-  void _catchTimeout() {
-    _discontinuityTimer?.cancel();
-    if (!mounted) return;
-    _writeLn('\n\nConnection lost\r\n');
-    context.showRoundDialog(
-      title: Text(l10n.attention),
-      child: Text('${l10n.disconnected}\n${l10n.goBackQ}'),
-      barrierDismiss: false,
-      actions: [
-        TextButton(
-          onPressed: () {
-            if (mounted) {
-              context.pop();
-              context.pop();
-            }
-          },
-          child: Text(l10n.ok),
-        ),
-      ],
-    );
-  }
+  // void _catchTimeout() {
+  //   _discontinuityTimer?.cancel();
+  //   if (!mounted) return;
+  //   _writeLn('\n\nConnection lost\r\n');
+  //   context.showRoundDialog(
+  //     title: Text(l10n.attention),
+  //     child: Text('${l10n.disconnected}\n${l10n.goBackQ}'),
+  //     barrierDismiss: false,
+  //     actions: [
+  //       TextButton(
+  //         onPressed: () {
+  //           if (mounted) {
+  //             context.pop();
+  //             if (widget.pop) {
+  //               context.pop();
+  //             }
+  //           }
+  //         },
+  //         child: Text(l10n.ok),
+  //       ),
+  //     ],
+  //   );
+  // }
 
   @override
   bool get wantKeepAlive => true;
+
+  Future<void> _initService() async {
+    if (!isAndroid) return;
+
+    await FlutterBackgroundService().configure(
+      androidConfiguration: AndroidConfiguration(
+        onStart: _onStart,
+        autoStart: true,
+        isForegroundMode: true,
+        initialNotificationTitle: 'SSH',
+        initialNotificationContent: l10n.bgRun,
+      ),
+      iosConfiguration: IosConfiguration(),
+    );
+  }
 }
+
+Future<void> _onStart(ServiceInstance service) async {}

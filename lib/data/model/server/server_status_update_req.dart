@@ -1,3 +1,4 @@
+import 'package:toolbox/data/model/server/battery.dart';
 import 'package:toolbox/data/model/server/nvdia.dart';
 import 'package:toolbox/data/model/server/server.dart';
 import 'package:toolbox/data/model/server/system.dart';
@@ -23,12 +24,10 @@ class ServerStatusUpdateReq {
 }
 
 Future<ServerStatus> getStatus(ServerStatusUpdateReq req) async {
-  switch (req.system) {
-    case SystemType.linux:
-      return _getLinuxStatus(req);
-    case SystemType.bsd:
-      return _getBsdStatus(req);
-  }
+  return switch (req.system) {
+    SystemType.linux => _getLinuxStatus(req),
+    SystemType.bsd => _getBsdStatus(req),
+  };
 }
 
 // Wrap each operation with a try-catch, so that if one operation fails,
@@ -40,7 +39,7 @@ Future<ServerStatus> _getLinuxStatus(ServerStatusUpdateReq req) async {
       DateTime.now().millisecondsSinceEpoch ~/ 1000;
 
   try {
-    final net = parseNetSpeed(StatusCmdType.net.find(segments), time);
+    final net = NetSpeed.parse(StatusCmdType.net.find(segments), time);
     req.ss.netSpeed.update(net);
   } catch (e, s) {
     Loggers.parse.warning(e, s);
@@ -49,17 +48,25 @@ Future<ServerStatus> _getLinuxStatus(ServerStatusUpdateReq req) async {
   try {
     final sys = _parseSysVer(
       StatusCmdType.sys.find(segments),
-      StatusCmdType.host.find(segments),
     );
     if (sys != null) {
-      req.ss.sysVer = sys;
+      req.ss.more[StatusCmdType.sys] = sys;
     }
   } catch (e, s) {
     Loggers.parse.warning(e, s);
   }
 
   try {
-    final cpus = parseCPU(StatusCmdType.cpu.find(segments));
+    final host = StatusCmdType.host.find(segments);
+    if (host.isNotEmpty) {
+      req.ss.more[StatusCmdType.host] = host;
+    }
+  } catch (e, s) {
+    Loggers.parse.warning(e, s);
+  }
+
+  try {
+    final cpus = OneTimeCpuStatus.parse(StatusCmdType.cpu.find(segments));
     req.ss.cpu.update(cpus);
     req.ss.temps.parse(
       StatusCmdType.tempType.find(segments),
@@ -70,7 +77,7 @@ Future<ServerStatus> _getLinuxStatus(ServerStatusUpdateReq req) async {
   }
 
   try {
-    final tcp = parseConn(StatusCmdType.conn.find(segments));
+    final tcp = Conn.parse(StatusCmdType.conn.find(segments));
     if (tcp != null) {
       req.ss.tcp = tcp;
     }
@@ -79,13 +86,13 @@ Future<ServerStatus> _getLinuxStatus(ServerStatusUpdateReq req) async {
   }
 
   try {
-    req.ss.disk = parseDisk(StatusCmdType.disk.find(segments));
+    req.ss.disk = Disk.parse(StatusCmdType.disk.find(segments));
   } catch (e, s) {
     Loggers.parse.warning(e, s);
   }
 
   try {
-    req.ss.mem = parseMem(StatusCmdType.mem.find(segments));
+    req.ss.mem = Memory.parse(StatusCmdType.mem.find(segments));
   } catch (e, s) {
     Loggers.parse.warning(e, s);
   }
@@ -93,14 +100,14 @@ Future<ServerStatus> _getLinuxStatus(ServerStatusUpdateReq req) async {
   try {
     final uptime = _parseUpTime(StatusCmdType.uptime.find(segments));
     if (uptime != null) {
-      req.ss.uptime = uptime;
+      req.ss.more[StatusCmdType.uptime] = uptime;
     }
   } catch (e, s) {
     Loggers.parse.warning(e, s);
   }
 
   try {
-    req.ss.swap = parseSwap(StatusCmdType.mem.find(segments));
+    req.ss.swap = Swap.parse(StatusCmdType.mem.find(segments));
   } catch (e, s) {
     Loggers.parse.warning(e, s);
   }
@@ -113,11 +120,24 @@ Future<ServerStatus> _getLinuxStatus(ServerStatusUpdateReq req) async {
   }
 
   try {
-    final nvdia = NvidiaSmi.fromXml(StatusCmdType.nvdia.find(segments));
-    req.ss.nvdia = nvdia;
+    req.ss.nvidia = NvidiaSmi.fromXml(StatusCmdType.nvidia.find(segments));
   } catch (e, s) {
     Loggers.parse.warning(e, s);
   }
+
+  try {
+    final battery = StatusCmdType.battery.find(segments);
+
+    /// Only collect li-poly batteries
+    final batteries = Batteries.parse(battery, true);
+    req.ss.batteries.clear();
+    if (batteries.isNotEmpty) {
+      req.ss.batteries.addAll(batteries);
+    }
+  } catch (e, s) {
+    Loggers.parse.warning(e, s);
+  }
+
   return req.ss;
 }
 
@@ -127,14 +147,14 @@ Future<ServerStatus> _getBsdStatus(ServerStatusUpdateReq req) async {
 
   try {
     final time = int.parse(BSDStatusCmdType.time.find(segments));
-    final net = parseBsdNetSpeed(BSDStatusCmdType.net.find(segments), time);
+    final net = NetSpeed.parseBsd(BSDStatusCmdType.net.find(segments), time);
     req.ss.netSpeed.update(net);
   } catch (e, s) {
     Loggers.parse.warning(e, s);
   }
 
   try {
-    req.ss.sysVer = BSDStatusCmdType.sys.find(segments);
+    req.ss.more[StatusCmdType.sys] = BSDStatusCmdType.sys.find(segments);
   } catch (e, s) {
     Loggers.parse.warning(e, s);
   }
@@ -154,14 +174,14 @@ Future<ServerStatus> _getBsdStatus(ServerStatusUpdateReq req) async {
   try {
     final uptime = _parseUpTime(BSDStatusCmdType.uptime.find(segments));
     if (uptime != null) {
-      req.ss.uptime = uptime;
+      req.ss.more[StatusCmdType.uptime] = uptime;
     }
   } catch (e, s) {
     Loggers.parse.warning(e, s);
   }
 
   try {
-    req.ss.disk = parseDisk(BSDStatusCmdType.disk.find(segments));
+    req.ss.disk = Disk.parse(BSDStatusCmdType.disk.find(segments));
   } catch (e, s) {
     Loggers.parse.warning(e, s);
   }
@@ -181,10 +201,10 @@ String? _parseUpTime(String raw) {
   return null;
 }
 
-String? _parseSysVer(String raw, String hostname) {
+String? _parseSysVer(String raw) {
   final s = raw.split('=');
   if (s.length == 2) {
     return s[1].replaceAll('"', '').replaceFirst('\n', '');
   }
-  return hostname.isEmpty ? null : hostname;
+  return null;
 }

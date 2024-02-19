@@ -6,15 +6,15 @@ import 'package:provider/provider.dart';
 import 'package:toolbox/core/extension/context/common.dart';
 import 'package:toolbox/core/extension/context/dialog.dart';
 import 'package:toolbox/core/extension/context/locale.dart';
-import 'package:toolbox/core/extension/media_queryx.dart';
+import 'package:toolbox/core/extension/numx.dart';
 import 'package:toolbox/core/extension/ssh_client.dart';
+import 'package:toolbox/core/extension/widget.dart';
 import 'package:toolbox/core/utils/platform/base.dart';
 import 'package:toolbox/core/utils/share.dart';
 import 'package:toolbox/data/model/app/shell_func.dart';
 import 'package:toolbox/data/model/server/try_limiter.dart';
 import 'package:toolbox/data/res/provider.dart';
 import 'package:toolbox/data/res/store.dart';
-import 'package:toolbox/view/widget/value_notifier.dart';
 
 import '../../../core/route.dart';
 import '../../../data/model/app/net_view.dart';
@@ -39,23 +39,36 @@ class _ServerPageState extends State<ServerPage>
     with AutomaticKeepAliveClientMixin, AfterLayoutMixin {
   late MediaQueryData _media;
 
+  late double _textFactorDouble;
+  late TextScaler _textFactor;
+
   final _cardsStatus = <String, _CardNotifier>{};
 
   String? _tag;
-  bool _useDoubleColumn = false;
+  // bool _useDoubleColumn = false;
 
   @override
   void didChangeDependencies() {
     super.didChangeDependencies();
     _media = MediaQuery.of(context);
-    _useDoubleColumn = _media.useDoubleColumn;
+    // _useDoubleColumn = _media.useDoubleColumn;
+    _textFactorDouble = Stores.setting.textFactor.fetch();
+    _textFactor = TextScaler.linear(_textFactorDouble);
   }
 
   @override
   Widget build(BuildContext context) {
     super.build(context);
     return Scaffold(
-      body: _buildBody(),
+      appBar: _buildTagsSwitcher(Pros.server),
+      body: ListenableBuilder(
+        listenable: Stores.setting.textFactor.listenable(),
+        builder: (_, __) {
+          _textFactorDouble = Stores.setting.textFactor.fetch();
+          _textFactor = TextScaler.linear(_textFactorDouble);
+          return _buildBody();
+        },
+      ),
       floatingActionButton: FloatingActionButton(
         onPressed: () => AppRoute.serverEdit().go(context),
         tooltip: l10n.addAServer,
@@ -81,10 +94,10 @@ class _ServerPageState extends State<ServerPage>
         }
 
         final filtered = _filterServers(pro);
-        if (_useDoubleColumn &&
-            Stores.setting.doubleColumnServersPage.fetch()) {
-          return _buildBodyMedium(pro: pro, filtered: filtered);
-        }
+        // if (_useDoubleColumn &&
+        //     Stores.setting.doubleColumnServersPage.fetch()) {
+        //   return _buildBodyMedium(pro: pro, filtered: filtered);
+        // }
         return _buildBodySmall(provider: pro, filtered: filtered);
       },
     );
@@ -94,12 +107,12 @@ class _ServerPageState extends State<ServerPage>
 
     return RefreshIndicator(
       key: ServerProvider.refreshKey,
-      onRefresh: () async => await Pros.server.refreshData(onlyFailed: true),
+      onRefresh: () async => await Pros.server.refresh(onlyFailed: true),
       child: child,
     );
   }
 
-  Widget _buildTagsSwitcher(ServerProvider provider) {
+  TagSwitcher _buildTagsSwitcher(ServerProvider provider) {
     return TagSwitcher(
       tags: provider.tags,
       width: _media.size.width,
@@ -115,61 +128,33 @@ class _ServerPageState extends State<ServerPage>
     required ServerProvider provider,
     required List<String> filtered,
     EdgeInsets? padding = const EdgeInsets.fromLTRB(7, 0, 7, 7),
-    bool buildTags = true,
   }) {
-    final count = buildTags ? filtered.length + 2 : filtered.length + 1;
+    final count = filtered.length + 1;
     return ListView.builder(
       padding: padding,
       itemCount: count,
       itemBuilder: (_, index) {
-        if (index == 0 && buildTags) return _buildTagsSwitcher(provider);
-
         // Issue #130
         if (index == count - 1) return UIs.height77;
-
-        if (buildTags) index--;
         return _buildEachServerCard(provider.pick(id: filtered[index]));
       },
     );
   }
 
-  Widget _buildBodyMedium({
-    required ServerProvider pro,
-    required List<String> filtered,
-  }) {
-    final left = filtered.where((e) => filtered.indexOf(e) % 2 == 0).toList();
-    final right = filtered.where((e) => filtered.indexOf(e) % 2 == 1).toList();
-    return Column(
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 7),
-          child: _buildTagsSwitcher(pro),
-        ),
-        Expanded(
-            child: Row(
-          children: [
-            Expanded(
-              child: _buildBodySmall(
-                provider: pro,
-                filtered: left,
-                padding: const EdgeInsets.fromLTRB(7, 0, 0, 7),
-                buildTags: false,
-              ),
-            ),
-            Expanded(
-              child: _buildBodySmall(
-                provider: pro,
-                filtered: right,
-                padding: const EdgeInsets.fromLTRB(0, 0, 7, 7),
-                buildTags: false,
-              ),
-            ),
-          ],
-        ))
-      ],
-    );
-  }
+  // Widget _buildBodyMedium({
+  //   required ServerProvider pro,
+  //   required List<String> filtered,
+  // }) {
+  //   return GridView.builder(
+  //     gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+  //       crossAxisCount: 2,
+  //     ),
+  //     itemCount: filtered.length,
+  //     itemBuilder: (context, index) {
+  //       return _buildEachServerCard(pro.pick(id: filtered[index]));
+  //     },
+  //   );
+  // }
 
   Widget _buildEachServerCard(Server? srv) {
     if (srv == null) {
@@ -178,7 +163,7 @@ class _ServerPageState extends State<ServerPage>
 
     return CardX(
       key: Key(srv.spi.id + (_tag ?? '')),
-      InkWell(
+      child: _buildRealServerCard(srv).padding(const EdgeInsets.all(13)).tap(
         onTap: () {
           if (srv.canViewDetails) {
             AppRoute.serverDetail(spi: srv.spi).go(context);
@@ -186,10 +171,10 @@ class _ServerPageState extends State<ServerPage>
             _showFailReason(srv.status);
           }
         },
-        onLongPress: () {
+        onLongTap: () {
           if (srv.state == ServerState.finished) {
             final id = srv.spi.id;
-            final cardStatus = getCardNoti(id);
+            final cardStatus = _getCardNoti(id);
             cardStatus.value = cardStatus.value.copyWith(
               flip: !cardStatus.value.flip,
             );
@@ -197,35 +182,31 @@ class _ServerPageState extends State<ServerPage>
             AppRoute.serverEdit(spi: srv.spi).go(context);
           }
         },
-        child: Padding(
-          padding: const EdgeInsets.all(13),
-          child: _buildRealServerCard(srv),
-        ),
       ),
     );
   }
 
-  Widget _wrapWithSizedbox(Widget child) {
+  /// The child's width mat not equal to 1/4 of the screen width,
+  /// so we need to wrap it with a SizedBox.
+  Widget _wrapWithSizedbox(Widget child, [bool circle = false]) {
     return SizedBox(
-      width: _useDoubleColumn
-          ? (_media.size.width - 137) / 8
-          : (_media.size.width - 74) / 4,
+      width: (_media.size.width - 74) / (circle ? 4 : 4.3),
       child: child,
     );
   }
 
   Widget _buildRealServerCard(Server srv) {
     final id = srv.spi.id;
-    final cardStatus = getCardNoti(id);
+    final cardStatus = _getCardNoti(id);
     final title = _buildServerCardTitle(srv.status, srv.state, srv.spi);
 
-    return ValueBuilder(
+    return ListenableBuilder(
       listenable: cardStatus,
-      build: () {
+      builder: (_, __) {
         late final List<Widget> children;
         if (srv.state == ServerState.finished) {
           if (cardStatus.value.flip) {
-            children = [title, ..._buildFlipedCard(srv)];
+            children = [title, ..._buildFlippedCard(srv)];
           } else {
             children = [title, ..._buildNormalCard(srv.status, srv.spi)];
           }
@@ -247,7 +228,7 @@ class _ServerPageState extends State<ServerPage>
     );
   }
 
-  List<Widget> _buildFlipedCard(Server srv) {
+  List<Widget> _buildFlippedCard(Server srv) {
     return [
       UIs.height13,
       Row(
@@ -314,8 +295,9 @@ class _ServerPageState extends State<ServerPage>
       Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
-          _wrapWithSizedbox(_buildPercentCircle(ss.cpu.usedPercent())),
-          _wrapWithSizedbox(_buildPercentCircle(ss.mem.usedPercent * 100)),
+          _wrapWithSizedbox(_buildPercentCircle(ss.cpu.usedPercent()), true),
+          _wrapWithSizedbox(
+              _buildPercentCircle(ss.mem.usedPercent * 100), true),
           _wrapWithSizedbox(_buildNet(ss, spi.id)),
           _wrapWithSizedbox(_buildDisk(ss, spi.id)),
         ],
@@ -341,7 +323,7 @@ class _ServerPageState extends State<ServerPage>
       rightCorner = InkWell(
         onTap: () {
           TryLimiter.reset(spi.id);
-          Pros.server.refreshData(spi: spi);
+          Pros.server.refresh(spi: spi);
         },
         child: const Padding(
           padding: EdgeInsets.symmetric(horizontal: 7),
@@ -354,7 +336,7 @@ class _ServerPageState extends State<ServerPage>
       );
     } else if (!(spi.autoConnect ?? true) && cs == ServerState.disconnected) {
       rightCorner = InkWell(
-        onTap: () => Pros.server.refreshData(spi: spi),
+        onTap: () => Pros.server.refresh(spi: spi),
         child: const Padding(
           padding: EdgeInsets.symmetric(horizontal: 7),
           child: Icon(
@@ -376,7 +358,7 @@ class _ServerPageState extends State<ServerPage>
             children: [
               Text(
                 spi.name,
-                style: UIs.textSize13Bold,
+                style: UIs.text13Bold,
               ),
               const Icon(
                 Icons.keyboard_arrow_right,
@@ -400,7 +382,7 @@ class _ServerPageState extends State<ServerPage>
     final topRightStr = _getTopRightStr(
       cs,
       ss.temps.first,
-      ss.uptime,
+      ss.more[StatusCmdType.uptime] ?? '',
       ss.err,
     );
     if (cs == ServerState.failed && ss.err != null) {
@@ -408,13 +390,13 @@ class _ServerPageState extends State<ServerPage>
         onTap: () => _showFailReason(ss),
         child: Text(
           l10n.viewErr,
-          style: UIs.textSize11Grey,
+          style: UIs.text13Grey,
         ),
       );
     }
     return Text(
       topRightStr,
-      style: UIs.textSize11Grey,
+      style: UIs.text13Grey,
     );
   }
 
@@ -434,10 +416,10 @@ class _ServerPageState extends State<ServerPage>
   }
 
   Widget _buildDisk(ServerStatus ss, String id) {
-    final cardNoti = getCardNoti(id);
-    return ValueBuilder(
+    final cardNoti = _getCardNoti(id);
+    return ListenableBuilder(
       listenable: cardNoti,
-      build: () {
+      builder: (_, __) {
         final rootDisk = findRootDisk(ss.disk);
         final isSpeed = cardNoti.value.diskIO ??
             !Stores.setting.serverTabPreferDiskAmount.fetch();
@@ -450,7 +432,7 @@ class _ServerPageState extends State<ServerPage>
             return FadeTransition(opacity: animation, child: child);
           },
           child: _buildIOData(
-            isSpeed ? '${l10n.read}:\n$r' : 'Total:\n${rootDisk?.size}',
+            isSpeed ? '${l10n.read}:\n$r' : 'Total:\n${rootDisk?.size.kb2Str}',
             isSpeed ? '${l10n.write}:\n$w' : 'Used:\n${rootDisk?.usedPercent}%',
             onTap: () {
               cardNoti.value = cardNoti.value.copyWith(diskIO: !isSpeed);
@@ -463,7 +445,7 @@ class _ServerPageState extends State<ServerPage>
   }
 
   Widget _buildNet(ServerStatus ss, String id) {
-    final cardNoti = getCardNoti(id);
+    final cardNoti = _getCardNoti(id);
     final type = cardNoti.value.net ?? Stores.setting.netViewType.fetch();
     final (a, b) = type.build(ss);
     return AnimatedSwitcher(
@@ -490,17 +472,18 @@ class _ServerPageState extends State<ServerPage>
   }) {
     final child = Column(
       children: [
-        const SizedBox(height: 5),
         Text(
           up,
-          style: UIs.textSize9Grey,
+          style: const TextStyle(fontSize: 10, color: Colors.grey),
           textAlign: TextAlign.center,
+          textScaler: _textFactor,
         ),
         const SizedBox(height: 3),
         Text(
           down,
-          style: UIs.textSize9Grey,
+          style: const TextStyle(fontSize: 10, color: Colors.grey),
           textAlign: TextAlign.center,
+          textScaler: _textFactor,
         )
       ],
     );
@@ -517,25 +500,20 @@ class _ServerPageState extends State<ServerPage>
     if (percent <= 0) percent = 0.01;
     if (percent >= 100) percent = 99.9;
     return Stack(
+      alignment: Alignment.center,
       children: [
-        Center(
-          child: CircleChart(
-            progressColor: primaryColor,
-            progressNumber: percent,
-            maxNumber: 100,
-            width: 53,
-            height: 53,
-            animationDuration: const Duration(milliseconds: 777),
-          ),
+        CircleChart(
+          progressColor: primaryColor,
+          progressNumber: percent,
+          maxNumber: 100,
+          width: 57,
+          height: 57,
+          animationDuration: const Duration(milliseconds: 777),
         ),
-        Positioned.fill(
-          child: Center(
-            child: Text(
-              '${percent.toStringAsFixed(1)}%',
-              textAlign: TextAlign.center,
-              style: UIs.textSize11,
-            ),
-          ),
+        Text(
+          '${percent.toStringAsFixed(1)}%',
+          textAlign: TextAlign.center,
+          style: const TextStyle(fontSize: 12.7),
         ),
       ],
     );
@@ -586,7 +564,8 @@ class _ServerPageState extends State<ServerPage>
     }
   }
 
-  double _calcCardHeight(ServerState cs, bool flip) {
+  double? _calcCardHeight(ServerState cs, bool flip) {
+    if (_textFactorDouble != 1.0) return null;
     if (cs != ServerState.finished) {
       return 23.0;
     }
@@ -598,7 +577,7 @@ class _ServerPageState extends State<ServerPage>
         !Stores.setting.serverTabUseOldUI.fetch()) {
       return 132;
     }
-    return 107;
+    return 106;
   }
 
   void _askFor({
@@ -621,7 +600,7 @@ class _ServerPageState extends State<ServerPage>
     );
   }
 
-  _CardNotifier getCardNoti(String id) => _cardsStatus.putIfAbsent(
+  _CardNotifier _getCardNoti(String id) => _cardsStatus.putIfAbsent(
         id,
         () => _CardNotifier(const _CardStatus()),
       );

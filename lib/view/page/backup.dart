@@ -1,11 +1,12 @@
 import 'dart:io';
 
-import 'package:flutter/foundation.dart';
+import 'package:computer/computer.dart';
 import 'package:flutter/material.dart';
 import 'package:toolbox/core/extension/context/common.dart';
 import 'package:toolbox/core/extension/context/dialog.dart';
 import 'package:toolbox/core/extension/context/locale.dart';
 import 'package:toolbox/core/extension/context/snackbar.dart';
+import 'package:toolbox/core/extension/datetime.dart';
 import 'package:toolbox/core/utils/misc.dart';
 import 'package:toolbox/core/utils/sync/icloud.dart';
 import 'package:toolbox/core/utils/platform/base.dart';
@@ -21,7 +22,6 @@ import 'package:toolbox/view/widget/expand_tile.dart';
 import 'package:toolbox/view/widget/cardx.dart';
 import 'package:toolbox/view/widget/input_field.dart';
 import 'package:toolbox/view/widget/store_switch.dart';
-import 'package:toolbox/view/widget/value_notifier.dart';
 
 class BackupPage extends StatelessWidget {
   BackupPage({super.key});
@@ -33,7 +33,7 @@ class BackupPage extends StatelessWidget {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: CustomAppBar(
-        title: Text(l10n.backupAndRestore, style: UIs.textSize18),
+        title: Text(l10n.backup, style: UIs.text18),
       ),
       body: _buildBody(context),
     );
@@ -47,13 +47,14 @@ class BackupPage extends StatelessWidget {
         if (isMacOS || isIOS) _buildIcloud(context),
         _buildWebdav(context),
         _buildFile(context),
+        _buildClipboard(context),
       ],
     );
   }
 
   Widget _buildTip() {
     return CardX(
-      ListTile(
+      child: ListTile(
         leading: const Icon(Icons.warning),
         title: Text(l10n.attention),
         subtitle: Text(l10n.backupTip, style: UIs.textGrey),
@@ -63,7 +64,7 @@ class BackupPage extends StatelessWidget {
 
   Widget _buildFile(BuildContext context) {
     return CardX(
-      ExpandTile(
+      child: ExpandTile(
         leading: const Icon(Icons.file_open),
         title: Text(l10n.files),
         initiallyExpanded: true,
@@ -94,7 +95,8 @@ class BackupPage extends StatelessWidget {
 
   Widget _buildIcloud(BuildContext context) {
     return CardX(
-      ListTile(
+      child: ListTile(
+        leading: const Icon(Icons.cloud),
         title: const Text('iCloud'),
         trailing: StoreSwitch(
           prop: Stores.setting.icloudSync,
@@ -119,10 +121,10 @@ class BackupPage extends StatelessWidget {
 
   Widget _buildWebdav(BuildContext context) {
     return CardX(
-      ExpandTile(
+      child: ExpandTile(
         leading: const Icon(Icons.storage),
         title: const Text('WebDAV'),
-        initiallyExpanded: !(isIOS || isMacOS),
+        initiallyExpanded: true,
         children: [
           ListTile(
             title: Text(l10n.setting),
@@ -159,9 +161,9 @@ class BackupPage extends StatelessWidget {
           ),
           ListTile(
             title: Text(l10n.manual),
-            trailing: ValueBuilder(
+            trailing: ListenableBuilder(
               listenable: webdavLoading,
-              build: () {
+              builder: (_, __) {
                 if (webdavLoading.value) {
                   return UIs.centerSizedLoadingSmall;
                 }
@@ -187,6 +189,31 @@ class BackupPage extends StatelessWidget {
     );
   }
 
+  Widget _buildClipboard(BuildContext context) {
+    return CardX(
+      child: ExpandTile(
+        leading: const Icon(Icons.content_paste),
+        title: Text(l10n.clipboard),
+        children: [
+          ListTile(
+            title: Text(l10n.backup),
+            trailing: const Icon(Icons.save),
+            onTap: () async {
+              final path = await Backup.backup();
+              Shares.copy(await File(path).readAsString());
+              context.showSnackBar(l10n.success);
+            },
+          ),
+          ListTile(
+            trailing: const Icon(Icons.restore),
+            title: Text(l10n.restore),
+            onTap: () async => _onTapClipboardRestore(context),
+          ),
+        ],
+      ),
+    );
+  }
+
   Future<void> _onTapFileRestore(BuildContext context) async {
     final path = await pickOneFile();
     if (path == null) return;
@@ -205,7 +232,8 @@ class BackupPage extends StatelessWidget {
 
     try {
       context.showLoadingDialog();
-      final backup = await compute(Backup.fromJsonString, text.trim());
+      final backup =
+          await Computer.shared.start(Backup.fromJsonString, text.trim());
       if (backupFormatVersion != backup.version) {
         context.showSnackBar(l10n.backupVersionNotMatch);
         return;
@@ -240,30 +268,58 @@ class BackupPage extends StatelessWidget {
 
   Future<void> _onTapWebdavDl(BuildContext context) async {
     webdavLoading.value = true;
-    try {
-      final result = await Webdav.download(
-        relativePath: Paths.bakName,
-      );
-      if (result != null) {
-        Loggers.app.warning('Download webdav backup failed: $result');
-        return;
-      }
-    } catch (e, s) {
-      Loggers.app.warning('Download webdav backup failed', e, s);
-      context.showSnackBar(e.toString());
+    final files = await Webdav.list();
+    if (files.isEmpty) {
+      context.showSnackBar(l10n.dirEmpty);
       webdavLoading.value = false;
       return;
     }
-    final dlFile = await File(await Paths.bak).readAsString();
-    final dlBak = await compute(Backup.fromJsonString, dlFile);
+
+    final fileName = await context.showRoundDialog<String>(
+      title: Text(l10n.restore),
+      child: SizedBox(
+        width: 300,
+        height: 300,
+        child: ListView.builder(
+          itemCount: files.length,
+          itemBuilder: (_, index) {
+            final file = files[index];
+            return ListTile(
+              title: Text(file),
+              onTap: () => context.pop(file),
+            );
+          },
+        ),
+      ),
+      actions: [
+        TextButton(
+          onPressed: () => context.pop(),
+          child: Text(l10n.cancel),
+        ),
+      ],
+    );
+    if (fileName == null) {
+      webdavLoading.value = false;
+      return;
+    }
+
+    final result = await Webdav.download(relativePath: fileName);
+    if (result != null) {
+      Loggers.app.warning('Download webdav backup failed: $result');
+      webdavLoading.value = false;
+      return;
+    }
+    final dlFile = await File('${await Paths.doc}/$fileName').readAsString();
+    final dlBak = await Computer.shared.start(Backup.fromJsonString, dlFile);
     await dlBak.restore(force: true);
     webdavLoading.value = false;
   }
 
   Future<void> _onTapWebdavUp(BuildContext context) async {
     webdavLoading.value = true;
-    await Backup.backup();
-    final uploadResult = await Webdav.upload(relativePath: Paths.bakName);
+    final bakName = '${DateTime.now().numStr}-${Paths.bakName}';
+    await Backup.backup(bakName);
+    final uploadResult = await Webdav.upload(relativePath: bakName);
     if (uploadResult != null) {
       Loggers.app.warning('Upload webdav backup failed: $uploadResult');
     } else {
@@ -321,6 +377,49 @@ class BackupPage extends StatelessWidget {
         return;
       }
       Webdav.changeClient(urlCtrl.text, userCtrl.text, pwdCtrl.text);
+    }
+  }
+
+  void _onTapClipboardRestore(BuildContext context) async {
+    final text = await Shares.paste();
+    if (text == null || text.isEmpty) {
+      context.showSnackBar(l10n.fieldMustNotEmpty);
+      return;
+    }
+
+    try {
+      context.showLoadingDialog();
+      final backup =
+          await Computer.shared.start(Backup.fromJsonString, text.trim());
+      if (backupFormatVersion != backup.version) {
+        context.showSnackBar(l10n.backupVersionNotMatch);
+        return;
+      }
+
+      await context.showRoundDialog(
+        title: Text(l10n.restore),
+        child: Text(l10n.askContinue(
+          '${l10n.restore} ${l10n.backup}(${backup.date})',
+        )),
+        actions: [
+          TextButton(
+            onPressed: () => context.pop(),
+            child: Text(l10n.cancel),
+          ),
+          TextButton(
+            onPressed: () async {
+              await backup.restore(force: true);
+              context.pop();
+            },
+            child: Text(l10n.ok),
+          ),
+        ],
+      );
+    } catch (e, trace) {
+      Loggers.app.warning('Import backup failed', e, trace);
+      context.showSnackBar(e.toString());
+    } finally {
+      context.pop();
     }
   }
 }

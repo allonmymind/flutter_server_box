@@ -2,6 +2,7 @@ import 'dart:async';
 
 import 'package:flutter/foundation.dart';
 import 'package:hive_flutter/hive_flutter.dart';
+import 'package:logging/logging.dart';
 import 'package:toolbox/core/utils/misc.dart';
 
 // abstract final class SecureStore {
@@ -29,6 +30,8 @@ import 'package:toolbox/core/utils/misc.dart';
 //   }
 // }
 
+final _logger = Logger('Store');
+
 class PersistentStore {
   late final Box box;
 
@@ -40,6 +43,36 @@ class PersistentStore {
         boxName,
         //encryptionCipher: SecureStore._cipher,
       );
+
+  _StoreProperty<T> property<T>(
+    String key,
+    T defaultValue, {
+    bool updateLastModified = true,
+  }) {
+    return _StoreProperty<T>(
+      box,
+      key,
+      defaultValue,
+      updateLastModified: updateLastModified,
+    );
+  }
+
+  _StoreListProperty<T> listProperty<T>(
+    String key,
+    List<T> defaultValue, {
+    bool updateLastModified = true,
+    T Function(dynamic val)? decoder,
+    dynamic Function(T val)? encoder,
+  }) {
+    return _StoreListProperty<T>(
+      box,
+      key,
+      defaultValue,
+      updateLastModified: updateLastModified,
+      encoder: encoder,
+      decoder: decoder,
+    );
+  }
 }
 
 extension BoxX on Box {
@@ -77,16 +110,6 @@ extension BoxX on Box {
   }
 }
 
-extension StoreX on PersistentStore {
-  _StoreProperty<T> property<T>(String key, T defaultValue) {
-    return _StoreProperty<T>(box, key, defaultValue);
-  }
-
-  _StoreListProperty<T> listProperty<T>(String key, List<T> defaultValue) {
-    return _StoreListProperty<T>(box, key, defaultValue);
-  }
-}
-
 abstract class StorePropertyBase<T> {
   ValueListenable<T> listenable();
   T fetch();
@@ -95,11 +118,21 @@ abstract class StorePropertyBase<T> {
 }
 
 class _StoreProperty<T> implements StorePropertyBase<T> {
-  _StoreProperty(this._box, this._key, this.defaultValue);
+  _StoreProperty(
+    this._box,
+    this._key,
+    this.defaultValue, {
+    this.updateLastModified = true,
+    this.decoder,
+    this.encoder,
+  });
 
   final Box _box;
   final String _key;
   T defaultValue;
+  bool updateLastModified;
+  final T Function(dynamic val)? decoder;
+  final dynamic Function(T val)? encoder;
 
   @override
   ValueListenable<T> listenable() {
@@ -110,6 +143,13 @@ class _StoreProperty<T> implements StorePropertyBase<T> {
   T fetch() {
     final stored = _box.get(_key);
     if (stored == null || stored is! T) {
+      try {
+        if (decoder != null) {
+          return decoder!(stored);
+        }
+      } catch (_) {
+        _logger.warning('Failed to decode "$_key"');
+      }
       return defaultValue;
     }
     return stored;
@@ -117,7 +157,10 @@ class _StoreProperty<T> implements StorePropertyBase<T> {
 
   @override
   Future<void> put(T value) {
-    _box.updateLastModified();
+    if (updateLastModified) _box.updateLastModified();
+    if (encoder != null) {
+      return _box.put(_key, encoder!(value));
+    }
     return _box.put(_key, value);
   }
 
@@ -128,11 +171,21 @@ class _StoreProperty<T> implements StorePropertyBase<T> {
 }
 
 class _StoreListProperty<T> implements StorePropertyBase<List<T>> {
-  _StoreListProperty(this._box, this._key, this.defaultValue);
+  _StoreListProperty(
+    this._box,
+    this._key,
+    this.defaultValue, {
+    this.updateLastModified = true,
+    this.decoder,
+    this.encoder,
+  });
 
   final Box _box;
   final String _key;
   List<T> defaultValue;
+  bool updateLastModified;
+  final T Function(dynamic val)? decoder;
+  final dynamic Function(T val)? encoder;
 
   @override
   ValueListenable<List<T>> listenable() {
@@ -142,16 +195,26 @@ class _StoreListProperty<T> implements StorePropertyBase<List<T>> {
   @override
   List<T> fetch() {
     final val = _box.get(_key, defaultValue: defaultValue)!;
-
     if (val is! List) {
       throw Exception('StoreListProperty("$_key") is: ${val.runtimeType}');
     }
-
+    if (decoder != null) {
+      try {
+        return List<T>.from(val.map(decoder!));
+      } catch (_) {
+        _logger.warning('Failed to decode "$_key"');
+        return defaultValue;
+      }
+    }
     return List<T>.from(val);
   }
 
   @override
   Future<void> put(List<T> value) {
+    if (updateLastModified) _box.updateLastModified();
+    if (encoder != null) {
+      return _box.put(_key, value.map(encoder!).toList());
+    }
     return _box.put(_key, value);
   }
 

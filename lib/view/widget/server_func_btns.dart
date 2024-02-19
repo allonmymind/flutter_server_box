@@ -7,17 +7,21 @@ import 'package:toolbox/core/extension/context/locale.dart';
 import 'package:toolbox/core/extension/context/snackbar.dart';
 import 'package:toolbox/core/extension/ssh_client.dart';
 import 'package:toolbox/core/extension/uint8list.dart';
+import 'package:toolbox/core/extension/widget.dart';
 import 'package:toolbox/core/utils/platform/base.dart';
 import 'package:toolbox/core/utils/platform/path.dart';
+import 'package:toolbox/data/model/app/menu/server_func.dart';
+import 'package:toolbox/data/model/app/shell_func.dart';
 import 'package:toolbox/data/model/pkg/manager.dart';
 import 'package:toolbox/data/model/server/dist.dart';
+import 'package:toolbox/data/model/server/snippet.dart';
 import 'package:toolbox/data/res/path.dart';
 import 'package:toolbox/data/res/provider.dart';
 import 'package:toolbox/data/res/store.dart';
+import 'package:toolbox/data/res/ui.dart';
 
 import '../../core/route.dart';
 import '../../core/utils/server.dart';
-import '../../data/model/app/menu.dart';
 import '../../data/model/pkg/upgrade_info.dart';
 import '../../data/model/server/server_private_info.dart';
 import 'popup_menu.dart';
@@ -32,9 +36,9 @@ class ServerFuncBtnsTopRight extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return PopupMenu<ServerTabMenuType>(
-      items: ServerTabMenuType.values
-          .map((e) => PopupMenuItem<ServerTabMenuType>(
+    return PopupMenu<ServerFuncBtn>(
+      items: ServerFuncBtn.values
+          .map((e) => PopupMenuItem<ServerFuncBtn>(
                 value: e,
                 child: Row(
                   children: [
@@ -65,51 +69,37 @@ class ServerFuncBtns extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    // return Row(
-    //   mainAxisAlignment: MainAxisAlignment.spaceAround,
-    //   children: ServerTabMenuType.values
-    //       .map(
-    //         (e) => Stores.setting.serverFuncBtnsDisplayName.fetch()
-    //             ? Column(
-    //                 mainAxisSize: MainAxisSize.min,
-    //                 children: [
-    //                   IconButton(
-    //                     onPressed: () => _onTapMoreBtns(e, spi, context),
-    //                     padding: EdgeInsets.zero,
-    //                     tooltip: e.name,
-    //                     icon: Icon(e.icon, size: iconSize ?? 15),
-    //                   ),
-    //                   Text(e.toStr, style: UIs.textSize9Grey)
-    //                 ],
-    //               )
-    //             : IconButton(
-    //                 onPressed: () => _onTapMoreBtns(e, spi, context),
-    //                 padding: EdgeInsets.zero,
-    //                 tooltip: e.name,
-    //                 icon: Icon(e.icon, size: iconSize ?? 15),
-    //               ),
-    //       )
-    //       .toList(),
-    // );
+    final btns = () {
+      try {
+        return Stores.setting.serverFuncBtns
+            .fetch()
+            .map((e) => ServerFuncBtn.values[e]);
+      } catch (e) {
+        return ServerFuncBtn.values;
+      }
+    }();
     return Row(
       mainAxisAlignment: MainAxisAlignment.spaceAround,
-      children: ServerTabMenuType.values
+      children: btns
           .map(
-            (e) => IconButton(
-              onPressed: () => _onTapMoreBtns(e, spi, context),
-              padding: EdgeInsets.zero,
-              tooltip: e.name,
-              icon: Stores.setting.serverFuncBtnsDisplayName.fetch()
-                  ? Column(
-                      children: [
-                        Icon(e.icon, size: iconSize ?? 15),
-                        Text(e.toStr,
-                            style: const TextStyle(
-                                fontSize: 7, color: Colors.grey))
-                      ],
-                    )
-                  : Icon(e.icon, size: iconSize ?? 15),
-            ),
+            (e) => Stores.setting.moveOutServerTabFuncBtns.fetch()
+                ? IconButton(
+                    onPressed: () => _onTapMoreBtns(e, spi, context),
+                    padding: EdgeInsets.zero,
+                    tooltip: e.toStr,
+                    icon: Icon(e.icon, size: iconSize ?? 15),
+                  )
+                : Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      IconButton(
+                        onPressed: () => _onTapMoreBtns(e, spi, context),
+                        padding: EdgeInsets.zero,
+                        icon: Icon(e.icon, size: iconSize ?? 15),
+                      ),
+                      Text(e.toStr, style: UIs.text11Grey)
+                    ],
+                  ).padding(const EdgeInsets.only(bottom: 13)),
           )
           .toList(),
     );
@@ -117,69 +107,59 @@ class ServerFuncBtns extends StatelessWidget {
 }
 
 void _onTapMoreBtns(
-  ServerTabMenuType value,
+  ServerFuncBtn value,
   ServerPrivateInfo spi,
   BuildContext context,
 ) async {
   switch (value) {
-    case ServerTabMenuType.pkg:
+    case ServerFuncBtn.pkg:
       _onPkg(context, spi);
       break;
-    case ServerTabMenuType.sftp:
+    case ServerFuncBtn.sftp:
       AppRoute.sftp(spi: spi).checkGo(
         context: context,
         check: () => _checkClient(context, spi.id),
       );
       break;
-    // case ServerTabMenuType.snippet:
-    //   final snippets = await context.showPickDialog<Snippet>(
-    //     items: Pros.snippet.snippets,
-    //     name: (e) => e.name,
-    //     multi: false
-    //   );
-    //   if (snippets == null || snippets.isEmpty) {
-    //     return;
-    //   }
-    //   final result = await Pros.server.runSnippets(spi.id, snippets.first);
-    //   if (result != null && result.isNotEmpty) {
-    //     context.showRoundDialog(
-    //       title: Text(l10n.result),
-    //       child: Text(result),
-    //       actions: [
-    //         TextButton(
-    //           onPressed: () => copy2Clipboard(result),
-    //           child: Text(l10n.copy),
-    //         )
-    //       ],
-    //     );
-    //   }
-    //   break;
-    case ServerTabMenuType.docker:
+    case ServerFuncBtn.snippet:
+      final snippet = await context.showPickSingleDialog<Snippet>(
+        items: Pros.snippet.snippets,
+        name: (e) => e.name,
+      );
+      if (snippet == null) return;
+
+      AppRoute.ssh(spi: spi, initCmd: snippet.fmtWith(spi)).checkGo(
+        context: context,
+        check: () => _checkClient(context, spi.id),
+      );
+      break;
+    case ServerFuncBtn.container:
       AppRoute.docker(spi: spi).checkGo(
         context: context,
         check: () => _checkClient(context, spi.id),
       );
       break;
-    case ServerTabMenuType.process:
+    case ServerFuncBtn.process:
       AppRoute.process(spi: spi).checkGo(
         context: context,
         check: () => _checkClient(context, spi.id),
       );
       break;
-    case ServerTabMenuType.terminal:
+    case ServerFuncBtn.terminal:
       _gotoSSH(spi, context);
+      break;
+    case ServerFuncBtn.iperf:
+      AppRoute.iperf(spi: spi).checkGo(
+        context: context,
+        check: () => _checkClient(context, spi.id),
+      );
       break;
   }
 }
 
-Future<void> _gotoSSH(
-  ServerPrivateInfo spi,
-  BuildContext context,
-) async {
-  // as a `Mobile first` app -> handle mobile first
-  //
+void _gotoSSH(ServerPrivateInfo spi, BuildContext context) async {
   // run built-in ssh on macOS due to incompatibility
-  if (!isDesktop || isMacOS) {
+  if (isMobile || isMacOS) {
     AppRoute.ssh(spi: spi).go(context);
     return;
   }
@@ -204,13 +184,13 @@ Future<void> _gotoSSH(
     extraArgs.addAll(["-i", path]);
   }
 
-  List<String> sshCommand = ["ssh", "${spi.user}@${spi.ip}"] + extraArgs;
-  final system = Platform.operatingSystem;
+  final sshCommand = ["ssh", "${spi.user}@${spi.ip}"] + extraArgs;
+  final system = OS.type;
   switch (system) {
-    case "windows":
+    case OS.windows:
       await Process.start("cmd", ["/c", "start"] + sshCommand);
       break;
-    case "linux":
+    case OS.linux:
       await Process.start("x-terminal-emulator", ["-e"] + sshCommand);
       break;
     default:
@@ -238,7 +218,11 @@ Future<void> _onPkg(BuildContext context, ServerPrivateInfo spi) async {
     context.showSnackBar(l10n.noClient);
     return;
   }
-  final sys = server.status.sysVer;
+  final sys = server.status.more[StatusCmdType.sys];
+  if (sys == null) {
+    context.showSnackBar(l10n.noResult);
+    return;
+  }
   final pkg = PkgManager.fromDist(sys.dist);
 
   // Update pkg list

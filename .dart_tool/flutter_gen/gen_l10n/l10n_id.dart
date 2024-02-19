@@ -58,13 +58,13 @@ class SId extends S {
   String get autoConnect => 'Hubungkan otomatis';
 
   @override
+  String get autoRun => 'Berjalan Otomatis';
+
+  @override
   String get autoUpdateHomeWidget => 'Widget Rumah Pembaruan Otomatis';
 
   @override
   String get backup => 'Cadangan';
-
-  @override
-  String get backupAndRestore => 'Cadangan dan Pulihkan';
 
   @override
   String get backupTip => 'Data yang diekspor hanya dienkripsi.\nTolong jaga keamanannya.';
@@ -73,7 +73,13 @@ class SId extends S {
   String get backupVersionNotMatch => 'Versi cadangan tidak cocok.';
 
   @override
+  String get battery => 'Baterai';
+
+  @override
   String get bgRun => 'Jalankan di Backgroud';
+
+  @override
+  String get bgRunTip => 'Sakelar ini hanya berarti aplikasi akan mencoba berjalan di latar belakang, apakah aplikasi dapat berjalan di latar belakang tergantung pada apakah izin diaktifkan atau tidak. Untuk Android asli, nonaktifkan \"Pengoptimalan Baterai\" di aplikasi ini, dan untuk miui, ubah kebijakan penghematan daya ke \"Tidak Terbatas\".';
 
   @override
   String get bioAuth => 'Biosertifikasi';
@@ -97,10 +103,19 @@ class SId extends S {
   String get clear => 'Jernih';
 
   @override
+  String get clipboard => 'papan klip';
+
+  @override
   String get close => 'Menutup';
 
   @override
   String get cmd => 'Memerintah';
+
+  @override
+  String get collapseUI => 'Runtuh';
+
+  @override
+  String get collapseUITip => 'Apakah akan menciutkan daftar panjang yang ada di UI secara default atau tidak';
 
   @override
   String get conn => 'Koneksi';
@@ -109,10 +124,16 @@ class SId extends S {
   String get connected => 'Terhubung';
 
   @override
+  String get container => 'Wadah';
+
+  @override
   String get containerName => 'Nama kontainer';
 
   @override
   String get containerStatus => 'Status wadah';
+
+  @override
+  String get containerTrySudoTip => 'Contohnya: Di dalam aplikasi, pengguna diatur sebagai aaa, tetapi Docker diinstal di bawah pengguna root. Dalam kasus ini, Anda perlu mengaktifkan opsi ini.';
 
   @override
   String get convert => 'Mengubah';
@@ -177,7 +198,7 @@ class SId extends S {
   String get dockerEditHost => 'Edit Docker_host';
 
   @override
-  String get dockerEmptyRunningItems => 'Tidak ada wadah yang berjalan.\nMungkin saja env DOCKER_HOST tidak dibaca dengan benar. Anda dapat menemukannya dengan menjalankan `echo \$DOCKER_HOST` di terminal.';
+  String get dockerEmptyRunningItems => 'Tidak ada wadah yang sedang berjalan.\nHal ini dapat terjadi karena:\n- Pengguna instalasi Docker tidak sama dengan nama pengguna yang dikonfigurasi di dalam Aplikasi.\n- Variabel lingkungan DOCKER_HOST tidak terbaca dengan benar. Anda bisa mendapatkannya dengan menjalankan `echo \$DOCKER_HOST` di terminal.';
 
   @override
   String dockerImagesFmt(Object count) {
@@ -269,6 +290,9 @@ class SId extends S {
 
   @override
   String get fontSize => 'Ukuran huruf';
+
+  @override
+  String get force => 'sukarela';
 
   @override
   String foundNUpdate(Object count) {
@@ -580,6 +604,9 @@ class SId extends S {
   String get run => 'Berlari';
 
   @override
+  String get running => 'berlari';
+
+  @override
   String get save => 'Menyimpan';
 
   @override
@@ -634,10 +661,16 @@ class SId extends S {
   String get sftpSSHConnected => 'Sftp terhubung';
 
   @override
+  String get sftpShowFoldersFirst => 'Folder ditampilkan lebih dulu';
+
+  @override
   String get showDistLogo => 'Tampilkan logo distribusi';
 
   @override
   String get shutdown => 'Matikan';
+
+  @override
+  String get size => 'Ukuran';
 
   @override
   String get snippet => 'Snippet';
@@ -668,13 +701,24 @@ class SId extends S {
   String get stop => 'Berhenti';
 
   @override
+  String get stopped => 'dihentikan';
+
+  @override
   String get success => 'Kesuksesan';
+
+  @override
+  String get supportFmtArgs => 'Parameter pemformatan berikut ini didukung:';
 
   @override
   String get suspend => 'Suspend';
 
   @override
   String get suspendTip => 'Fungsi penangguhan memerlukan hak akses root dan dukungan systemd.';
+
+  @override
+  String switchTo(Object val) {
+    return 'Beralih ke $val';
+  }
 
   @override
   String get syncTip => 'Pengaktifan ulang mungkin diperlukan agar beberapa perubahan dapat diterapkan.';
@@ -695,16 +739,31 @@ class SId extends S {
   String get test => 'pengujian';
 
   @override
+  String get textScaler => 'Penskalaan font';
+
+  @override
+  String get textScalerTip => '1.0 => 100% (ukuran asli), hanya berfungsi pada bagian halaman server font, tidak disarankan untuk diubah.';
+
+  @override
   String get theme => ' Tema';
 
   @override
   String get themeMode => 'Mode tema';
 
   @override
+  String get time => 'Waktu';
+
+  @override
   String get times => 'Waktu';
 
   @override
+  String get total => 'Total';
+
+  @override
   String get traffic => 'Lalu lintas';
+
+  @override
+  String get trySudo => 'Cobalah menggunakan sudo';
 
   @override
   String get ttl => 'ttl';
@@ -747,10 +806,19 @@ class SId extends S {
   String get upsideDown => 'Terbalik';
 
   @override
+  String get uptime => 'Uptime';
+
+  @override
   String get urlOrJson => 'URL atau JSON';
 
   @override
-  String get useNoPwd => 'Tidak ada kata sandi yang akan digunakan.';
+  String get useNoPwd => 'Tidak ada kata sandi yang akan digunakan';
+
+  @override
+  String get usePodmanByDefault => 'Menggunakan Podman sebagai bawaan';
+
+  @override
+  String get used => 'Digunakan';
 
   @override
   String get user => 'Username';

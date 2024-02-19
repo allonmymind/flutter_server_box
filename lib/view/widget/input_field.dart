@@ -58,8 +58,8 @@ class _InputState extends State<Input> {
   @override
   Widget build(BuildContext context) {
     return CardX(
-      Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 17),
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 15),
         child: TextField(
           controller: widget.controller,
           maxLines: widget.maxLines,

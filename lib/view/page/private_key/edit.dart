@@ -1,6 +1,6 @@
 import 'dart:io';
 
-import 'package:flutter/foundation.dart';
+import 'package:computer/computer.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:toolbox/core/extension/context/common.dart';
@@ -39,7 +39,7 @@ class _PrivateKeyEditPageState extends State<PrivateKeyEditPage> {
 
   late FocusScopeNode _focusScope;
 
-  Widget? _loading;
+  final _loading = ValueNotifier<Widget?>(null);
 
   @override
   void initState() {
@@ -84,7 +84,7 @@ class _PrivateKeyEditPageState extends State<PrivateKeyEditPage> {
     );
   }
 
-  PreferredSizeWidget _buildAppBar() {
+  CustomAppBar _buildAppBar() {
     final actions = [
       IconButton(
         tooltip: l10n.delete,
@@ -113,9 +113,13 @@ class _PrivateKeyEditPageState extends State<PrivateKeyEditPage> {
       )
     ];
     return CustomAppBar(
-      title: Text(l10n.edit, style: UIs.textSize18),
+      title: Text(l10n.edit, style: UIs.text18),
       actions: widget.pki == null ? null : actions,
     );
+  }
+
+  String _standardizeLineSeparators(String value) {
+    return value.replaceAll("\r\n", "\n").replaceAll("\r", "\n");
   }
 
   Widget _buildFAB() {
@@ -123,18 +127,16 @@ class _PrivateKeyEditPageState extends State<PrivateKeyEditPage> {
       tooltip: l10n.save,
       onPressed: () async {
         final name = _nameController.text;
-        final key = _keyController.text.trim();
+        final key = _standardizeLineSeparators(_keyController.text.trim());
         final pwd = _pwdController.text;
         if (name.isEmpty || key.isEmpty) {
           context.showSnackBar(l10n.fieldMustNotEmpty);
           return;
         }
         FocusScope.of(context).unfocus();
-        setState(() {
-          _loading = UIs.centerSizedLoading;
-        });
+        _loading.value = UIs.centerSizedLoading;
         try {
-          final decrypted = await compute(decyptPem, [key, pwd]);
+          final decrypted = await Computer.shared.start(decyptPem, [key, pwd]);
           final pki = PrivateKeyInfo(id: name, key: decrypted);
           if (widget.pki != null) {
             Pros.key.update(widget.pki!, pki);
@@ -145,9 +147,7 @@ class _PrivateKeyEditPageState extends State<PrivateKeyEditPage> {
           context.showSnackBar(e.toString());
           rethrow;
         } finally {
-          setState(() {
-            _loading = null;
-          });
+          _loading.value = null;
         }
         context.pop();
       },
@@ -181,10 +181,7 @@ class _PrivateKeyEditPageState extends State<PrivateKeyEditPage> {
         TextButton(
           onPressed: () async {
             final path = await pickOneFile();
-            if (path == null) {
-              context.showSnackBar(l10n.fieldMustNotEmpty);
-              return;
-            }
+            if (path == null) return;
 
             final file = File(path);
             if (!file.existsSync()) {
@@ -196,14 +193,16 @@ class _PrivateKeyEditPageState extends State<PrivateKeyEditPage> {
               context.showSnackBar(
                 l10n.fileTooLarge(
                   path,
-                  size.convertBytes,
-                  Miscs.privateKeyMaxSize.convertBytes,
+                  size.bytes2Str,
+                  Miscs.privateKeyMaxSize.bytes2Str,
                 ),
               );
               return;
             }
 
-            _keyController.text = await file.readAsString();
+            final content = await file.readAsString();
+            // dartssh2 accepts only LF (but not CRLF or CR)
+            _keyController.text = _standardizeLineSeparators(content.trim());
           },
           child: Text(l10n.pickFile),
         ),
@@ -216,7 +215,10 @@ class _PrivateKeyEditPageState extends State<PrivateKeyEditPage> {
           icon: Icons.password,
         ),
         SizedBox(height: MediaQuery.of(context).size.height * 0.1),
-        _loading ?? UIs.placeholder,
+        ValueListenableBuilder(
+          valueListenable: _loading,
+          builder: (_, val, __) => val ?? UIs.placeholder,
+        ),
       ],
     );
   }

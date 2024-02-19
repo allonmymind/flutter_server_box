@@ -40,16 +40,14 @@ abstract final class InitStatus {
           free: 1,
           avail: 1,
         ),
-        sysVer: 'Loading...',
-        uptime: '',
         disk: [
-          const Disk(
+          Disk(
             dev: '/',
             mount: '/',
             usedPercent: 0,
-            used: '0',
-            size: '0',
-            avail: '0',
+            used: BigInt.zero,
+            size: BigInt.one,
+            avail: BigInt.zero,
           )
         ],
         tcp: const Conn(maxConn: 0, active: 0, passive: 0, fail: 0),

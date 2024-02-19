@@ -4,12 +4,15 @@ abstract final class GithubIds {
   // Thanks
   // If you want to change your Github ID, please open an issue.
   static const contributors = <GhId>{
+    'PaperCube',
     'its-tom',
-    'RainSunMe',
-    'kalashnikov',
     'azkadev',
+    'kalashnikov',
+    'FrancXPT',
+    'RainSunMe',
     'calvinweb',
-    'Liloupar'
+    'Liloupar',
+    'dccif',
   };
   static const participants = <GhId>{
     'jaychoubaby',
@@ -42,5 +45,19 @@ abstract final class GithubIds {
     'xingleiwu',
     'Cooper098',
     'xushuojie',
+    'AniberMokie',
+    'LucaLin233',
+    'lalasou',
+    'ohyoxo',
+    'lovechang1986',
+    'luckyreny',
+    'aliuzzz',
+    '58fly',
+    'Potterli20',
+    'Seifon',
+    'bxoooooo',
+    'KatharsisKing',
+    'mervinniu',
+    'L-Super',
   };
 }

@@ -7,6 +7,7 @@ import 'package:intl/intl.dart' as intl;
 
 import 'l10n_de.dart';
 import 'l10n_en.dart';
+import 'l10n_fr.dart';
 import 'l10n_id.dart';
 import 'l10n_zh.dart';
 
@@ -93,6 +94,7 @@ abstract class S {
   static const List<Locale> supportedLocales = <Locale>[
     Locale('de'),
     Locale('en'),
+    Locale('fr'),
     Locale('id'),
     Locale('zh'),
     Locale('zh', 'TW')
@@ -161,7 +163,7 @@ abstract class S {
   /// No description provided for @askContinue.
   ///
   /// In en, this message translates to:
-  /// **'{msg}, continue?'**
+  /// **'{msg}. Continue?'**
   String askContinue(Object msg);
 
   /// No description provided for @attention.
@@ -200,6 +202,12 @@ abstract class S {
   /// **'Auto connect'**
   String get autoConnect;
 
+  /// No description provided for @autoRun.
+  ///
+  /// In en, this message translates to:
+  /// **'Automatic Run'**
+  String get autoRun;
+
   /// No description provided for @autoUpdateHomeWidget.
   ///
   /// In en, this message translates to:
@@ -211,12 +219,6 @@ abstract class S {
   /// In en, this message translates to:
   /// **'Backup'**
   String get backup;
-
-  /// No description provided for @backupAndRestore.
-  ///
-  /// In en, this message translates to:
-  /// **'Backup and Restore'**
-  String get backupAndRestore;
 
   /// No description provided for @backupTip.
   ///
@@ -230,11 +232,23 @@ abstract class S {
   /// **'Backup version is not match.'**
   String get backupVersionNotMatch;
 
+  /// No description provided for @battery.
+  ///
+  /// In en, this message translates to:
+  /// **'Battery'**
+  String get battery;
+
   /// No description provided for @bgRun.
   ///
   /// In en, this message translates to:
   /// **'Run in backgroud'**
   String get bgRun;
+
+  /// No description provided for @bgRunTip.
+  ///
+  /// In en, this message translates to:
+  /// **'This switch only means the program will try to run in the background, whether it can run in the background depends on whether the permission is enabled or not. For native Android, please disable \"Battery Optimization\" in this app, and for miui, please change the power saving policy to \"Unlimited\".'**
+  String get bgRunTip;
 
   /// No description provided for @bioAuth.
   ///
@@ -278,6 +292,12 @@ abstract class S {
   /// **'Clear'**
   String get clear;
 
+  /// No description provided for @clipboard.
+  ///
+  /// In en, this message translates to:
+  /// **'Clipboard'**
+  String get clipboard;
+
   /// No description provided for @close.
   ///
   /// In en, this message translates to:
@@ -289,6 +309,18 @@ abstract class S {
   /// In en, this message translates to:
   /// **'Command'**
   String get cmd;
+
+  /// No description provided for @collapseUI.
+  ///
+  /// In en, this message translates to:
+  /// **'Collapse'**
+  String get collapseUI;
+
+  /// No description provided for @collapseUITip.
+  ///
+  /// In en, this message translates to:
+  /// **'Whether to collapse long lists present in the UI by default'**
+  String get collapseUITip;
 
   /// No description provided for @conn.
   ///
@@ -302,6 +334,12 @@ abstract class S {
   /// **'Connected'**
   String get connected;
 
+  /// No description provided for @container.
+  ///
+  /// In en, this message translates to:
+  /// **'Container'**
+  String get container;
+
   /// No description provided for @containerName.
   ///
   /// In en, this message translates to:
@@ -313,6 +351,12 @@ abstract class S {
   /// In en, this message translates to:
   /// **'Container status'**
   String get containerStatus;
+
+  /// No description provided for @containerTrySudoTip.
+  ///
+  /// In en, this message translates to:
+  /// **'For example: In the app, the user is set to aaa, but Docker is installed under the root user. In this case, you need to enable this option.'**
+  String get containerTrySudoTip;
 
   /// No description provided for @convert.
   ///
@@ -437,7 +481,7 @@ abstract class S {
   /// No description provided for @dockerEmptyRunningItems.
   ///
   /// In en, this message translates to:
-  /// **'No running container. \nIt may be that the env DOCKER_HOST is not read correctly. You can found it by running `echo \$DOCKER_HOST` in terminal.'**
+  /// **'There are no running containers.\nThis could be because:\n- The Docker installation user is not the same as the username configured within the App.\n- The environment variable DOCKER_HOST was not read correctly. You can get it by running `echo \$DOCKER_HOST` in the terminal.'**
   String get dockerEmptyRunningItems;
 
   /// No description provided for @dockerImagesFmt.
@@ -601,6 +645,12 @@ abstract class S {
   /// In en, this message translates to:
   /// **'Font size'**
   String get fontSize;
+
+  /// No description provided for @force.
+  ///
+  /// In en, this message translates to:
+  /// **'Force'**
+  String get force;
 
   /// No description provided for @foundNUpdate.
   ///
@@ -1196,6 +1246,12 @@ abstract class S {
   /// **'Run'**
   String get run;
 
+  /// No description provided for @running.
+  ///
+  /// In en, this message translates to:
+  /// **'Running'**
+  String get running;
+
   /// No description provided for @save.
   ///
   /// In en, this message translates to:
@@ -1304,6 +1360,12 @@ abstract class S {
   /// **'SFTP Connected'**
   String get sftpSSHConnected;
 
+  /// No description provided for @sftpShowFoldersFirst.
+  ///
+  /// In en, this message translates to:
+  /// **'Display folders first'**
+  String get sftpShowFoldersFirst;
+
   /// No description provided for @showDistLogo.
   ///
   /// In en, this message translates to:
@@ -1315,6 +1377,12 @@ abstract class S {
   /// In en, this message translates to:
   /// **'Shutdown'**
   String get shutdown;
+
+  /// No description provided for @size.
+  ///
+  /// In en, this message translates to:
+  /// **'Size'**
+  String get size;
 
   /// No description provided for @snippet.
   ///
@@ -1364,11 +1432,23 @@ abstract class S {
   /// **'Stop'**
   String get stop;
 
+  /// No description provided for @stopped.
+  ///
+  /// In en, this message translates to:
+  /// **'Stopped'**
+  String get stopped;
+
   /// No description provided for @success.
   ///
   /// In en, this message translates to:
   /// **'Success'**
   String get success;
+
+  /// No description provided for @supportFmtArgs.
+  ///
+  /// In en, this message translates to:
+  /// **'The following formatting parameters are supported:'**
+  String get supportFmtArgs;
 
   /// No description provided for @suspend.
   ///
@@ -1381,6 +1461,12 @@ abstract class S {
   /// In en, this message translates to:
   /// **'The suspend function requires root privileges and systemd support.'**
   String get suspendTip;
+
+  /// No description provided for @switchTo.
+  ///
+  /// In en, this message translates to:
+  /// **'Switch to {val}'**
+  String switchTo(Object val);
 
   /// No description provided for @syncTip.
   ///
@@ -1418,6 +1504,18 @@ abstract class S {
   /// **'Test'**
   String get test;
 
+  /// No description provided for @textScaler.
+  ///
+  /// In en, this message translates to:
+  /// **'Text scaler'**
+  String get textScaler;
+
+  /// No description provided for @textScalerTip.
+  ///
+  /// In en, this message translates to:
+  /// **'1.0 => 100% (original size), only works on server page part of the font, not recommended to change.'**
+  String get textScalerTip;
+
   /// No description provided for @theme.
   ///
   /// In en, this message translates to:
@@ -1430,17 +1528,35 @@ abstract class S {
   /// **'Theme mode'**
   String get themeMode;
 
+  /// No description provided for @time.
+  ///
+  /// In en, this message translates to:
+  /// **'Time'**
+  String get time;
+
   /// No description provided for @times.
   ///
   /// In en, this message translates to:
   /// **'Times'**
   String get times;
 
+  /// No description provided for @total.
+  ///
+  /// In en, this message translates to:
+  /// **'Total'**
+  String get total;
+
   /// No description provided for @traffic.
   ///
   /// In en, this message translates to:
   /// **'Traffic'**
   String get traffic;
+
+  /// No description provided for @trySudo.
+  ///
+  /// In en, this message translates to:
+  /// **'Try using sudo'**
+  String get trySudo;
 
   /// No description provided for @ttl.
   ///
@@ -1514,6 +1630,12 @@ abstract class S {
   /// **'Upside Down'**
   String get upsideDown;
 
+  /// No description provided for @uptime.
+  ///
+  /// In en, this message translates to:
+  /// **'Uptime'**
+  String get uptime;
+
   /// No description provided for @urlOrJson.
   ///
   /// In en, this message translates to:
@@ -1523,8 +1645,20 @@ abstract class S {
   /// No description provided for @useNoPwd.
   ///
   /// In en, this message translates to:
-  /// **'No password will be used.'**
+  /// **'No password will be used'**
   String get useNoPwd;
+
+  /// No description provided for @usePodmanByDefault.
+  ///
+  /// In en, this message translates to:
+  /// **'Defaulting to Podman'**
+  String get usePodmanByDefault;
+
+  /// No description provided for @used.
+  ///
+  /// In en, this message translates to:
+  /// **'Used'**
+  String get used;
 
   /// No description provided for @user.
   ///
@@ -1614,7 +1748,7 @@ class _SDelegate extends LocalizationsDelegate<S> {
   }
 
   @override
-  bool isSupported(Locale locale) => <String>['de', 'en', 'id', 'zh'].contains(locale.languageCode);
+  bool isSupported(Locale locale) => <String>['de', 'en', 'fr', 'id', 'zh'].contains(locale.languageCode);
 
   @override
   bool shouldReload(_SDelegate old) => false;
@@ -1636,6 +1770,7 @@ S lookupS(Locale locale) {
   switch (locale.languageCode) {
     case 'de': return SDe();
     case 'en': return SEn();
+    case 'fr': return SFr();
     case 'id': return SId();
     case 'zh': return SZh();
   }

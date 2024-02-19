@@ -120,6 +120,7 @@ Future<SSHClient> genClient(
   return SSHClient(
     socket,
     username: spi.user,
+    // Must use [compute] here, instead of [Computer.shared.start]
     identities: await compute(loadIndentity, privateKey),
   );
 }

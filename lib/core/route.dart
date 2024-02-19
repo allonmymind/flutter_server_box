@@ -3,29 +3,30 @@ import 'package:toolbox/core/analysis.dart';
 import 'package:toolbox/data/model/server/private_key_info.dart';
 import 'package:toolbox/data/model/server/server_private_info.dart';
 import 'package:toolbox/view/page/backup.dart';
-import 'package:toolbox/view/page/docker.dart';
+import 'package:toolbox/view/page/container.dart';
 import 'package:toolbox/view/page/home.dart';
+import 'package:toolbox/view/page/iperf.dart';
 import 'package:toolbox/view/page/ping.dart';
 import 'package:toolbox/view/page/private_key/edit.dart';
 import 'package:toolbox/view/page/private_key/list.dart';
 import 'package:toolbox/view/page/server/detail.dart';
-import 'package:toolbox/view/page/setting/android.dart';
-import 'package:toolbox/view/page/setting/ios.dart';
+import 'package:toolbox/view/page/setting/platform/android.dart';
+import 'package:toolbox/view/page/setting/platform/ios.dart';
+import 'package:toolbox/view/page/setting/seq/srv_func_seq.dart';
 import 'package:toolbox/view/page/snippet/result.dart';
 import 'package:toolbox/view/page/ssh/page.dart';
-import 'package:toolbox/view/page/setting/virt_key.dart';
+import 'package:toolbox/view/page/setting/seq/virt_key.dart';
 import 'package:toolbox/view/page/storage/local.dart';
 
 import '../data/model/server/snippet.dart';
 import '../view/page/debug.dart';
 import '../view/page/editor.dart';
-import '../view/page/full_screen.dart';
 import '../view/page/process.dart';
 import '../view/page/server/edit.dart';
 import '../view/page/server/tab.dart';
 import '../view/page/setting/entry.dart';
-import '../view/page/setting/srv_detail_seq.dart';
-import '../view/page/setting/srv_seq.dart';
+import '../view/page/setting/seq/srv_detail_seq.dart';
+import '../view/page/setting/seq/srv_seq.dart';
 import '../view/page/snippet/edit.dart';
 import '../view/page/snippet/list.dart';
 import '../view/page/storage/sftp.dart';
@@ -150,7 +151,7 @@ class AppRoute {
   }
 
   static AppRoute docker({Key? key, required ServerPrivateInfo spi}) {
-    return AppRoute(DockerManagePage(key: key, spi: spi), 'docker');
+    return AppRoute(ContainerPage(key: key, spi: spi), 'docker');
   }
 
   /// - Pop true if the text is changed & [path] is not null
@@ -173,9 +174,9 @@ class AppRoute {
         'editor');
   }
 
-  static AppRoute fullscreen({Key? key}) {
-    return AppRoute(FullScreenPage(key: key), 'fullscreen');
-  }
+  // static AppRoute fullscreen({Key? key}) {
+  //   return AppRoute(FullScreenPage(key: key), 'fullscreen');
+  // }
 
   static AppRoute home({Key? key}) {
     return AppRoute(HomePage(key: key), 'home');
@@ -217,5 +218,13 @@ class AppRoute {
           results: results,
         ),
         'snippet_result');
+  }
+
+  static AppRoute iperf({Key? key, required ServerPrivateInfo spi}) {
+    return AppRoute(IPerfPage(key: key, spi: spi), 'iperf');
+  }
+
+  static AppRoute serverFuncBtnsOrder({Key? key}) {
+    return AppRoute(ServerFuncBtnsOrderPage(key: key), 'server_func_btns_seq');
   }
 }

@@ -12,6 +12,8 @@ import 'package:toolbox/core/extension/context/snackbar.dart';
 import 'package:toolbox/core/extension/locale.dart';
 import 'package:toolbox/core/extension/context/dialog.dart';
 import 'package:toolbox/core/extension/stringx.dart';
+import 'package:toolbox/core/extension/widget.dart';
+import 'package:toolbox/core/utils/function.dart';
 import 'package:toolbox/core/utils/platform/base.dart';
 import 'package:toolbox/data/res/provider.dart';
 import 'package:toolbox/data/res/rebuild.dart';
@@ -33,7 +35,6 @@ import '../../widget/appbar.dart';
 import '../../widget/input_field.dart';
 import '../../widget/cardx.dart';
 import '../../widget/store_switch.dart';
-import '../../widget/value_notifier.dart';
 
 class SettingPage extends StatefulWidget {
   const SettingPage({super.key});
@@ -50,22 +51,25 @@ class _SettingPageState extends State<SettingPage> {
   final _editorThemeKey = GlobalKey<PopupMenuButtonState<String>>();
   final _editorDarkThemeKey = GlobalKey<PopupMenuButtonState<String>>();
   final _keyboardTypeKey = GlobalKey<PopupMenuButtonState<int>>();
-  final _rotateQuarterKey = GlobalKey<PopupMenuButtonState<int>>();
+  //final _rotateQuarterKey = GlobalKey<PopupMenuButtonState<int>>();
   final _netViewTypeKey = GlobalKey<PopupMenuButtonState<NetViewType>>();
   final _setting = Stores.setting;
 
-  final _selectedColorValue = ValueNotifier(0);
-  final _nightMode = ValueNotifier(0);
-  final _maxRetryCount = ValueNotifier(0);
-  final _updateInterval = ValueNotifier(0);
-  final _termFontSize = ValueNotifier(0.0);
-  final _editorFontSize = ValueNotifier(0.0);
-  final _localeCode = ValueNotifier('');
-  final _editorTheme = ValueNotifier('');
-  final _editorDarkTheme = ValueNotifier('');
-  final _keyboardType = ValueNotifier(0);
-  final _rotateQuarter = ValueNotifier(0);
-  final _netViewType = ValueNotifier(NetViewType.speed);
+  late final _selectedColorValue = ValueNotifier(_setting.primaryColor.fetch());
+  late final _nightMode = ValueNotifier(_setting.themeMode.fetch());
+  late final _maxRetryCount = ValueNotifier(_setting.maxRetryCount.fetch());
+  late final _updateInterval =
+      ValueNotifier(_setting.serverStatusUpdateInterval.fetch());
+  late final _termFontSize = ValueNotifier(_setting.termFontSize.fetch());
+  late final _editorFontSize = ValueNotifier(_setting.editorFontSize.fetch());
+  late final _localeCode = ValueNotifier('');
+  late final _editorTheme = ValueNotifier(_setting.editorTheme.fetch());
+  late final _editorDarkTheme = ValueNotifier(_setting.editorDarkTheme.fetch());
+  late final _keyboardType = ValueNotifier(_setting.keyboardType.fetch());
+  // late final _rotateQuarter =
+  //     ValueNotifier(_setting.fullScreenRotateQuarter.fetch());
+  late final _netViewType = ValueNotifier(_setting.netViewType.fetch());
+  late final _textScaler = ValueNotifier(_setting.textFactor.fetch());
 
   @override
   void didChangeDependencies() {
@@ -79,76 +83,53 @@ class _SettingPageState extends State<SettingPage> {
   }
 
   @override
-  void initState() {
-    super.initState();
-    _nightMode.value = _setting.themeMode.fetch();
-    _updateInterval.value = _setting.serverStatusUpdateInterval.fetch();
-    _maxRetryCount.value = _setting.maxRetryCount.fetch();
-    _selectedColorValue.value = _setting.primaryColor.fetch();
-    _termFontSize.value = _setting.termFontSize.fetch();
-    _editorFontSize.value = _setting.editorFontSize.fetch();
-    _editorTheme.value = _setting.editorTheme.fetch();
-    _editorDarkTheme.value = _setting.editorDarkTheme.fetch();
-    _keyboardType.value = _setting.keyboardType.fetch();
-    _rotateQuarter.value = _setting.fullScreenRotateQuarter.fetch();
-    _netViewType.value = _setting.netViewType.fetch();
-  }
-
-  @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: CustomAppBar(
         title: Text(l10n.setting),
         actions: [
-          Padding(
-            padding: const EdgeInsets.only(right: 17),
-            child: InkWell(
-              onTap: () => context.showRoundDialog(
-                title: Text(l10n.attention),
-                child: Text(l10n.askContinue(
-                  '${l10n.delete}: **${l10n.all}** ${l10n.setting}',
-                )),
-                actions: [
-                  TextButton(
-                    onPressed: () {
-                      _setting.box.deleteAll(_setting.box.keys);
-                      context.pop();
-                      context.showSnackBar(l10n.success);
-                    },
-                    child: Text(
-                      l10n.ok,
-                      style: const TextStyle(color: Colors.red),
+          const Icon(Icons.delete)
+              .tap(
+                onTap: () => context.showRoundDialog(
+                  title: Text(l10n.attention),
+                  child: Text(l10n.askContinue(
+                    '${l10n.delete}: **${l10n.all}** ${l10n.setting}',
+                  )),
+                  actions: [
+                    TextButton(
+                      onPressed: () {
+                        _setting.box.deleteAll(_setting.box.keys);
+                        context.pop();
+                        context.showSnackBar(l10n.success);
+                      },
+                      child: Text(
+                        l10n.ok,
+                        style: const TextStyle(color: Colors.red),
+                      ),
                     ),
-                  ),
-                ],
-              ),
+                  ],
+                ),
 
-              /// Only for debug, this will cause the app to crash
-              onDoubleTap: () => context.showRoundDialog(
-                title: Text(l10n.attention),
-                child: Text(l10n.askContinue(
-                  'Delete all data from disk, and exit the app?',
-                )),
-                actions: [
-                  TextButton(
-                    onPressed: () {
-                      if (!BuildMode.isDebug) return;
-                      Stores.docker.box.deleteFromDisk();
-                      Stores.server.box.deleteFromDisk();
-                      Stores.setting.box.deleteFromDisk();
-                      Stores.history.box.deleteFromDisk();
-                      Stores.snippet.box.deleteFromDisk();
-                      Stores.key.box.deleteFromDisk();
-                      exit(0);
-                    },
-                    child: Text(l10n.ok,
-                        style: const TextStyle(color: Colors.red)),
-                  ),
-                ],
-              ),
-              child: const Icon(Icons.delete),
-            ),
-          ),
+                /// Only for debug, this will cause the app to crash
+                onDoubleTap: () => context.showRoundDialog(
+                  title: Text(l10n.attention),
+                  child: Text(l10n.askContinue(
+                    'Delete all data from disk, and exit the app?',
+                  )),
+                  actions: [
+                    TextButton(
+                      onPressed: () {
+                        if (!BuildMode.isDebug) return;
+                        Stores.all.map((e) => e.box.deleteFromDisk());
+                        exit(0);
+                      },
+                      child: Text(l10n.ok,
+                          style: const TextStyle(color: Colors.red)),
+                    ),
+                  ],
+                ),
+              )
+              .padding(const EdgeInsets.only(right: 17)),
         ],
       ),
       body: ListView(
@@ -158,14 +139,19 @@ class _SettingPageState extends State<SettingPage> {
           _buildApp(),
           _buildTitle(l10n.server),
           _buildServer(),
+          _buildTitle(l10n.container),
+          _buildContainer(),
           _buildTitle('SSH'),
           _buildSSH(),
           _buildTitle('SFTP'),
           _buildSFTP(),
           _buildTitle(l10n.editor),
           _buildEditor(),
-          if (isDesktop) _buildTitle(l10n.fullScreen),
-          if (isDesktop) _buildFullScreen(),
+
+          /// Fullscreen Mode is designed for old mobile phone which can be
+          /// used as a status screen, so it's only available on mobile phone.
+          // if (!isDesktop) _buildTitle(l10n.fullScreen),
+          // if (!isDesktop) _buildFullScreen(),
           const SizedBox(height: 37),
         ],
       ),
@@ -191,39 +177,51 @@ class _SettingPageState extends State<SettingPage> {
       _buildAppColor(),
       //_buildLaunchPage(),
       _buildCheckUpdate(),
+      _buildCollapseUI(),
     ];
 
     /// Platform specific settings
-    if (OS.hasSettings) {
+    if (OS.hasSpecSetting) {
       children.add(_buildPlatformSetting());
     }
     return Column(
-      children: children.map((e) => CardX(e)).toList(),
+      children: children.map((e) => CardX(child: e)).toList(),
     );
   }
 
-  Widget _buildFullScreen() {
-    return Column(
-      children: [
-        _buildFullScreenSwitch(),
-        _buildFullScreenJitter(),
-        _buildFulScreenRotateQuarter(),
-      ].map((e) => CardX(e)).toList(),
-    );
-  }
+  // Widget _buildFullScreen() {
+  //   return Column(
+  //     children: [
+  //       _buildFullScreenSwitch(),
+  //       _buildFullScreenJitter(),
+  //       _buildFulScreenRotateQuarter(),
+  //     ].map((e) => CardX(child: e)).toList(),
+  //   );
+  // }
 
   Widget _buildServer() {
     return Column(
       children: [
         _buildServerFuncBtns(),
-        _buildSequence(),
+        _buildServerSeq(),
+        _buildServerDetailCardSeq(),
         _buildNetViewType(),
         _buildUpdateInterval(),
         _buildMaxRetry(),
         //_buildDiskIgnorePath(),
         _buildDeleteServers(),
+        _buildTextScaler(),
         //if (isDesktop) _buildDoubleColumnServersPage(),
-      ].map((e) => CardX(e)).toList(),
+      ].map((e) => CardX(child: e)).toList(),
+    );
+  }
+
+  Widget _buildContainer() {
+    return Column(
+      children: [
+        _buildUsePodman(),
+        _buildContainerTrySudo(),
+      ].map((e) => CardX(child: e)).toList(),
     );
   }
 
@@ -235,8 +233,8 @@ class _SettingPageState extends State<SettingPage> {
         _buildSSHVirtualKeyAutoOff(),
         // Use hardware keyboard on desktop, so there is no need to set it
         if (isMobile) _buildKeyboardType(),
-        _buildSSHVirtKeys(),
-      ].map((e) => CardX(e)).toList(),
+        if (isMobile) _buildSSHVirtKeys(),
+      ].map((e) => CardX(child: e)).toList(),
     );
   }
 
@@ -247,7 +245,7 @@ class _SettingPageState extends State<SettingPage> {
         _buildEditorTheme(),
         _buildEditorDarkTheme(),
         _buildEditorHighlight(),
-      ].map((e) => CardX(e)).toList(),
+      ].map((e) => CardX(child: e)).toList(),
     );
   }
 
@@ -267,7 +265,7 @@ class _SettingPageState extends State<SettingPage> {
         return ListTile(
           title: Text(l10n.autoCheckUpdate),
           subtitle: Text(display, style: UIs.textGrey),
-          onTap: () => doUpdate(ctx),
+          onTap: () => Funcs.throttle(() => doUpdate(ctx)),
           trailing: StoreSwitch(prop: _setting.autoCheckAppUpdate),
         );
       },
@@ -279,10 +277,12 @@ class _SettingPageState extends State<SettingPage> {
       10,
       (index) => PopupMenuItem(
         value: index,
-        child: Text('$index ${l10n.second}'),
+        child: Text(index == 0 ? l10n.manual : '$index ${l10n.second}'),
       ),
       growable: false,
     ).toList();
+    // 1 second is too fast, so remove it
+    items.removeAt(1);
 
     return ListTile(
       title: Text(
@@ -295,9 +295,9 @@ class _SettingPageState extends State<SettingPage> {
       onTap: () {
         _updateIntervalKey.currentState?.showButtonMenu();
       },
-      trailing: ValueBuilder(
+      trailing: ListenableBuilder(
         listenable: _updateInterval,
-        build: () => PopupMenuButton(
+        builder: (_, __) => PopupMenuButton(
           key: _updateIntervalKey,
           itemBuilder: (_) => items,
           initialValue: _updateInterval.value,
@@ -311,7 +311,7 @@ class _SettingPageState extends State<SettingPage> {
           },
           child: Text(
             '${_updateInterval.value} ${l10n.second}',
-            style: UIs.textSize15,
+            style: UIs.text15,
           ),
         ),
       ),
@@ -321,9 +321,9 @@ class _SettingPageState extends State<SettingPage> {
   Widget _buildAppColor() {
     return ListTile(
       trailing: ClipOval(
-        child: ValueBuilder(
+        child: ListenableBuilder(
           listenable: _selectedColorValue,
-          build: () => Container(
+          builder: (_, __) => Container(
             color: primaryColor,
             height: 27,
             width: 27,
@@ -454,8 +454,8 @@ class _SettingPageState extends State<SettingPage> {
       onTap: () {
         _maxRetryKey.currentState?.showButtonMenu();
       },
-      trailing: ValueBuilder(
-        build: () => PopupMenuButton(
+      trailing: ListenableBuilder(
+        builder: (_, __) => PopupMenuButton(
           key: _maxRetryKey,
           itemBuilder: (BuildContext context) => items,
           initialValue: _maxRetryCount.value,
@@ -465,7 +465,7 @@ class _SettingPageState extends State<SettingPage> {
           },
           child: Text(
             '${_maxRetryCount.value} ${l10n.times}',
-            style: UIs.textSize15,
+            style: UIs.text15,
           ),
         ),
         listenable: _maxRetryCount,
@@ -500,9 +500,9 @@ class _SettingPageState extends State<SettingPage> {
       onTap: () {
         _themeKey.currentState?.showButtonMenu();
       },
-      trailing: ValueBuilder(
+      trailing: ListenableBuilder(
         listenable: _nightMode,
-        build: () => PopupMenuButton(
+        builder: (_, __) => PopupMenuButton(
           key: _themeKey,
           itemBuilder: (BuildContext context) => items,
           initialValue: _nightMode.value,
@@ -514,7 +514,7 @@ class _SettingPageState extends State<SettingPage> {
           },
           child: Text(
             _buildThemeModeStr(_nightMode.value),
-            style: UIs.textSize15,
+            style: UIs.text15,
           ),
         ),
       ),
@@ -542,7 +542,7 @@ class _SettingPageState extends State<SettingPage> {
       title: Text(l10n.font),
       trailing: Text(
         fontName ?? l10n.notSelected,
-        style: UIs.textSize15,
+        style: UIs.text15,
       ),
       onTap: () {
         context.showRoundDialog(
@@ -587,13 +587,13 @@ class _SettingPageState extends State<SettingPage> {
   }
 
   Widget _buildTermFontSize() {
-    return ValueBuilder(
+    return ListenableBuilder(
       listenable: _termFontSize,
-      build: () => ListTile(
+      builder: (_, __) => ListTile(
         title: Text(l10n.fontSize),
         trailing: Text(
           _termFontSize.value.toString(),
-          style: UIs.textSize15,
+          style: UIs.text15,
         ),
         onTap: () => _showFontSizeDialog(_termFontSize, _setting.termFontSize),
       ),
@@ -651,9 +651,9 @@ class _SettingPageState extends State<SettingPage> {
       onTap: () {
         _localeKey.currentState?.showButtonMenu();
       },
-      trailing: ValueBuilder(
+      trailing: ListenableBuilder(
         listenable: _localeCode,
-        build: () => PopupMenuButton(
+        builder: (_, __) => PopupMenuButton(
           key: _localeKey,
           itemBuilder: (BuildContext context) => items,
           initialValue: _localeCode.value,
@@ -665,7 +665,7 @@ class _SettingPageState extends State<SettingPage> {
           },
           child: Text(
             l10n.languageName,
-            style: UIs.textSize15,
+            style: UIs.text15,
           ),
         ),
       ),
@@ -691,9 +691,9 @@ class _SettingPageState extends State<SettingPage> {
     ).toList();
     return ListTile(
       title: Text('${l10n.light} ${l10n.theme.toLowerCase()}'),
-      trailing: ValueBuilder(
+      trailing: ListenableBuilder(
         listenable: _editorTheme,
-        build: () => PopupMenuButton(
+        builder: (_, __) => PopupMenuButton(
           key: _editorThemeKey,
           itemBuilder: (BuildContext context) => items,
           initialValue: _editorTheme.value,
@@ -703,7 +703,7 @@ class _SettingPageState extends State<SettingPage> {
           },
           child: Text(
             _editorTheme.value,
-            style: UIs.textSize15,
+            style: UIs.text15,
           ),
         ),
       ),
@@ -724,9 +724,9 @@ class _SettingPageState extends State<SettingPage> {
     ).toList();
     return ListTile(
       title: Text('${l10n.dark} ${l10n.theme.toLowerCase()}'),
-      trailing: ValueBuilder(
+      trailing: ListenableBuilder(
         listenable: _editorDarkTheme,
-        build: () => PopupMenuButton(
+        builder: (_, __) => PopupMenuButton(
           key: _editorDarkThemeKey,
           itemBuilder: (BuildContext context) => items,
           initialValue: _editorDarkTheme.value,
@@ -736,7 +736,7 @@ class _SettingPageState extends State<SettingPage> {
           },
           child: Text(
             _editorDarkTheme.value,
-            style: UIs.textSize15,
+            style: UIs.text15,
           ),
         ),
       ),
@@ -746,56 +746,56 @@ class _SettingPageState extends State<SettingPage> {
     );
   }
 
-  Widget _buildFullScreenSwitch() {
-    return ListTile(
-      title: Text(l10n.fullScreen),
-      trailing: StoreSwitch(
-        prop: _setting.fullScreen,
-        callback: (_) => RebuildNodes.app.rebuild(),
-      ),
-    );
-  }
+  // Widget _buildFullScreenSwitch() {
+  //   return ListTile(
+  //     title: Text(l10n.fullScreen),
+  //     trailing: StoreSwitch(
+  //       prop: _setting.fullScreen,
+  //       callback: (_) => RebuildNodes.app.rebuild(),
+  //     ),
+  //   );
+  // }
 
-  Widget _buildFullScreenJitter() {
-    return ListTile(
-      title: Text(l10n.fullScreenJitter),
-      subtitle: Text(l10n.fullScreenJitterHelp, style: UIs.textGrey),
-      trailing: StoreSwitch(prop: _setting.fullScreenJitter),
-    );
-  }
+  // Widget _buildFullScreenJitter() {
+  //   return ListTile(
+  //     title: Text(l10n.fullScreenJitter),
+  //     subtitle: Text(l10n.fullScreenJitterHelp, style: UIs.textGrey),
+  //     trailing: StoreSwitch(prop: _setting.fullScreenJitter),
+  //   );
+  // }
 
-  Widget _buildFulScreenRotateQuarter() {
-    final degrees = List.generate(4, (idx) => '${idx * 90}°').toList();
-    final items = List.generate(4, (idx) {
-      return PopupMenuItem<int>(
-        value: idx,
-        child: Text(degrees[idx]),
-      );
-    }).toList();
+  // Widget _buildFulScreenRotateQuarter() {
+  //   final degrees = List.generate(4, (idx) => '${idx * 90}°').toList();
+  //   final items = List.generate(4, (idx) {
+  //     return PopupMenuItem<int>(
+  //       value: idx,
+  //       child: Text(degrees[idx]),
+  //     );
+  //   }).toList();
 
-    return ListTile(
-      title: Text(l10n.rotateAngel),
-      onTap: () {
-        _rotateQuarterKey.currentState?.showButtonMenu();
-      },
-      trailing: ValueBuilder(
-        listenable: _rotateQuarter,
-        build: () => PopupMenuButton(
-          key: _rotateQuarterKey,
-          itemBuilder: (BuildContext context) => items,
-          initialValue: _rotateQuarter.value,
-          onSelected: (int idx) {
-            _rotateQuarter.value = idx;
-            _setting.fullScreenRotateQuarter.put(idx);
-          },
-          child: Text(
-            degrees[_rotateQuarter.value],
-            style: UIs.textSize15,
-          ),
-        ),
-      ),
-    );
-  }
+  //   return ListTile(
+  //     title: Text(l10n.rotateAngel),
+  //     onTap: () {
+  //       _rotateQuarterKey.currentState?.showButtonMenu();
+  //     },
+  //     trailing: ListenableBuilder(
+  //       listenable: _rotateQuarter,
+  //       builder: (_, __) => PopupMenuButton(
+  //         key: _rotateQuarterKey,
+  //         itemBuilder: (BuildContext context) => items,
+  //         initialValue: _rotateQuarter.value,
+  //         onSelected: (int idx) {
+  //           _rotateQuarter.value = idx;
+  //           _setting.fullScreenRotateQuarter.put(idx);
+  //         },
+  //         child: Text(
+  //           degrees[_rotateQuarter.value],
+  //           style: UIs.text15,
+  //         ),
+  //       ),
+  //     ),
+  //   );
+  // }
 
   Widget _buildKeyboardType() {
     const List<String> names = <String>[
@@ -826,9 +826,9 @@ class _SettingPageState extends State<SettingPage> {
     return ListTile(
       title: Text(l10n.keyboardType),
       subtitle: Text(l10n.keyboardCompatibility, style: UIs.textGrey),
-      trailing: ValueBuilder(
+      trailing: ListenableBuilder(
         listenable: _keyboardType,
-        build: () => PopupMenuButton<int>(
+        builder: (_, __) => PopupMenuButton<int>(
           key: _keyboardTypeKey,
           itemBuilder: (BuildContext context) => items,
           initialValue: _keyboardType.value,
@@ -838,7 +838,7 @@ class _SettingPageState extends State<SettingPage> {
           },
           child: Text(
             names[_keyboardType.value],
-            style: UIs.textSize15,
+            style: UIs.text15,
           ),
         ),
       ),
@@ -861,7 +861,8 @@ class _SettingPageState extends State<SettingPage> {
       children: [
         _buildSftpRmrDir(),
         _buildSftpOpenLastPath(),
-      ].map((e) => CardX(e)).toList(),
+        _buildSftpShowFoldersFirst(),
+      ].map((e) => CardX(child: e)).toList(),
     );
   }
 
@@ -870,6 +871,13 @@ class _SettingPageState extends State<SettingPage> {
       title: Text(l10n.openLastPath),
       subtitle: Text(l10n.openLastPathTip, style: UIs.textGrey),
       trailing: StoreSwitch(prop: _setting.sftpOpenLastPath),
+    );
+  }
+
+  Widget _buildSftpShowFoldersFirst() {
+    return ListTile(
+      title: Text(l10n.sftpShowFoldersFirst),
+      trailing: StoreSwitch(prop: _setting.sftpShowFoldersFirst),
     );
   }
 
@@ -882,9 +890,9 @@ class _SettingPageState extends State<SettingPage> {
         .toList();
     return ListTile(
       title: Text(l10n.netViewType),
-      trailing: ValueBuilder(
+      trailing: ListenableBuilder(
         listenable: _netViewType,
-        build: () => PopupMenuButton<NetViewType>(
+        builder: (_, __) => PopupMenuButton<NetViewType>(
           key: _netViewTypeKey,
           itemBuilder: (BuildContext context) => items,
           initialValue: _netViewType.value,
@@ -894,7 +902,7 @@ class _SettingPageState extends State<SettingPage> {
           },
           child: Text(
             _netViewType.value.toStr,
-            style: UIs.textSize15,
+            style: UIs.text15,
           ),
         ),
       ),
@@ -913,7 +921,9 @@ class _SettingPageState extends State<SettingPage> {
           title: Text(l10n.choose),
           child: SingleChildScrollView(
             child: StatefulBuilder(builder: (ctx, setState) {
-              final all = Stores.server.box.keys.map(
+              final keys = Stores.server.box.keys.toList();
+              keys.removeWhere((element) => element == BoxX.lastModifiedKey);
+              final all = keys.map(
                 (e) => TextButton(
                   onPressed: () => context.showRoundDialog(
                     title: Text(l10n.attention),
@@ -945,58 +955,100 @@ class _SettingPageState extends State<SettingPage> {
     );
   }
 
+  Widget _buildTextScaler() {
+    final ctrl = TextEditingController(text: _textScaler.value.toString());
+    return ListTile(
+      title: Text(l10n.textScaler),
+      subtitle: Text(l10n.textScalerTip, style: UIs.textGrey),
+      trailing: ListenableBuilder(
+        listenable: _textScaler,
+        builder: (_, __) => Text(
+          _textScaler.value.toString(),
+          style: UIs.text15,
+        ),
+      ),
+      onTap: () => context.showRoundDialog(
+        title: Text(l10n.textScaler),
+        child: Input(
+          autoFocus: true,
+          type: TextInputType.number,
+          hint: '1.0',
+          icon: Icons.format_size,
+          controller: ctrl,
+          onSubmitted: _onSaveTextScaler,
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => _onSaveTextScaler(ctrl.text),
+            child: Text(l10n.ok),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _onSaveTextScaler(String s) {
+    final val = double.tryParse(s);
+    if (val == null) {
+      context.showSnackBar(l10n.failed);
+      return;
+    }
+    _textScaler.value = val;
+    _setting.textFactor.put(val);
+    RebuildNodes.app.rebuild();
+    context.pop();
+  }
+
   Widget _buildServerFuncBtns() {
     return ExpandTile(
       title: Text(l10n.serverFuncBtns),
-      subtitle: Text(
-        '${l10n.location} / ${l10n.displayName}',
-        style: UIs.textSize13Grey,
-      ),
       children: [
-        ListTile(
-          title: Text(l10n.location),
-          subtitle:
-              Text(l10n.moveOutServerFuncBtnsHelp, style: UIs.textSize13Grey),
-          trailing: StoreSwitch(prop: _setting.moveOutServerTabFuncBtns),
-        ),
-        ListTile(
-          title: Text(l10n.displayName),
-          trailing: StoreSwitch(prop: _setting.serverFuncBtnsDisplayName),
-        ),
+        _buildServerFuncBtnsSwitch(),
+        _buildServerFuncBtnsOrder(),
       ],
     );
   }
 
-  Widget _buildSequence() {
-    return ExpandTile(
+  Widget _buildServerFuncBtnsSwitch() {
+    return ListTile(
+      title: Text(l10n.location),
+      subtitle: Text(l10n.moveOutServerFuncBtnsHelp, style: UIs.text13Grey),
+      trailing: StoreSwitch(prop: _setting.moveOutServerTabFuncBtns),
+    );
+  }
+
+  Widget _buildServerFuncBtnsOrder() {
+    return ListTile(
       title: Text(l10n.sequence),
-      subtitle: Text(
-        '${l10n.serverOrder} / ${l10n.serverDetailOrder} ...',
-        style: UIs.textGrey,
-      ),
-      children: [
-        ListTile(
-          title: Text(l10n.serverOrder),
-          trailing: const Icon(Icons.keyboard_arrow_right),
-          onTap: () => AppRoute.serverOrder().go(context),
-        ),
-        ListTile(
-          title: Text(l10n.serverDetailOrder),
-          trailing: const Icon(Icons.keyboard_arrow_right),
-          onTap: () => AppRoute.serverDetailOrder().go(context),
-        ),
-      ],
+      trailing: const Icon(Icons.keyboard_arrow_right),
+      onTap: () => AppRoute.serverFuncBtnsOrder().go(context),
+    );
+  }
+
+  Widget _buildServerSeq() {
+    return ListTile(
+      title: Text(l10n.serverOrder),
+      trailing: const Icon(Icons.keyboard_arrow_right),
+      onTap: () => AppRoute.serverOrder().go(context),
+    );
+  }
+
+  Widget _buildServerDetailCardSeq() {
+    return ListTile(
+      title: Text(l10n.serverDetailOrder),
+      trailing: const Icon(Icons.keyboard_arrow_right),
+      onTap: () => AppRoute.serverDetailOrder().go(context),
     );
   }
 
   Widget _buildEditorFontSize() {
-    return ValueBuilder(
+    return ListenableBuilder(
       listenable: _editorFontSize,
-      build: () => ListTile(
+      builder: (_, __) => ListTile(
         title: Text(l10n.fontSize),
         trailing: Text(
           _editorFontSize.value.toString(),
-          style: UIs.textSize15,
+          style: UIs.text15,
         ),
         onTap: () =>
             _showFontSizeDialog(_editorFontSize, _setting.editorFontSize),
@@ -1080,6 +1132,29 @@ class _SettingPageState extends State<SettingPage> {
       title: Text(l10n.highlight),
       subtitle: Text(l10n.editorHighlightTip, style: UIs.textGrey),
       trailing: StoreSwitch(prop: _setting.editorHighlight),
+    );
+  }
+
+  Widget _buildCollapseUI() {
+    return ListTile(
+      title: Text(l10n.collapseUI),
+      subtitle: Text(l10n.collapseUITip, style: UIs.textGrey),
+      trailing: StoreSwitch(prop: _setting.collapseUIDefault),
+    );
+  }
+
+  Widget _buildUsePodman() {
+    return ListTile(
+      title: Text(l10n.usePodmanByDefault),
+      trailing: StoreSwitch(prop: _setting.usePodman),
+    );
+  }
+
+  Widget _buildContainerTrySudo() {
+    return ListTile(
+      title: Text(l10n.trySudo),
+      subtitle: Text(l10n.containerTrySudoTip, style: UIs.textGrey),
+      trailing: StoreSwitch(prop: _setting.containerTrySudo),
     );
   }
 }

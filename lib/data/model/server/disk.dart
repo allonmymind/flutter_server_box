@@ -7,9 +7,9 @@ class Disk {
   final String dev;
   final String mount;
   final int usedPercent;
-  final String used;
-  final String size;
-  final String avail;
+  final BigInt used;
+  final BigInt size;
+  final BigInt avail;
 
   const Disk({
     required this.dev,
@@ -19,6 +19,46 @@ class Disk {
     required this.size,
     required this.avail,
   });
+
+  /// raw:
+  /// ```
+  /// Filesystem           1K-blocks      Used Available Use% Mounted on
+  /// overlay              959122528 154470540 755857572  17% /
+  /// tmpfs                    65536         0     65536   0% /dev
+  /// ```
+  static List<Disk> parse(String raw) {
+    final list = <Disk>[];
+    final items = raw.split('\n');
+    items.removeAt(0);
+    var pathCache = '';
+    for (var item in items) {
+      if (item.isEmpty) {
+        continue;
+      }
+      final vals = item.split(Miscs.numReg);
+      if (vals.length == 1) {
+        pathCache = vals[0];
+        continue;
+      }
+      if (pathCache != '') {
+        vals[0] = pathCache;
+        pathCache = '';
+      }
+      try {
+        list.add(Disk(
+          dev: vals[0],
+          mount: vals[5],
+          usedPercent: int.parse(vals[4].replaceFirst('%', '')),
+          used: BigInt.tryParse(vals[2]) ?? BigInt.zero,
+          size: BigInt.tryParse(vals[1]) ?? BigInt.one,
+          avail: BigInt.tryParse(vals[3]) ?? BigInt.one,
+        ));
+      } catch (e) {
+        continue;
+      }
+    }
+    return list;
+  }
 }
 
 class DiskIO extends TimeSeq<DiskIOPiece> {
@@ -37,16 +77,16 @@ class DiskIO extends TimeSeq<DiskIOPiece> {
     final sectorsRead = now.sectorsRead - pre.sectorsRead;
     final sectorsWrite = now.sectorsWrite - pre.sectorsWrite;
     final time = now.time - pre.time;
-    final read = (sectorsRead / time * 512);
-    final write = (sectorsWrite / time * 512);
+    final read = sectorsRead / time * 512;
+    final write = sectorsWrite / time * 512;
     return (read, write);
   }
 
   (String?, String?) getSpeed(String dev) {
     final (read_, write_) = _getSpeed(dev);
     if (read_ == null || write_ == null) return (null, null);
-    final read = '${read_.convertBytes}/s';
-    final write = '${write_.convertBytes}/s';
+    final read = '${read_.bytes2Str}/s';
+    final write = '${write_.bytes2Str}/s';
     return (read, write);
   }
 
@@ -58,8 +98,8 @@ class DiskIO extends TimeSeq<DiskIOPiece> {
       read += read_ ?? 0;
       write += write_ ?? 0;
     }
-    final readStr = '${read.convertBytes}/s';
-    final writeStr = '${write.convertBytes}/s';
+    final readStr = '${read.bytes2Str}/s';
+    final writeStr = '${write.bytes2Str}/s';
     return (readStr, writeStr);
   }
 
@@ -116,40 +156,6 @@ class DiskIOPiece extends TimeSeqIface<DiskIOPiece> {
 
   @override
   bool same(DiskIOPiece other) => dev == other.dev;
-}
-
-List<Disk> parseDisk(String raw) {
-  final list = <Disk>[];
-  final items = raw.split('\n');
-  items.removeAt(0);
-  var pathCache = '';
-  for (var item in items) {
-    if (item.isEmpty) {
-      continue;
-    }
-    final vals = item.split(Miscs.numReg);
-    if (vals.length == 1) {
-      pathCache = vals[0];
-      continue;
-    }
-    if (pathCache != '') {
-      vals[0] = pathCache;
-      pathCache = '';
-    }
-    try {
-      list.add(Disk(
-        dev: vals[0],
-        mount: vals[5],
-        usedPercent: int.parse(vals[4].replaceFirst('%', '')),
-        used: vals[2],
-        size: vals[1],
-        avail: vals[3],
-      ));
-    } catch (e) {
-      continue;
-    }
-  }
-  return list;
 }
 
 /// Issue 88

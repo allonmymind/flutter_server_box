@@ -8,7 +8,9 @@ import 'package:toolbox/core/extension/context/dialog.dart';
 import 'package:toolbox/core/extension/context/locale.dart';
 import 'package:toolbox/core/extension/context/snackbar.dart';
 import 'package:toolbox/core/extension/sftpfile.dart';
+import 'package:toolbox/core/utils/comparator.dart';
 import 'package:toolbox/core/utils/platform/base.dart';
+import 'package:toolbox/data/res/color.dart';
 import 'package:toolbox/data/res/logger.dart';
 import 'package:toolbox/data/res/misc.dart';
 import 'package:toolbox/data/res/provider.dart';
@@ -50,6 +52,9 @@ class _SftpPageState extends State<SftpPage> with AfterLayoutMixin {
   final _status = SftpBrowserStatus();
   late final _client = widget.spi.server?.client;
 
+  final _sortOption =
+      ValueNotifier(_SortOption(sortBy: _SortType.name, reversed: false));
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -66,6 +71,51 @@ class _SftpPageState extends State<SftpPage> with AfterLayoutMixin {
           IconButton(
             icon: const Icon(Icons.downloading),
             onPressed: () => AppRoute.sftpMission().go(context),
+          ),
+          ValueListenableBuilder(
+            valueListenable: _sortOption,
+            builder: (context, value, child) {
+              return PopupMenuButton<_SortType>(
+                icon: const Icon(Icons.sort),
+                itemBuilder: (context) {
+                  final currentSelectedOption = _sortOption.value;
+                  final options = [
+                    (_SortType.name, l10n.name),
+                    (_SortType.size, l10n.size),
+                    (_SortType.time, l10n.time),
+                  ];
+                  return options.map((r) {
+                    final (type, name) = r;
+                    return PopupMenuItem(
+                      value: type,
+                      child: Text(
+                        type == currentSelectedOption.sortBy
+                            ? "$name (${currentSelectedOption.reversed ? '-' : '+'})"
+                            : name,
+                        style: TextStyle(
+                          color: type == currentSelectedOption.sortBy
+                              ? primaryColor
+                              : null,
+                          fontWeight: type == currentSelectedOption.sortBy
+                              ? FontWeight.bold
+                              : null,
+                        ),
+                      ),
+                    );
+                  }).toList();
+                },
+                onSelected: (sortBy) {
+                  final oldValue = _sortOption.value;
+                  if (oldValue.sortBy == sortBy) {
+                    _sortOption.value = _SortOption(
+                        sortBy: sortBy, reversed: !oldValue.reversed);
+                  } else {
+                    _sortOption.value =
+                        _SortOption(sortBy: sortBy, reversed: false);
+                  }
+                },
+              );
+            },
           ),
         ],
       ),
@@ -144,18 +194,15 @@ class _SftpPageState extends State<SftpPage> with AfterLayoutMixin {
           if (path == null) {
             return;
           }
-          final remotePath = _status.path?.path;
-          if (remotePath == null) {
+          final remoteDir = _status.path?.path;
+          if (remoteDir == null) {
             context.showSnackBar('remote path is null');
             return;
           }
+          final remotePath = '$remoteDir/${path.split('/').last}';
+          Loggers.app.info('SFTP upload local: $path, remote: $remotePath');
           Pros.sftp.add(
-            SftpReq(
-              widget.spi,
-              '$remotePath/${path.split('/').last}',
-              path,
-              SftpReqType.upload,
-            ),
+            SftpReq(widget.spi, remotePath, path, SftpReqType.upload),
           );
         },
         icon: const Icon(Icons.upload_file));
@@ -163,23 +210,23 @@ class _SftpPageState extends State<SftpPage> with AfterLayoutMixin {
 
   Widget _buildAddBtn() {
     return IconButton(
-      onPressed: (() => context.showRoundDialog(
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                ListTile(
-                  leading: const Icon(Icons.folder),
-                  title: Text(l10n.createFolder),
-                  onTap: _mkdir,
-                ),
-                ListTile(
-                  leading: const Icon(Icons.insert_drive_file),
-                  title: Text(l10n.createFile),
-                  onTap: _newFile,
-                ),
-              ],
+      onPressed: () => context.showRoundDialog(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            ListTile(
+              leading: const Icon(Icons.folder),
+              title: Text(l10n.createFolder),
+              onTap: _mkdir,
             ),
-          )),
+            ListTile(
+              leading: const Icon(Icons.insert_drive_file),
+              title: Text(l10n.createFile),
+              onTap: _newFile,
+            ),
+          ],
+        ),
+      ),
       icon: const Icon(Icons.add),
     );
   }
@@ -247,10 +294,17 @@ class _SftpPageState extends State<SftpPage> with AfterLayoutMixin {
     return RefreshIndicator(
       child: FadeIn(
         key: Key(widget.spi.name + _status.path!.path),
-        child: ListView.builder(
-          itemCount: _status.files!.length,
-          padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 3),
-          itemBuilder: (_, index) => _buildItem(_status.files![index]),
+        child: ValueListenableBuilder(
+          valueListenable: _sortOption,
+          builder: (_, sortOption, __) {
+            final files = sortOption.sortBy
+                .sort(_status.files!, reversed: sortOption.reversed);
+            return ListView.builder(
+              itemCount: files.length,
+              padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 3),
+              itemBuilder: (_, index) => _buildItem(files[index]),
+            );
+          },
         ),
       ),
       onRefresh: () => _listDir(),
@@ -264,26 +318,28 @@ class _SftpPageState extends State<SftpPage> with AfterLayoutMixin {
       style: UIs.textGrey,
       textAlign: TextAlign.right,
     );
-    return CardX(ListTile(
-      leading: Icon(isDir ? Icons.folder : Icons.insert_drive_file),
-      title: Text(file.filename),
-      trailing: trailing,
-      subtitle: isDir
-          ? null
-          : Text(
-              (file.attr.size ?? 0).convertBytes,
-              style: UIs.textGrey,
-            ),
-      onTap: () {
-        if (isDir) {
-          _status.path?.update(file.filename);
-          _listDir();
-        } else {
-          _onItemPress(file, true);
-        }
-      },
-      onLongPress: () => _onItemPress(file, !isDir),
-    ));
+    return CardX(
+      child: ListTile(
+        leading: Icon(isDir ? Icons.folder_outlined : Icons.insert_drive_file),
+        title: Text(file.filename),
+        trailing: trailing,
+        subtitle: isDir
+            ? null
+            : Text(
+                (file.attr.size ?? 0).bytes2Str,
+                style: UIs.textGrey,
+              ),
+        onTap: () {
+          if (isDir) {
+            _status.path?.update(file.filename);
+            _listDir();
+          } else {
+            _onItemPress(file, true);
+          }
+        },
+        onLongPress: () => _onItemPress(file, !isDir),
+      ),
+    );
   }
 
   void _onItemPress(SftpName file, bool notDir) {
@@ -755,4 +811,59 @@ String _getTime(int? unixMill) {
   return DateTime.fromMillisecondsSinceEpoch((unixMill ?? 0) * 1000)
       .toString()
       .replaceFirst('.000', '');
+}
+
+enum _SortType {
+  name,
+  time,
+  size,
+  ;
+
+  List<SftpName> sort(List<SftpName> files, {bool reversed = false}) {
+    var comparator = ChainComparator<SftpName>.create();
+    if (Stores.setting.sftpShowFoldersFirst.fetch()) {
+      comparator = comparator.thenTrueFirst((x) => x.attr.isDirectory);
+    }
+    switch (this) {
+      case _SortType.name:
+        files.sort(
+          comparator
+              .thenWithComparator(
+                (a, b) => Comparators.compareStringCaseInsensitive()(
+                    a.filename, b.filename),
+                reversed: reversed,
+              )
+              .compare,
+        );
+        break;
+      case _SortType.time:
+        files.sort(
+          comparator
+              .thenCompareBy<num>(
+                (x) => x.attr.modifyTime ?? 0,
+                reversed: reversed,
+              )
+              .compare,
+        );
+        break;
+      case _SortType.size:
+        files.sort(
+          comparator
+              .thenCompareBy<num>(
+                (x) => x.attr.size ?? 0,
+                reversed: reversed,
+              )
+              .compare,
+        );
+        break;
+    }
+    return files;
+  }
+}
+
+class _SortOption {
+  final _SortType sortBy;
+  final bool reversed;
+
+  _SortOption({required this.sortBy, required this.reversed});
 }
