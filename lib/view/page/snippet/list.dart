@@ -34,7 +34,7 @@ class _SnippetListPageState extends State<SnippetListPage> {
     return Scaffold(
       body: _buildBody(),
       floatingActionButton: FloatingActionButton(
-        heroTag: 'snippet',
+        heroTag: 'snippetAdd',
         child: const Icon(Icons.add),
         onPressed: () => AppRoute.snippetEdit().go(context),
       ),
@@ -59,9 +59,9 @@ class _SnippetListPageState extends State<SnippetListPage> {
           itemCount: filtered.length,
           onReorder: (oldIdx, newIdx) => setState(() {
             provider.snippets.moveByItem(
-              filtered,
               oldIdx,
               newIdx,
+              filtered: filtered,
               onMove: (p0) {
                 Stores.setting.snippetOrder.put(p0.map((e) => e.name).toList());
               },
@@ -71,7 +71,6 @@ class _SnippetListPageState extends State<SnippetListPage> {
             tags: provider.tags,
             onTagChanged: (tag) => setState(() => _tag = tag),
             initTag: _tag,
-            all: l10n.all,
             width: _media.size.width,
           ),
           footer: UIs.height77,

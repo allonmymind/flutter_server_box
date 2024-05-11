@@ -1,5 +1,6 @@
 import 'package:toolbox/data/model/server/battery.dart';
 import 'package:toolbox/data/model/server/nvdia.dart';
+import 'package:toolbox/data/model/server/sensors.dart';
 import 'package:toolbox/data/model/server/server.dart';
 import 'package:toolbox/data/model/server/system.dart';
 import 'package:toolbox/data/res/logger.dart';
@@ -15,11 +16,13 @@ class ServerStatusUpdateReq {
   final ServerStatus ss;
   final List<String> segments;
   final SystemType system;
+  final Map<String, String> customCmds;
 
   const ServerStatusUpdateReq({
     required this.system,
     required this.ss,
     required this.segments,
+    required this.customCmds,
   });
 }
 
@@ -57,8 +60,8 @@ Future<ServerStatus> _getLinuxStatus(ServerStatusUpdateReq req) async {
   }
 
   try {
-    final host = StatusCmdType.host.find(segments);
-    if (host.isNotEmpty) {
+    final host = _parseHostName(StatusCmdType.host.find(segments));
+    if (host != null) {
       req.ss.more[StatusCmdType.host] = host;
     }
   } catch (e, s) {
@@ -66,8 +69,13 @@ Future<ServerStatus> _getLinuxStatus(ServerStatusUpdateReq req) async {
   }
 
   try {
-    final cpus = OneTimeCpuStatus.parse(StatusCmdType.cpu.find(segments));
+    final cpus = SingleCpuCore.parse(StatusCmdType.cpu.find(segments));
     req.ss.cpu.update(cpus);
+  } catch (e, s) {
+    Loggers.parse.warning(e, s);
+  }
+
+  try {
     req.ss.temps.parse(
       StatusCmdType.tempType.find(segments),
       StatusCmdType.tempVal.find(segments),
@@ -87,6 +95,7 @@ Future<ServerStatus> _getLinuxStatus(ServerStatusUpdateReq req) async {
 
   try {
     req.ss.disk = Disk.parse(StatusCmdType.disk.find(segments));
+    req.ss.diskUsage = DiskUsage.parse(req.ss.disk);
   } catch (e, s) {
     Loggers.parse.warning(e, s);
   }
@@ -133,6 +142,26 @@ Future<ServerStatus> _getLinuxStatus(ServerStatusUpdateReq req) async {
     req.ss.batteries.clear();
     if (batteries.isNotEmpty) {
       req.ss.batteries.addAll(batteries);
+    }
+  } catch (e, s) {
+    Loggers.parse.warning(e, s);
+  }
+
+  try {
+    final sensors = SensorItem.parse(StatusCmdType.sensors.find(segments));
+    if (sensors.isNotEmpty) {
+      req.ss.sensors.clear();
+      req.ss.sensors.addAll(sensors);
+    }
+  } catch (e, s) {
+    Loggers.parse.warning(e, s);
+  }
+
+  try {
+    for (int idx = 0; idx < req.customCmds.length; idx++) {
+      final key = req.customCmds.keys.elementAt(idx);
+      final value = req.segments[idx + req.system.segmentsLen];
+      req.ss.customCmds[key] = value;
     }
   } catch (e, s) {
     Loggers.parse.warning(e, s);
@@ -207,4 +236,10 @@ String? _parseSysVer(String raw) {
     return s[1].replaceAll('"', '').replaceFirst('\n', '');
   }
   return null;
+}
+
+String? _parseHostName(String raw) {
+  if (raw.isEmpty) return null;
+  if (raw.contains(ShellFunc.scriptFile)) return null;
+  return raw;
 }

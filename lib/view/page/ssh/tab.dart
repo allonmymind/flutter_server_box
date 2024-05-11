@@ -3,8 +3,10 @@ import 'package:provider/provider.dart';
 import 'package:toolbox/core/extension/context/common.dart';
 import 'package:toolbox/core/extension/context/dialog.dart';
 import 'package:toolbox/core/extension/context/locale.dart';
-import 'package:toolbox/core/extension/widget.dart';
+import 'package:toolbox/core/route.dart';
+import 'package:toolbox/data/model/server/server_private_info.dart';
 import 'package:toolbox/data/provider/server.dart';
+import 'package:toolbox/data/res/provider.dart';
 import 'package:toolbox/data/res/ui.dart';
 import 'package:toolbox/view/page/ssh/page.dart';
 import 'package:toolbox/view/widget/cardx.dart';
@@ -13,7 +15,7 @@ class SSHTabPage extends StatefulWidget {
   const SSHTabPage({super.key});
 
   @override
-  _SSHTabPageState createState() => _SSHTabPageState();
+  State<SSHTabPage> createState() => _SSHTabPageState();
 }
 
 class _SSHTabPageState extends State<SSHTabPage>
@@ -25,6 +27,7 @@ class _SSHTabPageState extends State<SSHTabPage>
     length: _tabIds.length,
     vsync: this,
   );
+  final _fabRN = ValueNotifier(0);
 
   @override
   Widget build(BuildContext context) {
@@ -36,8 +39,21 @@ class _SSHTabPageState extends State<SSHTabPage>
         isScrollable: true,
         tabAlignment: TabAlignment.start,
         dividerColor: Colors.transparent,
+        onTap: (value) => _fabRN.value = value,
       ),
       body: _buildBody(),
+      floatingActionButton: ListenableBuilder(
+        listenable: _fabRN,
+        builder: (_, __) {
+          if (_fabRN.value != 0) return const SizedBox();
+          return FloatingActionButton(
+            heroTag: 'sshAddServer',
+            onPressed: () => AppRoute.serverEdit().go(context),
+            tooltip: l10n.addAServer,
+            child: const Icon(Icons.add),
+          );
+        },
+      ),
     );
   }
 
@@ -50,10 +66,9 @@ class _SSHTabPageState extends State<SSHTabPage>
         children: [
           Text(e),
           UIs.width7,
-          const Icon(Icons.close, size: 17)
-              .padding(const EdgeInsets.all(7))
-              .tap(
-            onTap: () async {
+          IconButton(
+            icon: const Icon(Icons.close, size: 17),
+            onPressed: () async {
               final confirm = await context.showRoundDialog<bool>(
                 title: Text(l10n.attention),
                 child: Text('${l10n.close} SSH ${l10n.conn}($e) ?'),
@@ -71,7 +86,6 @@ class _SSHTabPageState extends State<SSHTabPage>
               if (confirm != true) {
                 return;
               }
-              // debugPrint("Removing a tab whose tabId = $e");
               _tabIds.remove(e);
               _refreshTabs();
             },
@@ -84,37 +98,25 @@ class _SSHTabPageState extends State<SSHTabPage>
   Widget _buildAddPage() {
     return Center(
       child: Consumer<ServerProvider>(builder: (_, pro, __) {
+        if (pro.serverOrder.isEmpty) {
+          return Center(
+            child: Text(
+              l10n.serverTabEmpty,
+              textAlign: TextAlign.center,
+            ),
+          );
+        }
         return ListView.builder(
           padding: const EdgeInsets.all(7),
           itemBuilder: (_, idx) {
-            final spi = pro.servers.toList()[idx].spi;
+            final spi = Pros.server.pick(id: pro.serverOrder[idx])?.spi;
+            if (spi == null) return UIs.placeholder;
             return CardX(
               child: ListTile(
                 title: Text(spi.name),
                 subtitle: Text(spi.id, style: UIs.textGrey),
                 trailing: const Icon(Icons.chevron_right),
-                onTap: () {
-                  final name = () {
-                    if (_tabIds.containsKey(spi.name)) {
-                      return '${spi.name}(${_tabIds.length + 1})';
-                    }
-                    return spi.name;
-                  }();
-                  final key = GlobalKey(debugLabel: 'sshTabPage_$name');
-                  _tabIds[name] = SSHPage(
-                    key: key,
-                    spi: spi,
-                    pop: false,
-                    onSessionEnd: () {
-                      // debugPrint("Session done received on page whose tabId = $name");
-                      // debugPrint("key = $key");
-                      _tabIds.remove(name);
-                      _refreshTabs();
-                    },
-                  );
-                  _refreshTabs();
-                  _tabController.animateTo(_tabIds.length - 1);
-                },
+                onTap: () => _onTapInitCard(spi),
               ),
             );
           },
@@ -130,6 +132,31 @@ class _SSHTabPageState extends State<SSHTabPage>
       controller: _tabController,
       children: _tabIds.values.toList(),
     );
+  }
+
+  void _onTapInitCard(ServerPrivateInfo spi) {
+    final name = () {
+      if (_tabIds.containsKey(spi.name)) {
+        return '${spi.name}(${_tabIds.length + 1})';
+      }
+      return spi.name;
+    }();
+    final key = GlobalKey<State<SSHPage>>(debugLabel: 'sshTabPage_$name');
+    _tabIds[name] = SSHPage(
+      key: key,
+      spi: spi,
+      notFromTab: false,
+      onSessionEnd: () {
+        // debugPrint("Session done received on page whose tabId = $name");
+        // debugPrint("key = $key");
+        _tabIds.remove(name);
+        _refreshTabs();
+      },
+    );
+    _refreshTabs();
+    final idx = _tabIds.length - 1;
+    _tabController.animateTo(idx);
+    _fabRN.value = idx;
   }
 
   void _refreshTabs() {

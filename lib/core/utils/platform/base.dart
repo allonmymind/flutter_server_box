@@ -44,12 +44,6 @@ enum OS {
         OS.ios => 'iOS',
         final val => val.name.upperFirst,
       };
-
-  /// Whether has platform specific settings.
-  static final hasSpecSetting = switch (type) {
-    OS.android || OS.ios => true,
-    _ => false,
-  };
 }
 
 final isAndroid = OS.type == OS.android;
@@ -61,4 +55,3 @@ final isWeb = OS.type == OS.web;
 final isMobile = OS.type == OS.ios || OS.type == OS.android;
 final isDesktop =
     OS.type == OS.linux || OS.type == OS.macos || OS.type == OS.windows;
-const isDebuggingMobileLayoutOnDesktop = kDebugMode;

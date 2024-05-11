@@ -1,14 +1,22 @@
+import 'dart:convert';
+
 import 'package:flutter/material.dart';
+import 'package:icons_plus/icons_plus.dart';
 import 'package:provider/provider.dart';
 import 'package:toolbox/core/extension/context/common.dart';
 import 'package:toolbox/core/extension/context/dialog.dart';
 import 'package:toolbox/core/extension/context/locale.dart';
 import 'package:toolbox/core/extension/context/snackbar.dart';
+import 'package:toolbox/core/extension/stringx.dart';
+import 'package:toolbox/core/extension/widget.dart';
+import 'package:toolbox/core/utils/ui.dart';
 import 'package:toolbox/data/model/app/shell_func.dart';
+import 'package:toolbox/data/model/server/custom.dart';
+import 'package:toolbox/data/model/server/wol_cfg.dart';
 import 'package:toolbox/data/res/provider.dart';
+import 'package:toolbox/view/widget/expand_tile.dart';
 
 import '../../../core/route.dart';
-import '../../../data/model/server/private_key_info.dart';
 import '../../../data/model/server/server_private_info.dart';
 import '../../../data/provider/private_key.dart';
 import '../../../data/res/ui.dart';
@@ -33,6 +41,14 @@ class _ServerEditPageState extends State<ServerEditPage> {
   final _portController = TextEditingController();
   final _usernameController = TextEditingController();
   final _passwordController = TextEditingController();
+  final _pveAddrCtrl = TextEditingController();
+  final _customCmdCtrl = TextEditingController();
+  final _preferTempDevCtrl = TextEditingController();
+  final _logoUrlCtrl = TextEditingController();
+  final _wolMacCtrl = TextEditingController();
+  final _wolIpCtrl = TextEditingController();
+  final _wolPwdCtrl = TextEditingController();
+
   final _nameFocus = FocusNode();
   final _ipFocus = FocusNode();
   final _alterUrlFocus = FocusNode();
@@ -44,6 +60,7 @@ class _ServerEditPageState extends State<ServerEditPage> {
   final _keyIdx = ValueNotifier<int?>(null);
   final _autoConnect = ValueNotifier(true);
   final _jumpServer = ValueNotifier<String?>(null);
+  final _pveIgnoreCert = ValueNotifier(false);
 
   var _tags = <String>[];
 
@@ -71,6 +88,28 @@ class _ServerEditPageState extends State<ServerEditPage> {
       _altUrlController.text = spi.alterUrl ?? '';
       _autoConnect.value = spi.autoConnect ?? true;
       _jumpServer.value = spi.jumpId;
+
+      final custom = spi.custom;
+      if (custom != null) {
+        _pveAddrCtrl.text = custom.pveAddr ?? '';
+        _pveIgnoreCert.value = custom.pveIgnoreCert;
+        try {
+          // Add a null check here to prevent setting `null` to the controller
+          final encoded = json.encode(custom.cmds!);
+          if (encoded.isNotEmpty) {
+            _customCmdCtrl.text = encoded;
+          }
+        } catch (_) {}
+        _preferTempDevCtrl.text = custom.preferTempDev ?? '';
+        _logoUrlCtrl.text = custom.logoUrl ?? '';
+      }
+
+      final wol = spi.wolCfg;
+      if (wol != null) {
+        _wolMacCtrl.text = wol.mac;
+        _wolIpCtrl.text = wol.ip;
+        _wolPwdCtrl.text = wol.pwd ?? '';
+      }
     }
   }
 
@@ -88,6 +127,13 @@ class _ServerEditPageState extends State<ServerEditPage> {
     _alterUrlFocus.dispose();
     _portFocus.dispose();
     _usernameFocus.dispose();
+    _pveAddrCtrl.dispose();
+    _customCmdCtrl.dispose();
+    _preferTempDevCtrl.dispose();
+    _logoUrlCtrl.dispose();
+    _wolMacCtrl.dispose();
+    _wolIpCtrl.dispose();
+    _wolPwdCtrl.dispose();
   }
 
   @override
@@ -108,59 +154,60 @@ class _ServerEditPageState extends State<ServerEditPage> {
   PreferredSizeWidget _buildAppBar() {
     return CustomAppBar(
       title: Text(l10n.edit, style: UIs.text18),
-      actions: widget.spi != null
-          ? [
-              IconButton(
-                onPressed: () {
-                  var delScripts = false;
-                  context.showRoundDialog(
-                    title: Text(l10n.attention),
-                    child: StatefulBuilder(builder: (ctx, setState) {
-                      return Column(
-                        mainAxisSize: MainAxisSize.min,
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(l10n.askContinue(
-                            '${l10n.delete} ${l10n.server}(${widget.spi!.name})',
-                          )),
-                          UIs.height13,
-                          if (widget.spi?.server?.canViewDetails ?? false)
-                            CheckboxListTile(
-                              value: delScripts,
-                              onChanged: (_) => setState(
-                                () => delScripts = !delScripts,
-                              ),
-                              controlAffinity: ListTileControlAffinity.leading,
-                              title: Text(l10n.deleteScripts),
-                              tileColor: Colors.transparent,
-                              contentPadding: EdgeInsets.zero,
-                            )
-                        ],
-                      );
-                    }),
-                    actions: [
-                      TextButton(
-                        onPressed: () async {
-                          context.pop();
-                          if (delScripts) {
-                            context.showLoadingDialog();
-                            const cmd =
-                                'rm ${ShellFunc.srvBoxDir}/mobile_v*.sh';
-                            await widget.spi?.server?.client?.run(cmd);
-                            context.pop();
-                          }
-                          Pros.server.delServer(widget.spi!.id);
-                          context.pop(true);
-                        },
-                        child: Text(l10n.ok, style: UIs.textRed),
-                      ),
-                    ],
+      actions: widget.spi != null ? [_buildDelBtn()] : null,
+    );
+  }
+
+  Widget _buildDelBtn() {
+    return IconButton(
+      onPressed: () {
+        var delScripts = false;
+        context.showRoundDialog(
+          title: Text(l10n.attention),
+          child: StatefulBuilder(builder: (ctx, setState) {
+            return Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(l10n.askContinue(
+                  '${l10n.delete} ${l10n.server}(${widget.spi!.name})',
+                )),
+                UIs.height13,
+                if (widget.spi?.server?.canViewDetails ?? false)
+                  CheckboxListTile(
+                    value: delScripts,
+                    onChanged: (_) => setState(
+                      () => delScripts = !delScripts,
+                    ),
+                    controlAffinity: ListTileControlAffinity.leading,
+                    title: Text(l10n.deleteScripts),
+                    tileColor: Colors.transparent,
+                    contentPadding: EdgeInsets.zero,
+                  )
+              ],
+            );
+          }),
+          actions: [
+            TextButton(
+              onPressed: () async {
+                context.pop();
+                if (delScripts) {
+                  await context.showLoadingDialog(
+                    fn: () async {
+                      const cmd = 'rm ${ShellFunc.srvBoxDir}/mobile_v*.sh';
+                      return widget.spi?.server?.client?.run(cmd);
+                    },
                   );
-                },
-                icon: const Icon(Icons.delete),
-              ),
-            ]
-          : null,
+                }
+                Pros.server.delServer(widget.spi!.id);
+                context.pop(true);
+              },
+              child: Text(l10n.ok, style: UIs.textRed),
+            ),
+          ],
+        );
+      },
+      icon: const Icon(Icons.delete),
     );
   }
 
@@ -174,7 +221,7 @@ class _ServerEditPageState extends State<ServerEditPage> {
         onSubmitted: (_) => _focusScope.requestFocus(_ipFocus),
         hint: l10n.exampleName,
         label: l10n.name,
-        icon: Icons.info,
+        icon: BoxIcons.bx_rename,
         obscureText: false,
         autoCorrect: true,
         suggestiion: true,
@@ -185,7 +232,7 @@ class _ServerEditPageState extends State<ServerEditPage> {
         onSubmitted: (_) => _focusScope.requestFocus(_portFocus),
         node: _ipFocus,
         label: l10n.host,
-        icon: Icons.computer,
+        icon: BoxIcons.bx_server,
         hint: 'example.com',
       ),
       Input(
@@ -194,7 +241,7 @@ class _ServerEditPageState extends State<ServerEditPage> {
         node: _portFocus,
         onSubmitted: (_) => _focusScope.requestFocus(_usernameFocus),
         label: l10n.port,
-        icon: Icons.format_list_numbered,
+        icon: Bootstrap.number_123,
         hint: '22',
       ),
       Input(
@@ -211,17 +258,15 @@ class _ServerEditPageState extends State<ServerEditPage> {
         type: TextInputType.url,
         node: _alterUrlFocus,
         label: l10n.alterUrl,
-        icon: Icons.computer,
+        icon: MingCute.link_line,
         hint: 'user@ip:port',
       ),
       TagEditor(
         tags: _tags,
         onChanged: (p0) => _tags = p0,
-        allTags: [...Pros.server.tags],
+        allTags: [...Pros.server.tags.value],
         onRenameTag: Pros.server.renameTag,
       ),
-      _buildAuth(),
-      //_buildJumpServer(),
       ListTile(
         title: Text(l10n.autoConnect),
         trailing: ListenableBuilder(
@@ -234,6 +279,9 @@ class _ServerEditPageState extends State<ServerEditPage> {
           ),
         ),
       ),
+      _buildAuth(),
+      _buildJumpServer(),
+      _buildMore(),
     ];
     return SingleChildScrollView(
       padding: const EdgeInsets.fromLTRB(17, 17, 17, 47),
@@ -292,7 +340,7 @@ class _ServerEditPageState extends State<ServerEditPage> {
         final tiles = List<Widget>.generate(key.pkis.length, (index) {
           final e = key.pkis[index];
           return ListTile(
-            contentPadding: EdgeInsets.zero,
+            contentPadding: const EdgeInsets.symmetric(horizontal: 17),
             leading: Text(
               '#${index + 1}',
               style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 15),
@@ -303,94 +351,211 @@ class _ServerEditPageState extends State<ServerEditPage> {
               textAlign: TextAlign.start,
               style: UIs.textGrey,
             ),
-            trailing: _buildRadio(index, e),
+            trailing: Radio<int>(
+              value: index,
+              groupValue: _keyIdx.value,
+              onChanged: (value) => _keyIdx.value = value,
+            ),
+            onTap: () => _keyIdx.value = index,
           );
         });
         tiles.add(
           ListTile(
             title: Text(l10n.addPrivateKey),
-            contentPadding: EdgeInsets.zero,
-            trailing: IconButton(
-              icon: const Icon(Icons.add),
-              onPressed: () => AppRoute.keyEdit().go(context),
+            contentPadding: const EdgeInsets.symmetric(horizontal: 17),
+            trailing: const Padding(
+              padding: EdgeInsets.only(right: 13),
+              child: Icon(Icons.add),
             ),
+            onTap: () => AppRoute.keyEdit().go(context),
           ),
         );
         return CardX(
-          child: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 17),
-            child: Column(
-              children: tiles,
-            ),
+          child: ListenableBuilder(
+            listenable: _keyIdx,
+            builder: (_, __) => Column(children: tiles),
           ),
         );
       },
     );
   }
 
+  Widget _buildMore() {
+    return ExpandTile(
+      title: Text(l10n.more),
+      children: [
+        const Text('Logo', style: UIs.text13Grey),
+        UIs.height7,
+        Input(
+          controller: _logoUrlCtrl,
+          type: TextInputType.url,
+          icon: Icons.image,
+          label: 'Url',
+          hint: 'https://example.com/logo.png',
+        ),
+        UIs.height7,
+        ..._buildPVEs(),
+        UIs.height7,
+        ..._buildCustomCmds(),
+        UIs.height7,
+        Text(l10n.temperature, style: UIs.text13Grey),
+        UIs.height7,
+        Input(
+          controller: _preferTempDevCtrl,
+          type: TextInputType.text,
+          label: l10n.deviceName,
+          icon: MingCute.low_temperature_line,
+          hint: 'nvme-pci-0400',
+        ),
+        UIs.height7,
+        ..._buildWOLs(),
+      ],
+    );
+  }
+
+  List<Widget> _buildPVEs() {
+    return [
+      const Text('PVE', style: UIs.text13Grey),
+      UIs.height7,
+      Input(
+        controller: _pveAddrCtrl,
+        type: TextInputType.url,
+        icon: MingCute.web_line,
+        label: l10n.addr,
+        hint: 'https://example.com:8006',
+      ),
+      ListTile(
+        leading: const Padding(
+          padding: EdgeInsets.only(left: 10),
+          child: Icon(MingCute.certificate_line),
+        ),
+        title: Text('PVE ${l10n.ignoreCert}'),
+        subtitle: Text(l10n.pveIgnoreCertTip, style: UIs.text12Grey),
+        trailing: ListenableBuilder(
+          listenable: _pveIgnoreCert,
+          builder: (_, __) => Switch(
+            value: _pveIgnoreCert.value,
+            onChanged: (val) {
+              _pveIgnoreCert.value = val;
+            },
+          ),
+        ),
+      ).card,
+    ];
+  }
+
+  List<Widget> _buildCustomCmds() {
+    return [
+      Text(l10n.customCmd, style: UIs.text13Grey),
+      UIs.height7,
+      Input(
+        controller: _customCmdCtrl,
+        type: TextInputType.text,
+        maxLines: 3,
+        label: 'JSON',
+        icon: Icons.code,
+        hint: '{${l10n.customCmdHint}}',
+      ),
+      ListTile(
+        leading: const Padding(
+          padding: EdgeInsets.only(left: 10),
+          child: Icon(MingCute.doc_line),
+        ),
+        title: Text(l10n.doc),
+        trailing: const Icon(Icons.open_in_new, size: 17),
+        onTap: () => openUrl(l10n.customCmdDocUrl),
+      ).card,
+    ];
+  }
+
+  List<Widget> _buildWOLs() {
+    return [
+      const Text('Wake On LAN', style: UIs.text13Grey),
+      UIs.height7,
+      ListTile(
+        leading: const Padding(
+          padding: EdgeInsets.only(left: 10),
+          child: Icon(BoxIcons.bxs_help_circle),
+        ),
+        title: Text(l10n.about),
+        subtitle: Text(l10n.wolTip, style: UIs.text12Grey),
+      ).card,
+      Input(
+        controller: _wolMacCtrl,
+        type: TextInputType.text,
+        label: 'Mac ${l10n.addr}',
+        icon: Icons.computer,
+        hint: '00:11:22:33:44:55',
+      ),
+      Input(
+        controller: _wolIpCtrl,
+        type: TextInputType.text,
+        label: 'IP ${l10n.addr}',
+        icon: Icons.network_cell,
+        hint: '192.168.1.x',
+      ),
+      Input(
+        controller: _wolPwdCtrl,
+        type: TextInputType.text,
+        obscureText: true,
+        label: l10n.pwd,
+        icon: Icons.password,
+        hint: l10n.pwd,
+      ),
+    ];
+  }
+
   Widget _buildFAB() {
     return FloatingActionButton(
-      heroTag: 'server',
       onPressed: _onSave,
       child: const Icon(Icons.save),
     );
   }
 
-  Widget _buildRadio(int index, PrivateKeyInfo pki) {
+  Widget _buildJumpServer() {
     return ListenableBuilder(
-      listenable: _keyIdx,
-      builder: (_, __) => Radio<int>(
-        value: index,
-        groupValue: _keyIdx.value,
-        onChanged: (value) {
-          _keyIdx.value = value;
-        },
-      ),
+      listenable: _jumpServer,
+      builder: (_, __) {
+        final children = Pros.server.servers
+            .where((element) => element.spi.jumpId == null)
+            .where((element) => element.spi.id != widget.spi?.id)
+            .map(
+              (e) => ListTile(
+                title: Text(e.spi.name),
+                subtitle: Text(e.spi.id, style: UIs.textGrey),
+                trailing: Radio<String>(
+                  groupValue: _jumpServer.value,
+                  value: e.spi.id,
+                  onChanged: (val) => _jumpServer.value = val,
+                ),
+                onTap: () => _jumpServer.value = e.spi.id,
+                contentPadding: const EdgeInsets.symmetric(horizontal: 17),
+              ),
+            )
+            .toList();
+        children.add(ListTile(
+          title: Text(l10n.clear),
+          trailing: const Padding(
+            padding: EdgeInsets.only(right: 13),
+            child: Icon(Icons.clear),
+          ),
+          onTap: () => _jumpServer.value = null,
+          contentPadding: const EdgeInsets.symmetric(horizontal: 17),
+        ));
+        return CardX(
+          child: ExpandTile(
+            leading: const Padding(
+              padding: EdgeInsets.only(left: 10),
+              child: Icon(Icons.map),
+            ),
+            initiallyExpanded: _jumpServer.value != null,
+            title: Text(l10n.jumpServer),
+            children: children,
+          ),
+        );
+      },
     );
   }
-
-  // Widget _buildJumpServer() {
-  //   return ListenableBuilder(
-  //     listenable: _jumpServer,
-  //     builder: (_, __) {
-  //       final children = Pros.server.servers
-  //           .where((element) => element.spi.jumpId == null)
-  //           .where((element) => element.spi.id != widget.spi?.id)
-  //           .map(
-  //             (e) => ListTile(
-  //               title: Text(e.spi.name),
-  //               subtitle: Text(e.spi.id, style: UIs.textGrey),
-  //               trailing: Radio<String>(
-  //                 groupValue: _jumpServer.value,
-  //                 value: e.spi.id,
-  //                 onChanged: (val) => _jumpServer.value = val,
-  //               ),
-  //               onTap: () {
-  //                 _jumpServer.value = e.spi.id;
-  //               },
-  //             ),
-  //           )
-  //           .toList();
-  //       children.add(ListTile(
-  //         title: Text(l10n.clear),
-  //         trailing: const Icon(Icons.clear),
-  //         onTap: () => _jumpServer.value = null,
-  //       ));
-  //       return CardX(
-  //         child: ExpandTile(
-  //           leading: const Icon(Icons.map),
-  //           initiallyExpanded: _jumpServer.value != null,
-  //           title: Text(l10n.jumpServer),
-  //           subtitle: const Text(
-  //             "It was temporarily disabled because it has some bugs (Issues #210)",
-  //             style: UIs.textGrey,
-  //           ),
-  //           children: children,
-  //         ),
-  //       );
-  //     },
-  //   );
-  // }
 
   void _onSave() async {
     if (_ipController.text.isEmpty) {
@@ -412,7 +577,7 @@ class _ServerEditPageState extends State<ServerEditPage> {
           )
         ],
       );
-      if (cancel ?? true) {
+      if (cancel != false) {
         return;
       }
     }
@@ -427,6 +592,40 @@ class _ServerEditPageState extends State<ServerEditPage> {
     if (_portController.text.isEmpty) {
       _portController.text = '22';
     }
+    final customCmds = () {
+      if (_customCmdCtrl.text.isEmpty) return null;
+      try {
+        return json.decode(_customCmdCtrl.text).cast<String, String>();
+      } catch (e) {
+        context.showSnackBar(l10n.invalidJson);
+        return null;
+      }
+    }();
+    final custom = ServerCustom(
+      pveAddr: _pveAddrCtrl.text.selfIfNotNullEmpty,
+      pveIgnoreCert: _pveIgnoreCert.value,
+      cmds: customCmds,
+      preferTempDev: _preferTempDevCtrl.text.selfIfNotNullEmpty,
+      logoUrl: _logoUrlCtrl.text.selfIfNotNullEmpty,
+    );
+
+    final wolEmpty = _wolMacCtrl.text.isEmpty &&
+        _wolIpCtrl.text.isEmpty &&
+        _wolPwdCtrl.text.isEmpty;
+    final wol = wolEmpty
+        ? null
+        : WakeOnLanCfg(
+            mac: _wolMacCtrl.text,
+            ip: _wolIpCtrl.text,
+            pwd: _wolPwdCtrl.text.selfIfNotNullEmpty,
+          );
+    if (wol != null) {
+      final wolValidation = wol.validate();
+      if (!wolValidation.$2) {
+        context.showSnackBar('${l10n.failed}: ${wolValidation.$1}');
+        return;
+      }
+    }
 
     final spi = ServerPrivateInfo(
       name: _nameController.text.isEmpty
@@ -435,14 +634,16 @@ class _ServerEditPageState extends State<ServerEditPage> {
       ip: _ipController.text,
       port: int.parse(_portController.text),
       user: _usernameController.text,
-      pwd: _passwordController.text.isEmpty ? null : _passwordController.text,
+      pwd: _passwordController.text.selfIfNotNullEmpty,
       keyId: _keyIdx.value != null
           ? Pros.key.pkis.elementAt(_keyIdx.value!).id
           : null,
       tags: _tags,
-      alterUrl: _altUrlController.text.isEmpty ? null : _altUrlController.text,
+      alterUrl: _altUrlController.text.selfIfNotNullEmpty,
       autoConnect: _autoConnect.value,
       jumpId: _jumpServer.value,
+      custom: custom,
+      wolCfg: wol,
     );
 
     if (widget.spi == null) {

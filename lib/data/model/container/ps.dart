@@ -1,5 +1,7 @@
 import 'dart:convert';
 
+import 'package:toolbox/core/extension/context/locale.dart';
+import 'package:toolbox/core/extension/numx.dart';
 import 'package:toolbox/data/model/container/type.dart';
 
 abstract final class ContainerPs {
@@ -9,7 +11,14 @@ abstract final class ContainerPs {
   String? get cmd;
   bool get running;
 
+  String? cpu;
+  String? mem;
+  String? net;
+  String? disk;
+
   factory ContainerPs.fromRawJson(String s, ContainerType typ) => typ.ps(s);
+
+  void parseStats(String s);
 }
 
 final class PodmanPs implements ContainerPs {
@@ -22,6 +31,15 @@ final class PodmanPs implements ContainerPs {
   final String? image;
   final List<String>? names;
   final int? startedAt;
+
+  @override
+  String? cpu;
+  @override
+  String? mem;
+  @override
+  String? net;
+  @override
+  String? disk;
 
   PodmanPs({
     this.command,
@@ -41,6 +59,23 @@ final class PodmanPs implements ContainerPs {
 
   @override
   bool get running => exited != true;
+
+  @override
+  void parseStats(String s) {
+    final stats = json.decode(s);
+    final cpuD = (stats['CPU'] as double? ?? 0).toStringAsFixed(1);
+    final cpuAvgD = (stats['AvgCPU'] as double? ?? 0).toStringAsFixed(1);
+    cpu = '$cpuD% / ${l10n.pingAvg} $cpuAvgD%';
+    final memLimit = (stats['MemLimit'] as int? ?? 0).bytes2Str;
+    final memUsage = (stats['MemUsage'] as int? ?? 0).bytes2Str;
+    mem = '$memUsage / $memLimit';
+    final netIn = (stats['NetInput'] as int? ?? 0).bytes2Str;
+    final netOut = (stats['NetOutput'] as int? ?? 0).bytes2Str;
+    net = '↓ $netIn / ↑ $netOut';
+    final diskIn = (stats['BlockInput'] as int? ?? 0).bytes2Str;
+    final diskOut = (stats['BlockOutput'] as int? ?? 0).bytes2Str;
+    disk = '${l10n.read} $diskOut / ${l10n.write} $diskIn';
+  }
 
   factory PodmanPs.fromRawJson(String str) =>
       PodmanPs.fromJson(json.decode(str));
@@ -84,6 +119,15 @@ final class DockerPs implements ContainerPs {
   final String? names;
   final String? state;
 
+  @override
+  String? cpu;
+  @override
+  String? mem;
+  @override
+  String? net;
+  @override
+  String? disk;
+
   DockerPs({
     this.command,
     this.createdAt,
@@ -101,6 +145,15 @@ final class DockerPs implements ContainerPs {
 
   @override
   bool get running => state == 'running';
+
+  @override
+  void parseStats(String s) {
+    final stats = json.decode(s);
+    cpu = stats['CPUPerc'];
+    mem = stats['MemUsage'];
+    net = stats['NetIO'];
+    disk = stats['BlockIO'];
+  }
 
   factory DockerPs.fromRawJson(String str) =>
       DockerPs.fromJson(json.decode(str));

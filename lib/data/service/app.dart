@@ -5,7 +5,7 @@ import '../res/url.dart';
 
 class AppService {
   Future<AppUpdate> getUpdate() async {
-    final resp = await Dio().get('${Urls.resBase}/update.json');
+    final resp = await Dio().get('${Urls.cdnBase}/update.json');
     return AppUpdate.fromJson(resp.data);
   }
 }

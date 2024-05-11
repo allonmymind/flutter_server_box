@@ -1,10 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:toolbox/core/extension/context/locale.dart';
 import 'package:toolbox/core/extension/context/snackbar.dart';
-import 'package:toolbox/core/utils/platform/base.dart';
-import 'package:toolbox/data/res/default.dart';
-import 'package:toolbox/data/res/logger.dart';
+import 'package:toolbox/data/model/app/server_detail_card.dart';
 import 'package:toolbox/data/res/store.dart';
+import 'package:toolbox/view/widget/val_builder.dart';
 
 import '../../../../core/extension/order.dart';
 import '../../../widget/appbar.dart';
@@ -31,30 +30,27 @@ class _ServerDetailOrderPageState extends State<ServerDetailOrderPage> {
   }
 
   Widget _buildBody() {
-    return ValueListenableBuilder(
-      valueListenable: prop.listenable(),
-      builder: (_, vals, __) {
-        final keys = () {
-          try {
-            return List<String>.from(vals);
-          } catch (e) {
-            Loggers.app.info('ServerDetailOrderPage: $e');
-            return Defaults.detailCardOrder;
-          }
-        }();
+    return ValBuilder(
+      listenable: prop.listenable(),
+      builder: (keys) {
         final disabled =
-            Defaults.detailCardOrder.where((e) => !keys.contains(e)).toList();
+            ServerDetailCards.names.where((e) => !keys.contains(e)).toList();
         final allKeys = [...keys, ...disabled];
         return ReorderableListView.builder(
           padding: const EdgeInsets.all(7),
+          buildDefaultDragHandles: false,
           itemBuilder: (_, idx) {
             final key = allKeys[idx];
-            return CardX(
+            return ReorderableDelayedDragStartListener(
               key: ValueKey(idx),
-              child: ListTile(
-                title: Text(key),
-                leading: _buildCheckBox(keys, key, idx, idx < keys.length),
-                trailing: isDesktop ? null : const Icon(Icons.drag_handle),
+              index: idx,
+              child: CardX(
+                child: ListTile(
+                  contentPadding: const EdgeInsets.only(left: 23, right: 11),
+                  leading: Icon(ServerDetailCards.fromName(key)?.icon),
+                  title: Text(key),
+                  trailing: _buildCheckBox(keys, key, idx, idx < keys.length),
+                ),
               ),
             );
           },
@@ -64,7 +60,7 @@ class _ServerDetailOrderPageState extends State<ServerDetailOrderPage> {
               context.showSnackBar(l10n.disabled);
               return;
             }
-            keys.moveByItem(keys, o, n, property: prop);
+            keys.moveByItem(o, n, property: prop);
           },
         );
       },

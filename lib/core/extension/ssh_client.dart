@@ -67,14 +67,13 @@ extension SSHClientX on SSHClient {
     _OnStdout? onStderr,
     _OnStdin? stdin,
     bool redirectToBash = false, // not working yet. do not use
+    required String id,
   }) async {
     var isRequestingPwd = false;
     final session = await exec(
       cmd,
       redirectToBash: redirectToBash,
       onStderr: (data, session) async {
-        debugPrint(
-            " --- execWithPwd stderr (reqPwd = $isRequestingPwd) --- $data");
         onStderr?.call(data, session);
         if (isRequestingPwd) return;
 
@@ -82,10 +81,9 @@ extension SSHClientX on SSHClient {
           isRequestingPwd = true;
           final user = Miscs.pwdRequestWithUserReg.firstMatch(data)?.group(1);
           if (context == null) return;
-          final pwd = await context.showPwdDialog(user);
+          final pwd = await context.showPwdDialog(title: user, hostId: id);
           if (pwd == null || pwd.isEmpty) {
-            debugPrint("Empty pwd. Exiting");
-            session.kill(SSHSignal.INT);
+            session.kill(SSHSignal.TERM);
           } else {
             session.stdin.add('$pwd\n'.uint8List);
           }
@@ -94,7 +92,6 @@ extension SSHClientX on SSHClient {
       },
       onStdout: (data, sink) async {
         onStdout?.call(data, sink);
-        debugPrint(" --- execWithPwd stdout --- $data");
       },
       stdin: stdin,
     );

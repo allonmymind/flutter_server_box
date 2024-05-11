@@ -6,7 +6,9 @@ import 'package:dartssh2/dartssh2.dart';
 import 'package:flutter/material.dart';
 import 'package:toolbox/core/extension/ssh_client.dart';
 import 'package:toolbox/core/extension/stringx.dart';
+import 'package:toolbox/core/utils/ssh_auth.dart';
 import 'package:toolbox/core/utils/platform/path.dart';
+import 'package:toolbox/data/model/app/error.dart';
 import 'package:toolbox/data/model/app/shell_func.dart';
 import 'package:toolbox/data/model/server/system.dart';
 import 'package:toolbox/data/model/sftp/req.dart';
@@ -28,12 +30,14 @@ import '../res/status.dart';
 class ServerProvider extends ChangeNotifier {
   final Map<String, Server> _servers = {};
   Iterable<Server> get servers => _servers.values;
-  final Order<String> _serverOrder = [];
-  Order<String> get serverOrder => _serverOrder;
-  final List<String> _tags = [];
-  List<String> get tags => _tags;
+  final List<String> _serverOrder = [];
+  List<String> get serverOrder => _serverOrder;
+  final _tags = ValueNotifier(<String>[]);
+  ValueNotifier<List<String>> get tags => _tags;
 
   Timer? _timer;
+
+  final _manualDisconnectedIds = <String>{};
 
   Future<void> load() async {
     // Issue #147
@@ -51,7 +55,7 @@ class ServerProvider extends ChangeNotifier {
       /// Issues #258
       /// If not [shouldReconnect], then keep the old state.
       if (originServer != null && !originServer.spi.shouldReconnect(spi)) {
-        newServer.state = originServer.state;
+        newServer.conn = originServer.conn;
       }
       _servers[spi.id] = newServer;
     }
@@ -87,17 +91,17 @@ class ServerProvider extends ChangeNotifier {
   }
 
   void _updateTags() {
-    _tags.clear();
+    _tags.value.clear();
     for (final s in _servers.values) {
       if (s.spi.tags == null) continue;
       for (final t in s.spi.tags!) {
-        if (!_tags.contains(t)) {
-          _tags.add(t);
+        if (!_tags.value.contains(t)) {
+          _tags.value.add(t);
         }
       }
     }
-    _tags.sort();
-    notifyListeners();
+    _tags.value.sort();
+    _tags.notifyListeners();
   }
 
   void renameTag(String old, String new_) {
@@ -114,7 +118,7 @@ class ServerProvider extends ChangeNotifier {
   }
 
   Server genServer(ServerPrivateInfo spi) {
-    return Server(spi, InitStatus.status, ServerState.disconnected);
+    return Server(spi, InitStatus.status, ServerConn.disconnected);
   }
 
   /// if [spi] is specificed then only refresh this server
@@ -124,6 +128,7 @@ class ServerProvider extends ChangeNotifier {
     bool onlyFailed = false,
   }) async {
     if (spi != null) {
+      _manualDisconnectedIds.remove(spi.id);
       await _getData(spi);
       return;
     }
@@ -133,23 +138,16 @@ class ServerProvider extends ChangeNotifier {
 
   Future<void> _connectFn(Server s, bool onlyFailed) async {
     if (onlyFailed) {
-      if (s.state != ServerState.failed) return;
+      if (s.conn != ServerConn.failed) return;
       TryLimiter.reset(s.spi.id);
     }
 
-    /// If [spi.autoConnect] is false and server is disconnected, then skip.
-    ///
-    /// If [spi.autoConnect] is false and server is connected, then refresh.
-    /// If no this, the server will only refresh once by clicking refresh button.
-    ///
-    /// If [spi.autoConnect] is true, then refresh.
-    if (!(s.spi.autoConnect ?? true) && s.state == ServerState.disconnected) {
+    if (!(s.spi.autoConnect ?? true) && s.conn == ServerConn.disconnected ||
+        _manualDisconnectedIds.contains(s.spi.id)) {
       return;
     }
     return await _getData(s.spi);
   }
-
-  static final refreshKey = GlobalKey<RefreshIndicatorState>();
 
   Future<void> startAutoRefresh() async {
     var duration = Stores.setting.serverStatusUpdateInterval.fetch();
@@ -159,7 +157,6 @@ class ServerProvider extends ChangeNotifier {
       duration = 3;
       Loggers.app.warning('Invalid duration: $duration, use default 3');
     }
-    refreshKey.currentState?.show();
     _timer = Timer.periodic(Duration(seconds: duration), (_) async {
       await refresh();
     });
@@ -176,7 +173,7 @@ class ServerProvider extends ChangeNotifier {
 
   void setDisconnected() {
     for (final s in _servers.values) {
-      s.state = ServerState.disconnected;
+      s.conn = ServerConn.disconnected;
     }
     //TryLimiter.clear();
     notifyListeners();
@@ -193,8 +190,12 @@ class ServerProvider extends ChangeNotifier {
   }
 
   void _closeOneServer(String id) {
-    _servers[id]?.client?.close();
-    _servers[id]?.client = null;
+    final item = _servers[id];
+    item?.client?.close();
+    item?.client = null;
+    item?.conn = ServerConn.disconnected;
+    _manualDisconnectedIds.add(id);
+    notifyListeners();
   }
 
   void addServer(ServerPrivateInfo spi) {
@@ -253,36 +254,9 @@ class ServerProvider extends ChangeNotifier {
     }
   }
 
-  void _setServerState(Server s, ServerState ss) {
-    s.state = ss;
+  void _setServerState(Server s, ServerConn ss) {
+    s.conn = ss;
     notifyListeners();
-  }
-
-  Future<void> _writeInstallerScript(Server s) async {
-    /// TODO: Find a better way to judge if the write is successful
-
-    // Issues #275
-    // Can't use writeResult to judge if the write is successful
-
-    // void ensure(String? writeResult) {
-    //   if (writeResult == null || writeResult.isNotEmpty) {
-    //     throw Exception("Failed to write installer script: $writeResult");
-    //   }
-    // }
-
-    final client = s.client;
-    if (client == null) {
-      throw Exception("Invalid state: s.client cannot be null");
-    }
-
-    await client.run(ShellFunc.installerMkdirs).string;
-
-    await client.runForOutput(ShellFunc.installerShellWriter,
-        action: (session) async {
-      session.stdin.add(ShellFunc.allScript.uint8List);
-    }).string;
-
-    await client.run(ShellFunc.installerPermissionModifier).string;
   }
 
   Future<void> _getData(ServerPrivateInfo spi) async {
@@ -292,8 +266,8 @@ class ServerProvider extends ChangeNotifier {
     if (s == null) return;
 
     if (!TryLimiter.canTry(sid)) {
-      if (s.state != ServerState.failed) {
-        _setServerState(s, ServerState.failed);
+      if (s.conn != ServerConn.failed) {
+        _setServerState(s, ServerConn.failed);
       }
       return;
     }
@@ -301,43 +275,71 @@ class ServerProvider extends ChangeNotifier {
     s.status.err = null;
 
     if (s.needGenClient || (s.client?.isClosed ?? true)) {
-      _setServerState(s, ServerState.connecting);
+      _setServerState(s, ServerConn.connecting);
+
+      final wol = spi.wolCfg;
+      if (wol != null) {
+        /// TODO: test it
+        try {
+          await wol.wake();
+        } catch (e) {
+          // TryLimiter.inc(sid);
+          // s.status.err = SSHErr(
+          //   type: SSHErrType.connect,
+          //   message: 'Wake on lan failed: $e',
+          // );
+          // _setServerState(s, ServerConn.failed);
+          // Loggers.app.warning('Wake on lan failed', e);
+          // return;
+        }
+      }
 
       try {
         final time1 = DateTime.now();
         s.client = await genClient(
           spi,
           timeout: Duration(seconds: Stores.setting.timeout.fetch()),
+          onKeyboardInteractive: (_) => KeybordInteractive.defaultHandle(spi),
         );
         final time2 = DateTime.now();
         final spentTime = time2.difference(time1).inMilliseconds;
         if (spi.jumpId == null) {
           Loggers.app.info('Connected to ${spi.name} in $spentTime ms.');
         } else {
-          Loggers.app.info(
-            'Connected to ${spi.name} via jump server in $spentTime ms.',
-          );
+          Loggers.app.info('Jump to ${spi.name} in $spentTime ms.');
         }
       } catch (e) {
         TryLimiter.inc(sid);
-        s.status.err = e.toString();
-        _setServerState(s, ServerState.failed);
+        s.status.err = SSHErr(type: SSHErrType.connect, message: e.toString());
+        _setServerState(s, ServerConn.failed);
 
         /// In order to keep privacy, print [spi.name] instead of [spi.id]
         Loggers.app.warning('Connect to ${spi.name} failed', e);
         return;
       }
 
-      _setServerState(s, ServerState.connected);
+      _setServerState(s, ServerConn.connected);
 
       // Write script to server
       // by ssh
+      final scriptRaw = ShellFunc.allScript(spi.custom?.cmds).uint8List;
       try {
-        await _writeInstallerScript(s);
+        await s.client?.runForOutput(
+          ShellFunc.installShellCmd,
+          action: (session) async {
+            session.stdin.add(scriptRaw);
+            session.stdin.close();
+          },
+        );
       } on SSHAuthAbortError catch (e) {
         TryLimiter.inc(sid);
-        s.status.err = e.toString();
-        _setServerState(s, ServerState.failed);
+        s.status.err = SSHErr(type: SSHErrType.auth, message: e.toString());
+        _setServerState(s, ServerConn.failed);
+        return;
+      } on SSHAuthFailError catch (e) {
+        TryLimiter.inc(sid);
+        s.status.err = SSHErr(type: SSHErrType.auth, message: e.toString());
+        _setServerState(s, ServerConn.failed);
         return;
       } catch (e) {
         Loggers.app.warning('Write script to ${spi.name} by shell', e);
@@ -346,7 +348,7 @@ class ServerProvider extends ChangeNotifier {
         final localPath = joinPath(await Paths.doc, 'install.sh');
         final file = File(localPath);
         try {
-          file.writeAsString(ShellFunc.allScript);
+          file.writeAsBytes(scriptRaw);
           final completer = Completer();
           final homePath = (await s.client?.run('echo \$HOME').string)?.trim();
           if (homePath == null || homePath.isEmpty) {
@@ -362,11 +364,14 @@ class ServerProvider extends ChangeNotifier {
           if (err != null) {
             throw err;
           }
-        } catch (e) {
+        } catch (ee) {
           TryLimiter.inc(sid);
-          s.status.err = e.toString();
-          _setServerState(s, ServerState.failed);
-          Loggers.app.warning('Write script to ${spi.name} by sftp', e);
+          s.status.err = SSHErr(
+            type: SSHErrType.writeScript,
+            message: '$e\n\n$ee',
+          );
+          _setServerState(s, ServerConn.failed);
+          Loggers.app.warning('Write script to ${spi.name} by sftp', ee);
           return;
         } finally {
           if (await file.exists()) await file.delete();
@@ -374,11 +379,13 @@ class ServerProvider extends ChangeNotifier {
       }
     }
 
+    if (s.conn == ServerConn.connecting) return;
+
     /// Keep [finished] state, or the UI will be refreshed to [loading] state
     /// instead of the '$Temp | $Uptime'.
     /// eg: '32C | 7 days'
-    if (s.state != ServerState.finished) {
-      _setServerState(s, ServerState.loading);
+    if (s.conn != ServerConn.finished) {
+      _setServerState(s, ServerConn.loading);
     }
 
     List<String>? segments;
@@ -386,27 +393,46 @@ class ServerProvider extends ChangeNotifier {
 
     try {
       raw = await s.client?.run(ShellFunc.status.exec).string;
-      segments = raw?.split(seperator).map((e) => e.trim()).toList();
+      segments = raw?.split(ShellFunc.seperator).map((e) => e.trim()).toList();
       if (raw == null || raw.isEmpty || segments == null || segments.isEmpty) {
+        if (Stores.setting.keepStatusWhenErr.fetch()) {
+          // Keep previous server status when err occurs
+          if (s.conn != ServerConn.failed && s.status.more.isNotEmpty) {
+            return;
+          }
+        }
         TryLimiter.inc(sid);
-        s.status.err = 'Seperate segments failed, raw:\n$raw';
-        _setServerState(s, ServerState.failed);
+        s.status.err = SSHErr(
+          type: SSHErrType.segements,
+          message: 'Seperate segments failed, raw:\n$raw',
+        );
+        _setServerState(s, ServerConn.failed);
         return;
       }
     } catch (e) {
       TryLimiter.inc(sid);
-      s.status.err = e.toString();
-      _setServerState(s, ServerState.failed);
+      s.status.err = SSHErr(type: SSHErrType.getStatus, message: e.toString());
+      _setServerState(s, ServerConn.failed);
       Loggers.app.warning('Get status from ${spi.name} failed', e);
       return;
     }
 
     final systemType = SystemType.parse(segments[0]);
-    if (!systemType.isSegmentsLenMatch(segments.length)) {
+    final customCmdLen = spi.custom?.cmds?.length ?? 0;
+    if (!systemType.isSegmentsLenMatch(segments.length - customCmdLen)) {
       TryLimiter.inc(sid);
-      s.status.err =
-          'Segments not match: expect ${systemType.segmentsLen}, got ${segments.length}';
-      _setServerState(s, ServerState.failed);
+      if (raw.contains('Could not chdir to home directory /var/services/')) {
+        s.status.err = SSHErr(type: SSHErrType.chdir, message: raw);
+        _setServerState(s, ServerConn.failed);
+        return;
+      }
+      final expected = systemType.segmentsLen;
+      final actual = segments.length;
+      s.status.err = SSHErr(
+        type: SSHErrType.segements,
+        message: 'Segments: expect $expected, got $actual, raw:\n\n$raw',
+      );
+      _setServerState(s, ServerConn.failed);
       return;
     }
     s.status.system = systemType;
@@ -416,6 +442,7 @@ class ServerProvider extends ChangeNotifier {
         ss: s.status,
         segments: segments,
         system: systemType,
+        customCmds: spi.custom?.cmds ?? {},
       );
       s.status = await Computer.shared.start(
         getStatus,
@@ -424,14 +451,17 @@ class ServerProvider extends ChangeNotifier {
       );
     } catch (e, trace) {
       TryLimiter.inc(sid);
-      s.status.err = 'Parse failed: $e\n\n$raw';
-      _setServerState(s, ServerState.failed);
+      s.status.err = SSHErr(
+        type: SSHErrType.getStatus,
+        message: 'Parse failed: $e\n\n$raw',
+      );
+      _setServerState(s, ServerConn.failed);
       Loggers.parse.warning('Server status', e, trace);
       return;
     }
 
     /// Call this every time for setting [Server.isBusy] to false
-    _setServerState(s, ServerState.finished);
+    _setServerState(s, ServerConn.finished);
     // reset try times only after prepared successfully
     TryLimiter.reset(sid);
   }

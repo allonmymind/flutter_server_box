@@ -9,7 +9,7 @@ import 'package:toolbox/data/res/build_data.dart';
 import 'package:toolbox/data/res/color.dart';
 import 'package:toolbox/data/res/rebuild.dart';
 import 'package:toolbox/data/res/store.dart';
-import 'package:toolbox/view/page/home.dart';
+import 'package:toolbox/view/page/home/home.dart';
 
 class MyApp extends StatelessWidget {
   const MyApp({super.key});
@@ -75,7 +75,13 @@ class MyApp extends StatelessWidget {
       themeMode: themeMode,
       theme: light,
       darkTheme: tMode < 3 ? dark : _getAmoledTheme(dark),
-      home: const HomePage(),
+      home: Stores.setting.fullScreen.fetch()
+          ? OrientationBuilder(
+              builder: (_, ori) {
+                return HomePage(fullScreen: ori == Orientation.landscape);
+              },
+            )
+          : const HomePage(),
     );
   }
 }

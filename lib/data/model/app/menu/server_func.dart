@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:hive_flutter/hive_flutter.dart';
+import 'package:icons_plus/icons_plus.dart';
 import 'package:toolbox/core/extension/context/locale.dart';
 
 part 'server_func.g.dart';
@@ -20,16 +21,27 @@ enum ServerFuncBtn {
   snippet,
   @HiveField(6)
   iperf,
+  // @HiveField(7)
+  // pve,
   ;
 
-  IconData get icon => switch (this) {
-        sftp => Icons.insert_drive_file,
-        snippet => Icons.code,
-        pkg => Icons.system_security_update,
-        container => Icons.view_agenda,
-        process => Icons.list_alt_outlined,
-        terminal => Icons.terminal,
-        iperf => Icons.speed,
+  static final defaultIdxs = [
+    terminal,
+    sftp,
+    container,
+    process,
+    pkg,
+    snippet,
+  ].map((e) => e.index).toList();
+
+  Icon icon([double? sizeDiff]) => switch (this) {
+        sftp => Icon(Icons.insert_drive_file, size: 15 + (sizeDiff ?? 0)),
+        snippet => Icon(Icons.code, size: 15 + (sizeDiff ?? 0)),
+        pkg => Icon(Icons.system_security_update, size: 15 + (sizeDiff ?? 0)),
+        container => Icon(FontAwesome.docker_brand, size: 14 + (sizeDiff ?? 0)),
+        process => Icon(Icons.list_alt_outlined, size: 15 + (sizeDiff ?? 0)),
+        terminal => Icon(Icons.terminal, size: 15 + (sizeDiff ?? 0)),
+        iperf => Icon(Icons.speed, size: 15 + (sizeDiff ?? 0)),
       };
 
   String get toStr => switch (this) {
@@ -41,8 +53,4 @@ enum ServerFuncBtn {
         terminal => l10n.terminal,
         iperf => 'iperf',
       };
-
-  int toJson() => index;
-
-  static ServerFuncBtn fromJson(int i) => values[i];
 }

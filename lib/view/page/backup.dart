@@ -1,7 +1,9 @@
+import 'dart:convert';
 import 'dart:io';
 
 import 'package:computer/computer.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_markdown/flutter_markdown.dart';
 import 'package:toolbox/core/extension/context/common.dart';
 import 'package:toolbox/core/extension/context/dialog.dart';
 import 'package:toolbox/core/extension/context/locale.dart';
@@ -13,14 +15,17 @@ import 'package:toolbox/core/utils/platform/base.dart';
 import 'package:toolbox/core/utils/share.dart';
 import 'package:toolbox/core/utils/sync/webdav.dart';
 import 'package:toolbox/data/model/app/backup.dart';
+import 'package:toolbox/data/model/server/server_private_info.dart';
 import 'package:toolbox/data/res/logger.dart';
 import 'package:toolbox/data/res/path.dart';
 import 'package:toolbox/data/res/store.dart';
 import 'package:toolbox/data/res/ui.dart';
+import 'package:toolbox/data/res/url.dart';
 import 'package:toolbox/view/widget/appbar.dart';
 import 'package:toolbox/view/widget/expand_tile.dart';
 import 'package:toolbox/view/widget/cardx.dart';
 import 'package:toolbox/view/widget/input_field.dart';
+import 'package:toolbox/view/widget/markdown.dart';
 import 'package:toolbox/view/widget/store_switch.dart';
 
 class BackupPage extends StatelessWidget {
@@ -48,6 +53,7 @@ class BackupPage extends StatelessWidget {
         _buildWebdav(context),
         _buildFile(context),
         _buildClipboard(context),
+        _buildBulkImportServers(context),
       ],
     );
   }
@@ -214,6 +220,22 @@ class BackupPage extends StatelessWidget {
     );
   }
 
+  Widget _buildBulkImportServers(BuildContext context) {
+    return CardX(
+      child: ListTile(
+        title: Text(l10n.bulkImportServers),
+        subtitle: SimpleMarkdown(
+          data: l10n.bulkImportServersTip(Urls.appWiki),
+          styleSheet: MarkdownStyleSheet(
+            p: UIs.textGrey,
+          ),
+        ),
+        leading: const Icon(Icons.import_export),
+        onTap: () => _onBulkImportServers(context),
+      ),
+    );
+  }
+
   Future<void> _onTapFileRestore(BuildContext context) async {
     final path = await pickOneFile();
     if (path == null) return;
@@ -231,9 +253,9 @@ class BackupPage extends StatelessWidget {
     }
 
     try {
-      context.showLoadingDialog();
-      final backup =
-          await Computer.shared.start(Backup.fromJsonString, text.trim());
+      final backup = await context.showLoadingDialog(
+        fn: () => Computer.shared.start(Backup.fromJsonString, text.trim()),
+      );
       if (backupFormatVersion != backup.version) {
         context.showSnackBar(l10n.backupVersionNotMatch);
         return;
@@ -261,8 +283,6 @@ class BackupPage extends StatelessWidget {
     } catch (e, trace) {
       Loggers.app.warning('Import backup failed', e, trace);
       context.showSnackBar(e.toString());
-    } finally {
-      context.pop();
     }
   }
 
@@ -388,9 +408,10 @@ class BackupPage extends StatelessWidget {
     }
 
     try {
-      context.showLoadingDialog();
-      final backup =
-          await Computer.shared.start(Backup.fromJsonString, text.trim());
+      final backup = await context.showLoadingDialog(
+        fn: () => Computer.shared.start(Backup.fromJsonString, text.trim()),
+      );
+
       if (backupFormatVersion != backup.version) {
         context.showSnackBar(l10n.backupVersionNotMatch);
         return;
@@ -418,8 +439,63 @@ class BackupPage extends StatelessWidget {
     } catch (e, trace) {
       Loggers.app.warning('Import backup failed', e, trace);
       context.showSnackBar(e.toString());
-    } finally {
-      context.pop();
+    }
+  }
+
+  void _onBulkImportServers(BuildContext context) async {
+    final path = await pickOneFile();
+    if (path == null) return;
+
+    final file = File(path);
+    if (!await file.exists()) {
+      context.showRoundDialog(
+        title: Text(l10n.error),
+        child: Text(l10n.fileNotExist(path)),
+      );
+      return;
+    }
+
+    final text = await file.readAsString();
+    if (text.isEmpty) {
+      context.showRoundDialog(
+        title: Text(l10n.error),
+        child: Text(l10n.fieldMustNotEmpty),
+      );
+      return;
+    }
+
+    try {
+      final spis = await context.showLoadingDialog(
+        fn: () => Computer.shared.start((val) {
+          final list = json.decode(val) as List;
+          return list.map((e) => ServerPrivateInfo.fromJson(e)).toList();
+        }, text.trim()),
+      );
+      final sure = await context.showRoundDialog<bool>(
+        title: Text(l10n.import),
+        child: Text(l10n.askContinue('${spis.length} ${l10n.server}')),
+        actions: [
+          TextButton(
+            onPressed: () => context.pop(true),
+            child: Text(l10n.ok),
+          ),
+        ],
+      );
+      if (sure == true) {
+        await context.showLoadingDialog(
+          fn: () async {
+            for (var spi in spis) {
+              Stores.server.put(spi);
+            }
+          },
+        );
+        context.showSnackBar(l10n.success);
+      }
+    } catch (e) {
+      context.showRoundDialog(
+        title: Text(l10n.error),
+        child: Text(e.toString()),
+      );
     }
   }
 }

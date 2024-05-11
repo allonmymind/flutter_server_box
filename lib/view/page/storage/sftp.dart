@@ -17,6 +17,8 @@ import 'package:toolbox/data/res/provider.dart';
 import 'package:toolbox/data/res/store.dart';
 import 'package:toolbox/view/widget/omit_start_text.dart';
 import 'package:toolbox/view/widget/cardx.dart';
+import 'package:toolbox/view/widget/search.dart';
+import 'package:toolbox/view/widget/val_builder.dart';
 
 import '../../../core/extension/numx.dart';
 import '../../../core/route.dart';
@@ -72,9 +74,9 @@ class _SftpPageState extends State<SftpPage> with AfterLayoutMixin {
             icon: const Icon(Icons.downloading),
             onPressed: () => AppRoute.sftpMission().go(context),
           ),
-          ValueListenableBuilder(
-            valueListenable: _sortOption,
-            builder: (context, value, child) {
+          ValBuilder(
+            listenable: _sortOption,
+            builder: (value) {
               return PopupMenuButton<_SortType>(
                 icon: const Icon(Icons.sort),
                 itemBuilder: (context) {
@@ -128,8 +130,10 @@ class _SftpPageState extends State<SftpPage> with AfterLayoutMixin {
     final children = widget.isSelect
         ? [
             IconButton(
-                onPressed: () => context.pop(_status.path?.path),
-                icon: const Icon(Icons.done))
+              onPressed: () => context.pop(_status.path?.path),
+              icon: const Icon(Icons.done),
+            ),
+            _buildSearchBtn(),
           ]
         : [
             IconButton(
@@ -142,6 +146,7 @@ class _SftpPageState extends State<SftpPage> with AfterLayoutMixin {
             _buildAddBtn(),
             _buildGotoBtn(),
             _buildUploadBtn(),
+            _buildSearchBtn(),
           ];
     if (isDesktop) children.add(_buildRefreshBtn());
     return SafeArea(
@@ -158,6 +163,28 @@ class _SftpPageState extends State<SftpPage> with AfterLayoutMixin {
           ],
         ),
       ),
+    );
+  }
+
+  Widget _buildSearchBtn() {
+    return IconButton(
+      onPressed: () async {
+        Stream<SftpName> find(String query) async* {
+          final fs = _status.files;
+          if (fs == null) return;
+          for (final f in fs) {
+            if (f.filename.contains(query)) yield f;
+          }
+        }
+
+        final search = SearchPage(
+          padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 3),
+          future: (q) => find(q).toList(),
+          builder: (ctx, e) => _buildItem(e, beforeTap: () => ctx.pop()),
+        );
+        await showSearch(context: context, delegate: search);
+      },
+      icon: const Icon(Icons.search),
     );
   }
 
@@ -294,11 +321,13 @@ class _SftpPageState extends State<SftpPage> with AfterLayoutMixin {
     return RefreshIndicator(
       child: FadeIn(
         key: Key(widget.spi.name + _status.path!.path),
-        child: ValueListenableBuilder(
-          valueListenable: _sortOption,
-          builder: (_, sortOption, __) {
-            final files = sortOption.sortBy
-                .sort(_status.files!, reversed: sortOption.reversed);
+        child: ValBuilder(
+          listenable: _sortOption,
+          builder: (sortOption) {
+            final files = sortOption.sortBy.sort(
+              _status.files!,
+              reversed: sortOption.reversed,
+            );
             return ListView.builder(
               itemCount: files.length,
               padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 3),
@@ -311,7 +340,7 @@ class _SftpPageState extends State<SftpPage> with AfterLayoutMixin {
     );
   }
 
-  Widget _buildItem(SftpName file) {
+  Widget _buildItem(SftpName file, {VoidCallback? beforeTap}) {
     final isDir = file.attr.isDirectory;
     final trailing = Text(
       '${_getTime(file.attr.modifyTime)}\n${file.attr.mode?.str ?? ''}',
@@ -330,6 +359,7 @@ class _SftpPageState extends State<SftpPage> with AfterLayoutMixin {
                 style: UIs.textGrey,
               ),
         onTap: () {
+          beforeTap?.call();
           if (isDir) {
             _status.path?.update(file.filename);
             _listDir();
@@ -337,7 +367,10 @@ class _SftpPageState extends State<SftpPage> with AfterLayoutMixin {
             _onItemPress(file, true);
           }
         },
-        onLongPress: () => _onItemPress(file, !isDir),
+        onLongPress: () {
+          beforeTap?.call();
+          _onItemPress(file, !isDir);
+        },
       ),
     );
   }
@@ -406,9 +439,7 @@ class _SftpPageState extends State<SftpPage> with AfterLayoutMixin {
       SftpReqType.download,
     );
     Pros.sftp.add(req, completer: completer);
-    context.showLoadingDialog();
-    await completer.future;
-    context.pop();
+    await context.showLoadingDialog(fn: () => completer.future);
 
     final result = await AppRoute.editor(path: localPath).go<bool>(context);
     if (result != null && result) {
@@ -471,19 +502,18 @@ class _SftpPageState extends State<SftpPage> with AfterLayoutMixin {
         TextButton(
           onPressed: () async {
             context.pop();
-            context.showLoadingDialog();
-            final remotePath = _getRemotePath(file);
             try {
-              if (useRmr) {
-                await _client!.run('rm -r "$remotePath"');
-              } else if (file.attr.isDirectory) {
-                await _status.client!.rmdir(remotePath);
-              } else {
-                await _status.client!.remove(remotePath);
-              }
-              context.pop();
+              await context.showLoadingDialog(fn: () async {
+                final remotePath = _getRemotePath(file);
+                if (useRmr) {
+                  await _client!.run('rm -r "$remotePath"');
+                } else if (file.attr.isDirectory) {
+                  await _status.client!.rmdir(remotePath);
+                } else {
+                  await _status.client!.remove(remotePath);
+                }
+              });
             } catch (e) {
-              context.pop();
               context.showRoundDialog(
                 title: Text(l10n.error),
                 child: Text(e.toString()),
@@ -574,9 +604,8 @@ class _SftpPageState extends State<SftpPage> with AfterLayoutMixin {
             }
             context.pop();
             final path = '${_status.path!.path}/${textController.text}';
-            context.showLoadingDialog();
-            await _client!.run('touch "$path"');
-            context.pop();
+            await context.showLoadingDialog(
+                fn: () => _client!.run('touch "$path"'));
             _listDir();
           },
           child: Text(l10n.ok, style: UIs.textRed),
@@ -640,9 +669,7 @@ class _SftpPageState extends State<SftpPage> with AfterLayoutMixin {
       );
       return;
     }
-    context.showLoadingDialog();
-    await _client?.run(cmd);
-    context.pop();
+    await context.showLoadingDialog(fn: () async => _client?.run(cmd));
     _listDir();
   }
 
@@ -657,67 +684,65 @@ class _SftpPageState extends State<SftpPage> with AfterLayoutMixin {
 
   /// Only return true if the path is changed
   Future<bool> _listDir() async {
-    // Allow dismiss, because may this op will take a long time
-    context.showLoadingDialog(barrierDismiss: true);
-    if (_status.client == null) {
-      final sftpc = await _client?.sftp();
-      _status.client = sftpc;
-    }
-    try {
-      final listPath = _status.path?.path ?? '/';
-      final fs = await _status.client?.listdir(listPath);
-      if (fs == null) {
-        return false;
-      }
-      fs.sort((a, b) => a.filename.compareTo(b.filename));
+    return context.showLoadingDialog(
+      fn: () async {
+        _status.client ??= await _client?.sftp();
+        try {
+          final listPath = _status.path?.path ?? '/';
+          final fs = await _status.client?.listdir(listPath);
+          if (fs == null) {
+            return false;
+          }
+          fs.sort((a, b) => a.filename.compareTo(b.filename));
 
-      /// Issue #97
-      /// In order to compatible with the Synology NAS
-      /// which not has '.' and '..' in listdir
-      if (fs.isNotEmpty && fs.first.filename == '.') {
-        fs.removeAt(0);
-      }
+          /// Issue #97
+          /// In order to compatible with the Synology NAS
+          /// which not has '.' and '..' in listdir
+          if (fs.isNotEmpty && fs.firstOrNull?.filename == '.') {
+            fs.removeAt(0);
+          }
 
-      /// Issue #96
-      /// Due to [WillPopScope] added in this page
-      /// There is no need to keep '..' folder in listdir
-      /// So remove it
-      if (fs.isNotEmpty && fs.first.filename == '..') {
-        fs.removeAt(0);
-      }
-      if (mounted) {
-        setState(() {
-          _status.files = fs;
-        });
-        context.pop();
+          /// Issue #96
+          /// Due to [WillPopScope] added in this page
+          /// There is no need to keep '..' folder in listdir
+          /// So remove it
+          if (fs.isNotEmpty && fs.firstOrNull?.filename == '..') {
+            fs.removeAt(0);
+          }
+          if (mounted) {
+            setState(() {
+              _status.files = fs;
+            });
 
-        // Only update history when success
-        if (Stores.setting.sftpOpenLastPath.fetch()) {
-          Stores.history.sftpLastPath.put(widget.spi.id, listPath);
+            // Only update history when success
+            if (Stores.setting.sftpOpenLastPath.fetch()) {
+              Stores.history.sftpLastPath.put(widget.spi.id, listPath);
+            }
+
+            return true;
+          }
+          return false;
+        } catch (e, trace) {
+          Loggers.app.warning('List dir failed', e, trace);
+          await _backward();
+          Future.delayed(
+            const Duration(milliseconds: 177),
+            () => context.showRoundDialog(
+              title: Text(l10n.error),
+              child: Text(e.toString()),
+              actions: [
+                TextButton(
+                  onPressed: () => context.pop(),
+                  child: Text(l10n.ok),
+                )
+              ],
+            ),
+          );
+          return false;
         }
-
-        return true;
-      }
-      return false;
-    } catch (e, trace) {
-      context.pop();
-      Loggers.app.warning('List dir failed', e, trace);
-      await _backward();
-      Future.delayed(
-        const Duration(milliseconds: 177),
-        () => context.showRoundDialog(
-          title: Text(l10n.error),
-          child: Text(e.toString()),
-          actions: [
-            TextButton(
-              onPressed: () => context.pop(),
-              child: Text(l10n.ok),
-            )
-          ],
-        ),
-      );
-      return false;
-    }
+      },
+      barrierDismiss: true,
+    );
   }
 
   Future<void> _backward() async {

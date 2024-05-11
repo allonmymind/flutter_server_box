@@ -2,10 +2,10 @@ import 'package:flutter/material.dart';
 import 'package:toolbox/core/extension/context/common.dart';
 import 'package:toolbox/core/extension/context/dialog.dart';
 import 'package:toolbox/core/extension/context/locale.dart';
-import 'package:toolbox/core/extension/widget.dart';
 import 'package:toolbox/data/res/ui.dart';
 import 'package:toolbox/view/widget/input_field.dart';
 import 'package:toolbox/view/widget/cardx.dart';
+import 'package:toolbox/view/widget/val_builder.dart';
 
 import '../../data/res/color.dart';
 
@@ -60,12 +60,14 @@ class _TagEditorState extends State<TagEditor> {
     return CardX(
       child: ListTile(
         // Align the place of TextField.prefixIcon
-        leading: const Icon(Icons.tag).padding(const EdgeInsets.only(left: 6)),
+        leading: const Padding(
+          padding: EdgeInsets.only(left: 10),
+          child: Icon(Icons.tag),
+        ),
         title: _buildTags(widget.tags),
-        trailing: const Icon(Icons.add).tap(
-          onTap: () {
-            _showAddTagDialog();
-          },
+        trailing: IconButton(
+          icon: const Icon(Icons.add),
+          onPressed: () => _showAddTagDialog(),
         ),
       ),
     );
@@ -180,43 +182,46 @@ class _TagEditorState extends State<TagEditor> {
 }
 
 class TagSwitcher extends StatelessWidget implements PreferredSizeWidget {
-  final List<String> tags;
+  final ValueNotifier<List<String>> tags;
   final double width;
   final void Function(String?) onTagChanged;
   final String? initTag;
-  final String all;
 
   const TagSwitcher({
     super.key,
     required this.tags,
     required this.width,
     required this.onTagChanged,
-    required this.all,
     this.initTag,
   });
 
   @override
   Widget build(BuildContext context) {
-    if (tags.isEmpty) return UIs.placeholder;
-    final items = <String?>[null, ...tags];
-    return Container(
-      height: _kTagBtnHeight,
-      width: width,
-      padding: const EdgeInsets.symmetric(horizontal: 7),
-      alignment: Alignment.center,
-      color: Colors.transparent,
-      child: ListView.builder(
-        scrollDirection: Axis.horizontal,
-        itemBuilder: (context, index) {
-          final item = items[index];
-          return TagBtn(
-            content: item == null ? all : '#$item',
-            isEnable: initTag == item,
-            onTap: () => onTagChanged(item),
-          );
-        },
-        itemCount: items.length,
-      ),
+    return ValBuilder(
+      listenable: tags,
+      builder: (vals) {
+        if (vals.isEmpty) return UIs.placeholder;
+        final items = <String?>[null, ...vals];
+        return Container(
+          height: _kTagBtnHeight,
+          width: width,
+          padding: const EdgeInsets.symmetric(horizontal: 7),
+          alignment: Alignment.center,
+          color: Colors.transparent,
+          child: ListView.builder(
+            scrollDirection: Axis.horizontal,
+            itemBuilder: (context, index) {
+              final item = items[index];
+              return TagBtn(
+                content: item == null ? l10n.all : '#$item',
+                isEnable: initTag == item,
+                onTap: () => onTagChanged(item),
+              );
+            },
+            itemCount: items.length,
+          ),
+        );
+      },
     );
   }
 
@@ -235,10 +240,14 @@ Widget _wrap(
       borderRadius: const BorderRadius.all(Radius.circular(20.0)),
       child: Material(
         color: primaryColor.withAlpha(20),
-        child: child.padding(const EdgeInsets.fromLTRB(11.7, 2.7, 11.7, 0)).tap(
-              onTap: onTap,
-              onLongTap: onLongPress,
-            ),
+        child: InkWell(
+          onTap: onTap,
+          onLongPress: onLongPress,
+          child: Padding(
+            padding: const EdgeInsets.fromLTRB(11.7, 2.7, 11.7, 0),
+            child: child,
+          ),
+        ),
       ),
     ),
   );

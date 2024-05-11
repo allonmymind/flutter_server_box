@@ -21,6 +21,7 @@ var regAppleMarketVer = RegExp(r'MARKETING_VERSION = .+');
 const buildFuncs = {
   'ios': flutterBuildIOS,
   'android': flutterBuildAndroid,
+  'apk': flutterBuildAndroid,
   'mac': flutterBuildMacOS,
   'linux': flutterBuildLinux,
   'win': flutterBuildWin,
@@ -29,7 +30,7 @@ const buildFuncs = {
 int? build;
 
 Future<void> getGitCommitCount() async {
-  final result = await Process.run('git', ['log', '--oneline']);
+  final result = await Process.run('git', ['log', '--format=format:%h']);
   build = (result.stdout as String)
       .split('\n')
       .where((line) => line.isNotEmpty)
@@ -42,7 +43,7 @@ Future<int> getScriptCommitCount() async {
     exit(1);
   }
   final result =
-      await Process.run('git', ['log', '--oneline', shellScriptPath]);
+      await Process.run('git', ['log', '--format=format:%h', shellScriptPath]);
   return (result.stdout as String)
       .split('\n')
       .where((line) => line.isNotEmpty)
@@ -161,13 +162,11 @@ Future<void> flutterBuildAndroid() async {
 
 Future<void> flutterBuildLinux() async {
   await flutterBuild('linux');
-  const appDirName = '$appName.AppDir';
-  // mkdir appName.AppDir
-  await Process.run('mkdir', [appDirName]);
+  const appDirName = 'linux.AppDir';
   // cp -r build/linux/x64/release/bundle/* appName.AppDir
   await Process.run('cp', [
     '-r',
-    './build/linux/x64/release/bundle/*',
+    'build/linux/x64/release/bundle',
     appDirName,
   ]);
   // cp -r assets/app_icon.png ServerBox.AppDir
@@ -195,7 +194,7 @@ Icon=app_icon
 Type=Application
 Categories=Utility;
 ''';
-  await File('$appDirName/$appName.desktop').writeAsString(desktop);
+  await File('$appDirName/default.desktop').writeAsString(desktop);
   // Run appimagetool
   await Process.run('sh', ['-c', 'ARCH=x86_64 appimagetool $appDirName']);
 
@@ -264,6 +263,10 @@ Future<void> changeAppleVersion() async {
 }
 
 Future<void> killJava() async {
+  /// Due to the high cost of Mac memory,
+  /// terminate Java processes to free up memory.
+  /// :)
+  if (!Platform.isMacOS) return;
   final result = await Process.run('ps', ['-A']);
   final lines = (result.stdout as String).split('\n');
   for (final line in lines) {

@@ -1,15 +1,18 @@
+import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:toolbox/core/analysis.dart';
 import 'package:toolbox/data/model/server/private_key_info.dart';
 import 'package:toolbox/data/model/server/server_private_info.dart';
+import 'package:toolbox/data/res/store.dart';
 import 'package:toolbox/view/page/backup.dart';
 import 'package:toolbox/view/page/container.dart';
-import 'package:toolbox/view/page/home.dart';
+import 'package:toolbox/view/page/home/home.dart';
 import 'package:toolbox/view/page/iperf.dart';
 import 'package:toolbox/view/page/ping.dart';
 import 'package:toolbox/view/page/private_key/edit.dart';
 import 'package:toolbox/view/page/private_key/list.dart';
-import 'package:toolbox/view/page/server/detail.dart';
+import 'package:toolbox/view/page/pve.dart';
+import 'package:toolbox/view/page/server/detail/view.dart';
 import 'package:toolbox/view/page/setting/platform/android.dart';
 import 'package:toolbox/view/page/setting/platform/ios.dart';
 import 'package:toolbox/view/page/setting/seq/srv_func_seq.dart';
@@ -42,7 +45,9 @@ class AppRoute {
     Analysis.recordView(title);
     return Navigator.push<T>(
       context,
-      MaterialPageRoute(builder: (context) => page),
+      Stores.setting.cupertinoRoute.fetch()
+          ? CupertinoPageRoute(builder: (context) => page)
+          : MaterialPageRoute(builder: (context) => page),
     );
   }
 
@@ -226,5 +231,9 @@ class AppRoute {
 
   static AppRoute serverFuncBtnsOrder({Key? key}) {
     return AppRoute(ServerFuncBtnsOrderPage(key: key), 'server_func_btns_seq');
+  }
+
+  static AppRoute pve({Key? key, required ServerPrivateInfo spi}) {
+    return AppRoute(PvePage(key: key, spi: spi), 'pve');
   }
 }

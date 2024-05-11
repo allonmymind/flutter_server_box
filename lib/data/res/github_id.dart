@@ -13,7 +13,9 @@ abstract final class GithubIds {
     'calvinweb',
     'Liloupar',
     'dccif',
+    'QazCetelic',
   };
+
   static const participants = <GhId>{
     'jaychoubaby',
     'fecture',
@@ -59,5 +61,15 @@ abstract final class GithubIds {
     'KatharsisKing',
     'mervinniu',
     'L-Super',
+    'Tridays',
+    'Nebulosa-Cat',
+    'dani7959',
+    'MoMingRose',
+    'sakalakagg',
+    'cz32483490',
+    'zj1123581321',
+    'pctoolsx',
+    'pgs666',
+    'FHU-yezi',
   };
 }
