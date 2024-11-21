@@ -1,5 +1,7 @@
+import 'dart:io';
+
 import 'package:flutter_test/flutter_test.dart';
-import 'package:toolbox/data/model/server/nvdia.dart';
+import 'package:server_box/data/model/server/nvdia.dart';
 
 const _raw = '''
 <?xml version="1.0" ?>
@@ -859,5 +861,17 @@ void main() {
     expect(processes[1].memory, 34);
     expect(processes[2].pid, 16484);
     expect(processes[2].memory, 76);
+  });
+
+  test('nvidia-smi with N/A', () async {
+    final raw = await File('test/nvidia.xml').readAsString();
+    final items = NvidiaSmi.fromXml(raw);
+    expect(items.length, 4);
+  });
+
+  test('nvidia-smi 2', () async {
+    final raw = await File('test/nvidia2.xml').readAsString();
+    final items = NvidiaSmi.fromXml(raw);
+    expect(items.length, 1);
   });
 }

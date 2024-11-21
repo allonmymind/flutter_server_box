@@ -1,7 +1,9 @@
 import 'package:hive_flutter/adapters.dart';
+import 'package:json_annotation/json_annotation.dart';
 
 part 'custom.g.dart';
 
+@JsonSerializable()
 @HiveType(typeId: 7)
 final class ServerCustom {
   // @HiveField(0)
@@ -19,6 +21,14 @@ final class ServerCustom {
   @HiveField(5)
   final String? logoUrl;
 
+  /// The device name of the network interface displayed in the home server card.
+  @HiveField(6)
+  final String? netDev;
+
+  /// The directory where the script is stored.
+  @HiveField(7)
+  final String? scriptDir;
+
   const ServerCustom({
     //this.temperature,
     this.pveAddr,
@@ -26,51 +36,14 @@ final class ServerCustom {
     this.cmds,
     this.preferTempDev,
     this.logoUrl,
+    this.netDev,
+    this.scriptDir,
   });
 
-  static ServerCustom fromJson(Map<String, dynamic> json) {
-    //final temperature = json["temperature"] as String?;
-    final pveAddr = json["pveAddr"] as String?;
-    final pveIgnoreCert = json["pveIgnoreCert"] as bool;
-    final cmds = json["cmds"] as Map<String, dynamic>?;
-    final preferTempDev = json["preferTempDev"] as String?;
-    final logoUrl = json["logoUrl"] as String?;
-    return ServerCustom(
-      //temperature: temperature,
-      pveAddr: pveAddr,
-      pveIgnoreCert: pveIgnoreCert,
-      cmds: cmds?.cast<String, String>(),
-      preferTempDev: preferTempDev,
-      logoUrl: logoUrl,
-    );
-  }
+  factory ServerCustom.fromJson(Map<String, dynamic> json) =>
+      _$ServerCustomFromJson(json);
 
-  Map<String, dynamic> toJson() {
-    final json = <String, dynamic>{};
-    // if (temperature != null) {
-    //   json["temperature"] = temperature;
-    // }
-    if (pveAddr != null) {
-      json["pveAddr"] = pveAddr;
-    }
-    json["pveIgnoreCert"] = pveIgnoreCert;
-
-    if (cmds != null) {
-      json["cmds"] = cmds;
-    }
-    if (preferTempDev != null) {
-      json["preferTempDev"] = preferTempDev;
-    }
-    if (logoUrl != null) {
-      json["logoUrl"] = logoUrl;
-    }
-    return json;
-  }
-
-  @override
-  String toString() {
-    return toJson().toString();
-  }
+  Map<String, dynamic> toJson() => _$ServerCustomToJson(this);
 
   @override
   bool operator ==(Object other) {
@@ -80,7 +53,9 @@ final class ServerCustom {
         other.pveIgnoreCert == pveIgnoreCert &&
         other.cmds == cmds &&
         other.preferTempDev == preferTempDev &&
-        other.logoUrl == logoUrl;
+        other.logoUrl == logoUrl &&
+        other.netDev == netDev &&
+        other.scriptDir == scriptDir;
   }
 
   @override
@@ -90,5 +65,7 @@ final class ServerCustom {
       pveIgnoreCert.hashCode ^
       cmds.hashCode ^
       preferTempDev.hashCode ^
-      logoUrl.hashCode;
+      logoUrl.hashCode ^
+      netDev.hashCode ^
+      scriptDir.hashCode;
 }

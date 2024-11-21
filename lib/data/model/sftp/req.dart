@@ -1,19 +1,12 @@
-import 'dart:async';
-
-import 'package:toolbox/data/res/logger.dart';
-import 'package:toolbox/data/res/store.dart';
-
-import '../../../core/utils/server.dart';
-import '../server/server_private_info.dart';
-import 'worker.dart';
+part of 'worker.dart';
 
 class SftpReq {
-  final ServerPrivateInfo spi;
+  final Spi spi;
   final String remotePath;
   final String localPath;
   final SftpReqType type;
   String? privateKey;
-  ServerPrivateInfo? jumpSpi;
+  Spi? jumpSpi;
   String? jumpPrivateKey;
 
   SftpReq(
@@ -69,9 +62,8 @@ class SftpReqStatus {
   int get hashCode => id ^ super.hashCode;
 
   void dispose() {
-    // ignore: deprecated_member_use_from_same_package
-    worker.dispose();
-    completer?.complete();
+    worker._dispose();
+    completer?.complete(true);
   }
 
   void onNotify(dynamic event) {

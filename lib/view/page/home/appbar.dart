@@ -1,35 +1,26 @@
 part of 'home.dart';
 
-final class _AppBar extends CustomAppBar {
-  final ValueNotifier<int> selectIndex;
-  final ValueNotifier<bool> landscape;
+final class _AppBar extends StatelessWidget implements PreferredSizeWidget {
+  final double paddingTop;
 
-  const _AppBar({
-    required this.selectIndex,
-    required this.landscape,
-    super.title,
-    super.actions,
-    super.centerTitle,
-  });
+  const _AppBar(this.paddingTop);
 
   @override
   Widget build(BuildContext context) {
-    final placeholder = SizedBox(
-      height: CustomAppBar.barHeight ?? 0 + MediaQuery.of(context).padding.top,
+    return SizedBox(
+      height: preferredSize.height,
+      child: isIOS
+          ? const Center(child: Text(BuildData.name, style: UIs.text15Bold))
+          : null,
     );
-    return ValBuilder(
-      listenable: landscape,
-      builder: (ls) {
-        if (ls) return placeholder;
+  }
 
-        return ValBuilder(
-          listenable: selectIndex,
-          builder: (idx) {
-            if (idx == AppTab.ssh.index) return placeholder;
-            return super.build(context);
-          },
-        );
-      },
-    );
+  @override
+  Size get preferredSize {
+    final height = switch (Pfs.type) {
+      Pfs.macos => paddingTop + (CustomAppBar.sysStatusBarHeight ?? 0),
+      _ => paddingTop,
+    };
+    return Size.fromHeight(height);
   }
 }

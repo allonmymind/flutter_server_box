@@ -1,14 +1,15 @@
-import 'package:toolbox/core/persistant_store.dart';
-import 'package:toolbox/core/utils/platform/base.dart';
-import 'package:toolbox/data/model/app/menu/server_func.dart';
-import 'package:toolbox/data/model/app/server_detail_card.dart';
-import 'package:toolbox/data/model/ssh/virtual_key.dart';
+import 'package:fl_lib/fl_lib.dart';
+import 'package:server_box/data/model/app/menu/server_func.dart';
+import 'package:server_box/data/model/app/server_detail_card.dart';
+import 'package:server_box/data/model/ssh/virtual_key.dart';
 
-import '../model/app/net_view.dart';
-import '../res/default.dart';
+import 'package:server_box/data/model/app/net_view.dart';
+import 'package:server_box/data/res/default.dart';
 
 class SettingStore extends PersistentStore {
-  SettingStore() : super('setting');
+  SettingStore._() : super('setting');
+
+  static final instance = SettingStore._();
 
   // ------BEGIN------
   //
@@ -17,28 +18,16 @@ class SettingStore extends PersistentStore {
   // item in the drawer of the home page)
 
   /// Discussion #146
-  late final serverTabUseOldUI = property(
-    'serverTabUseOldUI',
-    false,
-  );
+  late final serverTabUseOldUI = property('serverTabUseOldUI', false);
 
   /// Time out for server connect and more...
-  late final timeout = property(
-    'timeOut',
-    5,
-  );
+  late final timeout = property('timeOut', 5);
 
   /// Record history of SFTP path and etc.
-  late final recordHistory = property(
-    'recordHistory',
-    true,
-  );
+  late final recordHistory = property('recordHistory', true);
 
   /// Lanch page idx
-  late final launchPage = property(
-    'launchPage',
-    Defaults.launchPageIdx,
-  );
+  // late final launchPage = property('launchPage', Defaults.launchPageIdx);
 
   /// Disk view: amount / IO
   late final serverTabPreferDiskAmount = property(
@@ -51,15 +40,10 @@ class SettingStore extends PersistentStore {
   /// Bigger for bigger font size
   /// 1.0 means 100%
   /// Warning: This may cause some UI issues
-  late final textFactor = property(
-    'textFactor',
-    1.0,
-  );
+  late final textFactor = property('textFactor', 1.0);
 
-  late final primaryColor = property(
-    'primaryColor',
-    4287106639,
-  );
+  /// The seed of color scheme
+  late final colorSeed = property('primaryColor', 4287106639);
 
   late final serverStatusUpdateInterval = property(
     'serverStatusUpdateInterval',
@@ -101,25 +85,14 @@ class SettingStore extends PersistentStore {
   late final editorFontSize = property('editorFontSize', 12.5);
 
   // Editor theme
-  late final editorTheme = property(
-    'editorTheme',
-    Defaults.editorTheme,
-  );
+  late final editorTheme = property('editorTheme', Defaults.editorTheme);
 
-  late final editorDarkTheme = property(
-    'editorDarkTheme',
-    Defaults.editorDarkTheme,
-  );
+  late final editorDarkTheme =
+      property('editorDarkTheme', Defaults.editorDarkTheme);
 
-  late final fullScreen = property(
-    'fullScreen',
-    false,
-  );
+  late final fullScreen = property('fullScreen', false);
 
-  late final fullScreenJitter = property(
-    'fullScreenJitter',
-    true,
-  );
+  late final fullScreenJitter = property('fullScreenJitter', true);
 
   // late final fullScreenRotateQuarter = property(
   //   'fullScreenRotateQuarter',
@@ -133,56 +106,29 @@ class SettingStore extends PersistentStore {
 
   late final sshVirtKeys = listProperty(
     'sshVirtKeys',
-    VirtKey.defaultOrder.map((e) => e.index).toList(),
+    VirtKeyX.defaultOrder.map((e) => e.index).toList(),
   );
 
-  late final netViewType = property(
-    'netViewType',
-    NetViewType.speed,
-  );
+  late final netViewType = property('netViewType', NetViewType.speed);
 
   // Only valid on iOS
-  late final autoUpdateHomeWidget = property(
-    'autoUpdateHomeWidget',
-    isIOS,
-  );
+  late final autoUpdateHomeWidget = property('autoUpdateHomeWidget', isIOS);
 
-  late final autoCheckAppUpdate = property(
-    'autoCheckAppUpdate',
-    true,
-  );
+  late final autoCheckAppUpdate = property('autoCheckAppUpdate', true);
 
   /// Display server tab function buttons on the bottom of each server card if [true]
   ///
   /// Otherwise, display them on the top of server detail page
-  late final moveOutServerTabFuncBtns = property(
-    'moveOutServerTabFuncBtns',
-    true,
-  );
+  late final moveServerFuncs = property('moveOutServerTabFuncBtns', false);
 
   /// Whether use `rm -r` to delete directory on SFTP
-  late final sftpRmrDir = property(
-    'sftpRmrDir',
-    false,
-  );
+  late final sftpRmrDir = property('sftpRmrDir', false);
 
   /// Whether use system's primary color as the app's primary color
-  late final useSystemPrimaryColor = property(
-    'useSystemPrimaryColor',
-    false,
-  );
-
-  /// Only valid on iOS and macOS
-  late final icloudSync = property(
-    'icloudSync',
-    false,
-  );
+  late final useSystemPrimaryColor = property('useSystemPrimaryColor', false);
 
   /// Only valid on iOS / Android / Windows
-  late final useBioAuth = property(
-    'useBioAuth',
-    false,
-  );
+  late final useBioAuth = property('useBioAuth', false);
 
   /// The performance of highlight is bad
   late final editorHighlight = property('editorHighlight', true);
@@ -195,12 +141,6 @@ class SettingStore extends PersistentStore {
 
   /// Show tip of suspend
   late final showSuspendTip = property('showSuspendTip', true);
-
-  /// Webdav sync
-  late final webdavSync = property('webdavSync', false);
-  late final webdavUrl = property('webdavUrl', '', updateLastModified: false);
-  late final webdavUser = property('webdavUser', '', updateLastModified: false);
-  late final webdavPwd = property('webdavPwd', '', updateLastModified: false);
 
   /// Whether collapse UI items by default
   late final collapseUIDefault = property('collapseUIDefault', true);
@@ -233,7 +173,7 @@ class SettingStore extends PersistentStore {
 
   /// Ignore local network device (eg: br-xxx, ovs-system...)
   /// when building traffic view on server tab
-  late final ignoreLocalNet = property('ignoreLocalNet', true);
+  //late final ignoreLocalNet = property('ignoreLocalNet', true);
 
   /// Remerber pwd in memory
   /// Used for [DialogX.showPwdDialog]
@@ -245,7 +185,7 @@ class SettingStore extends PersistentStore {
 
   /// Compatiablity for Chinese Android.
   /// Set it to true, if you use Safe Keyboard on Chinese Android
-  late final cnKeyboardComp = property('cnKeyboardComp', false);
+  // late final cnKeyboardComp = property('cnKeyboardComp', false);
 
   late final lastVer = property('lastVer', 0);
 
@@ -266,13 +206,28 @@ class SettingStore extends PersistentStore {
 
   late final horizonVirtKey = property('horizonVirtKey', false);
 
-  late final collectUsage = property('collectUsage', true);
-
   /// general wake lock
   late final generalWakeLock = property('generalWakeLock', false);
 
   /// ssh page
   late final sshWakeLock = property('sshWakeLock', true);
+
+  /// fmt: https://example.com/{DIST}-{BRIGHT}.png
+  late final serverLogoUrl = property('serverLogoUrl', '');
+
+  late final betaTest = property('betaTest', false);
+
+  /// If it's empty, skip change window size.
+  /// Format: {width}x{height}
+  late final windowSize = property('windowSize', '');
+
+  late final introVer = property('introVer', 0);
+
+  late final letterCache = property('letterCache', false);
+
+  /// Set it to `$EDITOR`, `vim` and etc. to use remote system editor in SSH terminal.
+  /// Set it empty to use local editor GUI.
+  late final sftpEditor = property('sftpEditor', '');
 
   // Never show these settings for users
   //

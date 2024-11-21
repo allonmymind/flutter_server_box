@@ -1,31 +1,23 @@
 import 'dart:async';
 
+import 'package:fl_lib/fl_lib.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import 'package:toolbox/core/extension/context/common.dart';
-import 'package:toolbox/core/extension/context/dialog.dart';
-import 'package:toolbox/core/extension/context/locale.dart';
-import 'package:toolbox/core/extension/context/snackbar.dart';
-import 'package:toolbox/core/extension/stringx.dart';
-import 'package:toolbox/core/route.dart';
-import 'package:toolbox/data/model/app/menu/container.dart';
-import 'package:toolbox/data/model/container/image.dart';
-import 'package:toolbox/data/model/container/type.dart';
-import 'package:toolbox/data/res/store.dart';
-import 'package:toolbox/view/widget/expand_tile.dart';
-import 'package:toolbox/view/widget/input_field.dart';
+import 'package:server_box/core/extension/context/locale.dart';
+import 'package:server_box/core/route.dart';
+import 'package:server_box/data/model/app/menu/base.dart';
+import 'package:server_box/data/model/app/menu/container.dart';
+import 'package:server_box/data/model/container/image.dart';
+import 'package:server_box/data/model/container/type.dart';
+import 'package:server_box/data/res/store.dart';
 
-import '../../data/model/container/ps.dart';
-import '../../data/model/server/server_private_info.dart';
-import '../../data/provider/container.dart';
-import '../../data/res/ui.dart';
-import '../widget/appbar.dart';
-import '../widget/popup_menu.dart';
-import '../widget/cardx.dart';
-import '../widget/two_line_text.dart';
+import 'package:server_box/data/model/container/ps.dart';
+import 'package:server_box/data/model/server/server_private_info.dart';
+import 'package:server_box/data/provider/container.dart';
+import 'package:server_box/view/widget/two_line_text.dart';
 
 class ContainerPage extends StatefulWidget {
-  final ServerPrivateInfo spi;
+  final Spi spi;
   const ContainerPage({required this.spi, super.key});
 
   @override
@@ -35,7 +27,7 @@ class ContainerPage extends StatefulWidget {
 class _ContainerPageState extends State<ContainerPage> {
   final _textController = TextEditingController();
   late final _container = ContainerProvider(
-    client: widget.spi.server?.client,
+    client: widget.spi.server?.value.client,
     userName: widget.spi.user,
     hostId: widget.spi.id,
     context: context,
@@ -46,6 +38,7 @@ class _ContainerPageState extends State<ContainerPage> {
   void dispose() {
     super.dispose();
     _textController.dispose();
+    _container.dispose();
   }
 
   @override
@@ -106,7 +99,7 @@ class _ContainerPageState extends State<ContainerPage> {
             UIs.height13,
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 23),
-              child: Text(_container.error?.toString() ?? l10n.unknownError),
+              child: Text(_container.error.toString()),
             ),
             const Spacer(),
             _buildEditHost(),
@@ -214,7 +207,10 @@ class _ContainerPageState extends State<ContainerPage> {
               ],
             ),
             Text(
-              '${item.image ?? l10n.unknown} - ${item.running ? l10n.running : l10n.stopped}',
+              '${item.image ?? l10n.unknown} - ${switch (item) {
+                final PodmanPs ps => ps.running ? l10n.running : l10n.stopped,
+                final DockerPs ps => ps.state,
+              }}',
               style: UIs.text13Grey,
             ),
             _buildPsItemStats(item),
@@ -267,7 +263,9 @@ class _ContainerPageState extends State<ContainerPage> {
 
   Widget _buildMoreBtn(ContainerPs dItem) {
     return PopupMenu(
-      items: ContainerMenu.items(dItem.running).map((e) => e.widget).toList(),
+      items: ContainerMenu.items(dItem.running)
+          .map((e) => PopMenu.build(e, e.icon, e.toStr))
+          .toList(),
       onSelected: (item) => _onTapMoreBtn(item, dItem),
     );
   }
@@ -288,16 +286,13 @@ class _ContainerPageState extends State<ContainerPage> {
     if (emptyPs && emptyImgs) {
       children.add(Padding(
         padding: const EdgeInsets.fromLTRB(17, 17, 17, 0),
-        child: Text(
-          l10n.dockerEmptyRunningItems,
-          textAlign: TextAlign.center,
-        ),
+        child: SimpleMarkdown(data: l10n.dockerEmptyRunningItems),
       ));
     }
     children.add(
       TextButton(
         onPressed: _showEditHostDialog,
-        child: Text(l10n.dockerEditHost),
+        child: Text('${libL10n.edit} DOCKER_HOST'),
       ),
     );
     return CardX(
@@ -331,71 +326,68 @@ class _ContainerPageState extends State<ContainerPage> {
     final nameCtrl = TextEditingController();
     final argsCtrl = TextEditingController();
     await context.showRoundDialog(
-      title: Text(l10n.newContainer),
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Input(
-            autoFocus: true,
-            type: TextInputType.text,
-            label: l10n.image,
-            hint: 'xxx:1.1',
-            controller: imageCtrl,
-          ),
-          Input(
-            type: TextInputType.text,
-            controller: nameCtrl,
-            label: l10n.containerName,
-            hint: 'xxx',
-          ),
-          Input(
-            type: TextInputType.text,
-            controller: argsCtrl,
-            label: l10n.extraArgs,
-            hint: '-p 2222:22 -v ~/.xxx/:/xxx',
-          ),
-        ],
-      ),
-      actions: [
-        TextButton(
-          onPressed: () => context.pop(),
-          child: Text(l10n.cancel),
+        title: l10n.newContainer,
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Input(
+              autoFocus: true,
+              type: TextInputType.text,
+              label: l10n.image,
+              hint: 'xxx:1.1',
+              controller: imageCtrl,
+              suggestion: false,
+            ),
+            Input(
+              type: TextInputType.text,
+              controller: nameCtrl,
+              label: libL10n.name,
+              hint: 'xxx',
+              suggestion: false,
+            ),
+            Input(
+              type: TextInputType.text,
+              controller: argsCtrl,
+              label: l10n.extraArgs,
+              hint: '-p 2222:22 -v ~/.xxx/:/xxx',
+              suggestion: false,
+            ),
+          ],
         ),
-        TextButton(
-          onPressed: () async {
-            context.pop();
-            await _showAddCmdPreview(
-              _buildAddCmd(
-                imageCtrl.text.trim(),
-                nameCtrl.text.trim(),
-                argsCtrl.text.trim(),
-              ),
-            );
-          },
-          child: Text(l10n.ok),
-        )
-      ],
-    );
+        actions: Btn.ok(onTap: () async {
+          context.pop();
+          await _showAddCmdPreview(
+            _buildAddCmd(
+              imageCtrl.text.trim(),
+              nameCtrl.text.trim(),
+              argsCtrl.text.trim(),
+            ),
+          );
+        }).toList);
   }
 
   Future<void> _showAddCmdPreview(String cmd) async {
     await context.showRoundDialog(
-      title: Text(l10n.preview),
+      title: l10n.preview,
       child: Text(cmd),
       actions: [
         TextButton(
           onPressed: () => context.pop(),
-          child: Text(l10n.cancel),
+          child: Text(libL10n.cancel),
         ),
         TextButton(
           onPressed: () async {
             context.pop();
 
-            final result = await context.showLoadingDialog(
+            final (result, err) = await context.showLoadingDialog(
               fn: () => _container.run(cmd),
             );
-            if (result != null) {
-              context.showSnackBar(result.message ?? l10n.unknownError);
+            if (err != null || result != null) {
+              final e = result?.message ?? err?.toString();
+              context.showRoundDialog(
+                title: libL10n.error,
+                child: Text(e.toString()),
+              );
             }
           },
           child: Text(l10n.run),
@@ -422,19 +414,15 @@ class _ContainerPageState extends State<ContainerPage> {
     final host = Stores.container.fetch(id);
     final ctrl = TextEditingController(text: host);
     await context.showRoundDialog(
-      title: Text(l10n.dockerEditHost),
+      title: libL10n.edit,
       child: Input(
         maxLines: 2,
         controller: ctrl,
         onSubmitted: _onSaveDockerHost,
         hint: 'unix:///run/user/1000/docker.sock',
+        suggestion: false,
       ),
-      actions: [
-        TextButton(
-          onPressed: () => _onSaveDockerHost(ctrl.text),
-          child: Text(l10n.ok),
-        ),
-      ],
+      actions: Btn.ok(onTap: () => _onSaveDockerHost(ctrl.text)).toList,
     );
   }
 
@@ -446,24 +434,20 @@ class _ContainerPageState extends State<ContainerPage> {
 
   void _showImageRmDialog(ContainerImg e) {
     context.showRoundDialog(
-      title: Text(l10n.attention),
-      child: Text(l10n.askContinue('${l10n.delete} Image(${e.repository})')),
-      actions: [
-        TextButton(
-          onPressed: () => context.pop(),
-          child: Text(l10n.cancel),
-        ),
-        TextButton(
-          onPressed: () async {
-            context.pop();
-            final result = await _container.run('rmi ${e.id} -f');
-            if (result != null) {
-              context.showSnackBar(result.message ?? l10n.unknownError);
-            }
-          },
-          child: Text(l10n.ok, style: UIs.textRed),
-        ),
-      ],
+      title: libL10n.attention,
+      child: Text(
+        libL10n.askContinue('${libL10n.delete} Image(${e.repository})'),
+      ),
+      actions: Btn.ok(
+        onTap: () async {
+          context.pop();
+          final result = await _container.run('rmi ${e.id} -f');
+          if (result != null) {
+            context.showSnackBar(result.message ?? 'null');
+          }
+        },
+        red: true,
+      ).toList,
     );
   }
 
@@ -477,12 +461,12 @@ class _ContainerPageState extends State<ContainerPage> {
       case ContainerMenu.rm:
         var force = false;
         context.showRoundDialog(
-          title: Text(l10n.attention),
+          title: libL10n.attention,
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              Text(l10n.askContinue(
-                '${l10n.delete} Container(${dItem.name})',
+              Text(libL10n.askContinue(
+                '${libL10n.delete} Container(${dItem.name})',
               )),
               UIs.height13,
               Row(
@@ -500,69 +484,74 @@ class _ContainerPageState extends State<ContainerPage> {
               )
             ],
           ),
-          actions: [
-            TextButton(
-              onPressed: () async {
-                context.pop();
+          actions: Btn.ok(onTap: () async {
+            context.pop();
 
-                final result = await context.showLoadingDialog(
-                  fn: () => _container.delete(id, force),
-                );
-                if (result != null) {
-                  context.showRoundDialog(
-                    title: Text(l10n.error),
-                    child: Text(result.message ?? l10n.unknownError),
-                  );
-                }
-              },
-              child: Text(l10n.ok),
-            )
-          ],
+            final (result, err) = await context.showLoadingDialog(
+              fn: () => _container.delete(id, force),
+            );
+            if (err != null || result != null) {
+              final e = result?.message ?? err?.toString();
+              context.showRoundDialog(
+                title: libL10n.error,
+                child: Text(e ?? 'null'),
+              );
+            }
+          }).toList,
         );
         break;
       case ContainerMenu.start:
-        final result = await context.showLoadingDialog(
+        final (result, err) = await context.showLoadingDialog(
           fn: () => _container.start(id),
         );
-        if (result != null) {
+        if (err != null || result != null) {
+          final e = result?.message ?? err?.toString();
           context.showRoundDialog(
-            title: Text(l10n.error),
-            child: Text(result.message ?? l10n.unknownError),
+            title: libL10n.error,
+            child: Text(e ?? 'null'),
           );
         }
         break;
       case ContainerMenu.stop:
-        final result = await context.showLoadingDialog(
+        final (result, err) = await context.showLoadingDialog(
           fn: () => _container.stop(id),
         );
-        if (result != null) {
+        if (err != null || result != null) {
+          final e = result?.message ?? err?.toString();
           context.showRoundDialog(
-            title: Text(l10n.error),
-            child: Text(result.message ?? l10n.unknownError),
+            title: libL10n.error,
+            child: Text(e ?? 'null'),
           );
         }
         break;
       case ContainerMenu.restart:
-        final result = await context.showLoadingDialog(
+        final (result, err) = await context.showLoadingDialog(
           fn: () => _container.restart(id),
         );
-        if (result != null) {
+        if (err != null || result != null) {
+          final e = result?.message ?? err?.toString();
           context.showRoundDialog(
-            title: Text(l10n.error),
-            child: Text(result.message ?? l10n.unknownError),
+            title: libL10n.error,
+            child: Text(e ?? 'null'),
           );
         }
         break;
       case ContainerMenu.logs:
-        AppRoute.ssh(
+        AppRoutes.ssh(
           spi: widget.spi,
-          initCmd: 'docker logs -f --tail 100 ${dItem.id}',
+          initCmd: '${switch (_container.type) {
+            ContainerType.podman => 'podman',
+            ContainerType.docker => 'docker',
+          }} logs -f --tail 100 ${dItem.id}',
         ).go(context);
         break;
       case ContainerMenu.terminal:
-        AppRoute.ssh(
+        AppRoutes.ssh(
           spi: widget.spi,
-          initCmd: 'docker exec -it ${dItem.id} sh',
+          initCmd: '${switch (_container.type) {
+            ContainerType.podman => 'podman',
+            ContainerType.docker => 'docker',
+          }} exec -it ${dItem.id} sh',
         ).go(context);
         break;
       // case DockerMenuType.stats:

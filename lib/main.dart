@@ -3,56 +3,34 @@
 import 'dart:async';
 
 import 'package:computer/computer.dart';
+import 'package:fl_lib/fl_lib.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_displaymode/flutter_displaymode.dart';
 import 'package:hive_flutter/hive_flutter.dart';
 import 'package:logging/logging.dart';
-import 'package:provider/provider.dart';
-import 'package:shared_preferences/shared_preferences.dart';
-import 'package:toolbox/core/channel/bg_run.dart';
-import 'package:toolbox/core/utils/sync/icloud.dart';
-import 'package:toolbox/core/utils/platform/base.dart';
-import 'package:toolbox/core/utils/sync/webdav.dart';
-import 'package:toolbox/core/utils/ui.dart';
-import 'package:toolbox/data/model/app/menu/server_func.dart';
-import 'package:toolbox/data/model/app/version_related.dart';
-import 'package:toolbox/data/model/server/custom.dart';
-import 'package:toolbox/data/res/build_data.dart';
-import 'package:toolbox/data/res/logger.dart';
-import 'package:toolbox/data/res/provider.dart';
-import 'package:toolbox/data/res/store.dart';
-import 'package:window_manager/window_manager.dart';
-
-import 'app.dart';
-import 'core/analysis.dart';
-import 'data/model/app/net_view.dart';
-import 'data/model/server/private_key_info.dart';
-import 'data/model/server/server_private_info.dart';
-import 'data/model/server/snippet.dart';
-import 'data/model/ssh/virtual_key.dart';
-import 'data/provider/app.dart';
-import 'data/provider/private_key.dart';
-import 'data/provider/server.dart';
-import 'data/provider/sftp.dart';
-import 'data/provider/snippet.dart';
-import 'locator.dart';
-import 'view/widget/appbar.dart';
+import 'package:server_box/app.dart';
+import 'package:server_box/core/sync.dart';
+import 'package:server_box/data/model/app/menu/server_func.dart';
+import 'package:server_box/data/model/app/net_view.dart';
+import 'package:server_box/data/model/app/server_detail_card.dart';
+import 'package:server_box/data/model/server/custom.dart';
+import 'package:server_box/data/model/server/private_key_info.dart';
+import 'package:server_box/data/model/server/server_private_info.dart';
+import 'package:server_box/data/model/server/snippet.dart';
+import 'package:server_box/data/model/server/wol_cfg.dart';
+import 'package:server_box/data/model/ssh/virtual_key.dart';
+import 'package:server_box/data/provider/private_key.dart';
+import 'package:server_box/data/provider/server.dart';
+import 'package:server_box/data/provider/sftp.dart';
+import 'package:server_box/data/provider/snippet.dart';
+import 'package:server_box/data/res/build_data.dart';
+import 'package:server_box/data/res/store.dart';
+import 'package:server_box/data/store/no_backup.dart';
 
 Future<void> main() async {
   _runInZone(() async {
     await _initApp();
-    runApp(
-      MultiProvider(
-        providers: [
-          ChangeNotifierProvider(create: (_) => locator<AppProvider>()),
-          ChangeNotifierProvider(create: (_) => locator<ServerProvider>()),
-          ChangeNotifierProvider(create: (_) => locator<SnippetProvider>()),
-          ChangeNotifierProvider(create: (_) => locator<PrivateKeyProvider>()),
-          ChangeNotifierProvider(create: (_) => locator<SftpProvider>()),
-        ],
-        child: const MyApp(),
-      ),
-    );
+    runApp(const MyApp());
   });
 }
 
@@ -65,10 +43,7 @@ void _runInZone(void Function() body) {
 
   runZonedGuarded(
     body,
-    (obj, trace) {
-      Analysis.recordException(trace);
-      Loggers.root.warning(obj, null, trace);
-    },
+    (e, s) => print('[ZONE] $e\n$s'),
     zoneSpecification: zoneSpec,
   );
 }
@@ -76,91 +51,84 @@ void _runInZone(void Function() body) {
 Future<void> _initApp() async {
   WidgetsFlutterBinding.ensureInitialized();
 
-  // Base of all data.
-  await _initDb();
-  await setupLocator();
-  await _initDesktopWindow();
-  Computer.shared.turnOn(
-    // Plus 1 to avoid 0.
-    workersCount: (Stores.server.box.keys.length / 3).round() + 1,
+  await Paths.init(BuildData.name, bakName: 'srvbox_bak.json');
+  await _initData();
+  _setupDebug();
+
+  final windowSize = Stores.setting.windowSize;
+  final hideTitleBar = Stores.setting.hideTitleBar.fetch();
+  await SystemUIs.initDesktopWindow(
+    hideTitleBar: hideTitleBar,
+    size: windowSize.fetch().toSize(),
+    listener: WindowSizeListener(windowSize),
   );
-  _setupLogger();
-  _setupProviders();
 
-  // Load font
-  loadFontFile(Stores.setting.fontPath.fetch());
+  FontUtils.loadFrom(Stores.setting.fontPath.fetch());
 
-  if (isAndroid) {
-    // Only start service when [bgRun] is true.
-    if (Stores.setting.bgRun.fetch()) {
-      BgRunMC.startService();
-    }
-    // SharedPreferences is only used on Android for saving home widgets settings.
-    SharedPreferences.setPrefix('');
-    // try switch to highest refresh rate
-    await FlutterDisplayMode.setHighRefreshRate();
-  }
-  if (isIOS || isMacOS) {
-    if (Stores.setting.icloudSync.fetch()) ICloud.sync();
-  }
-  if (Stores.setting.webdavSync.fetch()) Webdav.sync();
-
-  _doVersionRelated();
+  _doPlatformRelated();
 }
 
-void _setupProviders() {
-  Pros.snippet.load();
-  Pros.key.load();
-}
-
-Future<void> _initDb() async {
-  // await SecureStore.init();
+Future<void> _initData() async {
   await Hive.initFlutter();
+
   // Ordered by typeId
   Hive.registerAdapter(PrivateKeyInfoAdapter()); // 1
   Hive.registerAdapter(SnippetAdapter()); // 2
-  Hive.registerAdapter(ServerPrivateInfoAdapter()); // 3
+  Hive.registerAdapter(SpiAdapter()); // 3
   Hive.registerAdapter(VirtKeyAdapter()); // 4
   Hive.registerAdapter(NetViewTypeAdapter()); // 5
   Hive.registerAdapter(ServerFuncBtnAdapter()); // 6
   Hive.registerAdapter(ServerCustomAdapter()); // 7
+  Hive.registerAdapter(WakeOnLanCfgAdapter()); // 8
+
+  await PrefStore.init(); // Call this before accessing any store
+  await Stores.init();
+
+  // DO NOT change the order of these providers.
+  PrivateKeyProvider.instance.load();
+  SnippetProvider.instance.load();
+  ServerProvider.instance.load();
+  SftpProvider.instance.load();
+
+  if (Stores.setting.betaTest.fetch()) AppUpdate.chan = AppUpdateChan.beta;
+
+  // It may effect the following logic, so await it.
+  await _doVersionRelated();
 }
 
-void _setupLogger() {
+void _setupDebug() {
   Logger.root.level = Level.ALL;
   Logger.root.onRecord.listen((record) {
-    Pros.debug.addLog(record);
+    DebugProvider.addLog(record);
     print(record);
     if (record.error != null) print(record.error);
     if (record.stackTrace != null) print(record.stackTrace);
   });
 }
 
-Future<void> _initDesktopWindow() async {
-  if (!isDesktop) return;
+void _doPlatformRelated() async {
+  if (isAndroid) {
+    // try switch to highest refresh rate
+    FlutterDisplayMode.setHighRefreshRate();
+  }
 
-  await windowManager.ensureInitialized();
-  await CustomAppBar.updateTitlebarHeight();
+  final serversCount = Stores.server.box.keys.length;
+  // Plus 1 to avoid 0.
+  Computer.shared.turnOn(workersCount: (serversCount / 3).round() + 1);
 
-  final windowOptions = WindowOptions(
-    center: true,
-    backgroundColor: Colors.transparent,
-    skipTaskbar: false,
-    titleBarStyle: CustomAppBar.drawTitlebar ? TitleBarStyle.hidden : null,
-    minimumSize: const Size(300, 300),
-  );
-  windowManager.waitUntilReadyToShow(windowOptions, () async {
-    await windowManager.show();
-    await windowManager.focus();
-  });
+  bakSync.sync();
 }
 
+// It may contains some async heavy funcs.
 Future<void> _doVersionRelated() async {
   final curVer = Stores.setting.lastVer.fetch();
   const newVer = BuildData.build;
+  // It's only the version upgrade trigger logic.
+  // How to upgrade the data is inside each own func.
   if (curVer < newVer) {
-    /// Call [Iterable.toList] to consume the lazy iterable.
-    VersionRelated.funcs.map((e) => e(newVer)).toList();
+    ServerDetailCards.autoAddNewCards(newVer);
+    ServerFuncBtn.autoAddNewFuncs(newVer);
+    NoBackupStore.instance.migrate();
     Stores.setting.lastVer.put(newVer);
   }
 }

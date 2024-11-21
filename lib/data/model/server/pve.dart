@@ -1,7 +1,5 @@
-import 'package:toolbox/core/extension/context/locale.dart';
-import 'package:toolbox/core/extension/duration.dart';
-import 'package:toolbox/core/extension/numx.dart';
-import 'package:toolbox/core/extension/order.dart';
+import 'package:fl_lib/fl_lib.dart';
+import 'package:server_box/core/extension/context/locale.dart';
 
 enum PveResType {
   lxc,
@@ -132,7 +130,7 @@ final class PveLxc extends PveResIface implements PveCtrlIface {
   @override
   String get summary {
     if (available) {
-      return uptime.secondsToDuration().toStr;
+      return uptime.secondsToDuration().toAgoStr;
     }
     return l10n.stopped;
   }
@@ -210,7 +208,7 @@ final class PveQemu extends PveResIface implements PveCtrlIface {
   @override
   String get summary {
     if (available) {
-      return uptime.secondsToDuration().toStr;
+      return uptime.secondsToDuration().toAgoStr;
     }
     return l10n.stopped;
   }
@@ -260,7 +258,7 @@ final class PveNode extends PveResIface {
 
   String get topRight {
     if (isRunning) {
-      return uptime.secondsToDuration().toStr;
+      return uptime.secondsToDuration().toAgoStr;
     }
     return l10n.stopped;
   }

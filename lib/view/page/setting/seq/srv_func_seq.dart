@@ -1,14 +1,8 @@
+import 'package:fl_lib/fl_lib.dart';
 import 'package:flutter/material.dart';
-import 'package:toolbox/core/extension/context/locale.dart';
-import 'package:toolbox/core/extension/context/snackbar.dart';
-import 'package:toolbox/data/model/app/menu/server_func.dart';
-import 'package:toolbox/data/res/store.dart';
-import 'package:toolbox/data/res/ui.dart';
-import 'package:toolbox/view/widget/val_builder.dart';
-
-import '../../../../core/extension/order.dart';
-import '../../../widget/appbar.dart';
-import '../../../widget/cardx.dart';
+import 'package:server_box/core/extension/context/locale.dart';
+import 'package:server_box/data/model/app/menu/server_func.dart';
+import 'package:server_box/data/res/store.dart';
 
 class ServerFuncBtnsOrderPage extends StatefulWidget {
   const ServerFuncBtnsOrderPage({super.key});
@@ -23,9 +17,7 @@ class _ServerDetailOrderPageState extends State<ServerFuncBtnsOrderPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: CustomAppBar(
-        title: Text(l10n.sequence),
-      ),
+      appBar: CustomAppBar(title: Text(l10n.sequence)),
       body: _buildBody(),
     );
   }
@@ -50,8 +42,8 @@ class _ServerDetailOrderPageState extends State<ServerFuncBtnsOrderPage> {
                 title: RichText(
                   text: TextSpan(
                     children: [
-                      WidgetSpan(child: funcBtn.icon(2)),
-                      const WidgetSpan(child: UIs.width7),
+                      WidgetSpan(child: Icon(funcBtn.icon)),
+                      const WidgetSpan(child: UIs.width13),
                       TextSpan(text: funcBtn.toStr, style: UIs.textGrey),
                     ],
                   ),
@@ -63,7 +55,7 @@ class _ServerDetailOrderPageState extends State<ServerFuncBtnsOrderPage> {
           itemCount: allKeys.length,
           onReorder: (o, n) {
             if (o >= keys.length || n >= keys.length) {
-              context.showSnackBar(l10n.disabled);
+              context.showSnackBar(libL10n.disabled);
               return;
             }
             keys.moveByItem(o, n, property: prop);

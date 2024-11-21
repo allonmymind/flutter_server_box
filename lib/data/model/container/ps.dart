@@ -1,10 +1,11 @@
 import 'dart:convert';
 
-import 'package:toolbox/core/extension/context/locale.dart';
-import 'package:toolbox/core/extension/numx.dart';
-import 'package:toolbox/data/model/container/type.dart';
+import 'package:fl_lib/fl_lib.dart';
+import 'package:server_box/core/extension/context/locale.dart';
+import 'package:server_box/data/model/container/type.dart';
+import 'package:server_box/data/res/misc.dart';
 
-abstract final class ContainerPs {
+sealed class ContainerPs {
   final String? id = null;
   final String? image = null;
   String? get name;
@@ -16,7 +17,7 @@ abstract final class ContainerPs {
   String? net;
   String? disk;
 
-  factory ContainerPs.fromRawJson(String s, ContainerType typ) => typ.ps(s);
+  factory ContainerPs.fromRaw(String s, ContainerType typ) => typ.ps(s);
 
   void parseStats(String s);
 }
@@ -83,35 +84,33 @@ final class PodmanPs implements ContainerPs {
   String toRawJson() => json.encode(toJson());
 
   factory PodmanPs.fromJson(Map<String, dynamic> json) => PodmanPs(
-        command: json["Command"] == null
+        command: json['Command'] == null
             ? []
-            : List<String>.from(json["Command"]!.map((x) => x)),
+            : List<String>.from(json['Command']!.map((x) => x)),
         created:
-            json["Created"] == null ? null : DateTime.parse(json["Created"]),
-        exited: json["Exited"],
-        id: json["Id"],
-        image: json["Image"],
-        names: json["Names"] == null
+            json['Created'] == null ? null : DateTime.parse(json['Created']),
+        exited: json['Exited'],
+        id: json['Id'],
+        image: json['Image'],
+        names: json['Names'] == null
             ? []
-            : List<String>.from(json["Names"]!.map((x) => x)),
-        startedAt: json["StartedAt"],
+            : List<String>.from(json['Names']!.map((x) => x)),
+        startedAt: json['StartedAt'],
       );
 
   Map<String, dynamic> toJson() => {
-        "Command":
+        'Command':
             command == null ? [] : List<dynamic>.from(command!.map((x) => x)),
-        "Created": created?.toIso8601String(),
-        "Exited": exited,
-        "Id": id,
-        "Image": image,
-        "Names": names == null ? [] : List<dynamic>.from(names!.map((x) => x)),
-        "StartedAt": startedAt,
+        'Created': created?.toIso8601String(),
+        'Exited': exited,
+        'Id': id,
+        'Image': image,
+        'Names': names == null ? [] : List<dynamic>.from(names!.map((x) => x)),
+        'StartedAt': startedAt,
       };
 }
 
 final class DockerPs implements ContainerPs {
-  final String? command;
-  final String? createdAt;
   @override
   final String? id;
   @override
@@ -129,8 +128,6 @@ final class DockerPs implements ContainerPs {
   String? disk;
 
   DockerPs({
-    this.command,
-    this.createdAt,
     this.id,
     this.image,
     this.names,
@@ -141,10 +138,13 @@ final class DockerPs implements ContainerPs {
   String? get name => names;
 
   @override
-  String? get cmd => command;
+  String? get cmd => null;
 
   @override
-  bool get running => state == 'running';
+  bool get running {
+    if (state?.contains('Exited') == true) return false;
+    return true;
+  }
 
   @override
   void parseStats(String s) {
@@ -155,26 +155,15 @@ final class DockerPs implements ContainerPs {
     disk = stats['BlockIO'];
   }
 
-  factory DockerPs.fromRawJson(String str) =>
-      DockerPs.fromJson(json.decode(str));
-
-  String toRawJson() => json.encode(toJson());
-
-  factory DockerPs.fromJson(Map<String, dynamic> json) => DockerPs(
-        command: json["Command"],
-        createdAt: json["CreatedAt"],
-        id: json["ID"],
-        image: json["Image"],
-        names: json["Names"],
-        state: json["State"],
-      );
-
-  Map<String, dynamic> toJson() => {
-        "Command": command,
-        "CreatedAt": createdAt,
-        "ID": id,
-        "Image": image,
-        "Names": names,
-        "State": state,
-      };
+  /// CONTAINER ID                   NAMES                          IMAGE                          STATUS
+  /// a049d689e7a1                   aria2-pro                      p3terx/aria2-pro               Up 3 weeks
+  factory DockerPs.parse(String raw) {
+    final parts = raw.split(Miscs.multiBlankreg);
+    return DockerPs(
+      id: parts[0],
+      state: parts[1],
+      names: parts[2],
+      image: parts[3].trim(),
+    );
+  }
 }

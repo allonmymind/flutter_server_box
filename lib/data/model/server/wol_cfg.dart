@@ -1,8 +1,12 @@
 import 'dart:io';
 
 import 'package:hive_flutter/hive_flutter.dart';
+import 'package:json_annotation/json_annotation.dart';
 import 'package:wake_on_lan/wake_on_lan.dart';
 
+part 'wol_cfg.g.dart';
+
+@JsonSerializable()
 @HiveType(typeId: 8)
 final class WakeOnLanCfg {
   @HiveField(0)
@@ -26,7 +30,9 @@ final class WakeOnLanCfg {
           ? InternetAddressType.IPv6
           : InternetAddressType.IPv4,
     );
-    final pwdValidation = SecureONPassword.validate(pwd);
+    final pwdValidation = pwd != null
+        ? SecureONPassword.validate(pwd)
+        : (state: true, error: null);
 
     final valid =
         macValidation.state && ipValidation.state && pwdValidation.state;
@@ -35,7 +41,7 @@ final class WakeOnLanCfg {
     return (err, valid);
   }
 
-  Future<void> wake() async {
+  Future<void> wake() {
     if (!validate().$2) {
       throw Exception('Invalid WakeOnLanCfg');
     }
@@ -44,28 +50,14 @@ final class WakeOnLanCfg {
     final mac_ = MACAddress(mac);
     final pwd_ = pwd != null ? SecureONPassword(pwd!) : null;
     final obj = WakeOnLAN(ip_, mac_, password: pwd_);
-    await obj.wake(
+    return obj.wake(
       repeat: 3,
       repeatDelay: const Duration(milliseconds: 500),
     );
   }
 
-  static WakeOnLanCfg fromJson(Map<String, dynamic> json) {
-    return WakeOnLanCfg(
-      mac: json['mac'] as String,
-      ip: json['ip'] as String,
-      pwd: json['pwd'] as String?,
-    );
-  }
+  factory WakeOnLanCfg.fromJson(Map<String, dynamic> json) =>
+      _$WakeOnLanCfgFromJson(json);
 
-  Map<String, dynamic> toJson() {
-    final map = <String, dynamic>{
-      'mac': mac,
-      'ip': ip,
-    };
-    if (pwd != null) {
-      map['pwd'] = pwd;
-    }
-    return map;
-  }
+  Map<String, dynamic> toJson() => _$WakeOnLanCfgToJson(this);
 }

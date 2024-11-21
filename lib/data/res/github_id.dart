@@ -1,25 +1,29 @@
-import 'package:toolbox/data/model/app/github_id.dart';
-
 abstract final class GithubIds {
   // Thanks
   // If you want to change your Github ID, please open an issue.
   static const contributors = <GhId>{
     'PaperCube',
+    'Integral-Tech',
     'its-tom',
+    'leganck',
     'azkadev',
     'kalashnikov',
-    'FrancXPT',
-    'RainSunMe',
     'calvinweb',
+    'No06',
+    'QazCetelic',
+    'RainSunMe',
+    'FrancXPT',
     'Liloupar',
     'dccif',
-    'QazCetelic',
+    'mikropsoft',
+    'CakesTwix',
   };
 
   static const participants = <GhId>{
     'jaychoubaby',
     'fecture',
     'Tao173',
+    'Jasonzhu1207',
     'QingAnLe',
     'wxdjs',
     'Aeorq',
@@ -71,5 +75,35 @@ abstract final class GithubIds {
     'pctoolsx',
     'pgs666',
     'FHU-yezi',
+    'ZRY233',
+    'sakuraanzu',
+    'licaon-kter',
+    '77160860',
+    'mijjjj',
+    'muyunil',
+    'Hua159',
+    'jaydong2016',
+    'geol',
+    'Mooling0602',
+    'IllTamer',
+    'marlkiller',
+    'hlarc',
+    'itsandrewpao',
+    'StudyingLover',
+    'QJAG1024',
+    'Wuming-HUST',
+    'WolfCanglong',
+    'liwenjie119',
+    'logce',
+    'h-lyf',
+    '88484396',
+    'honggeigei',
+    'likecreep',
   };
+}
+
+typedef GhId = String;
+
+extension GhIdX on GhId {
+  String get url => 'https://github.com/$this';
 }

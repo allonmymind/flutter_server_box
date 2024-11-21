@@ -1,11 +1,10 @@
+import 'package:fl_lib/fl_lib.dart';
 import 'package:flutter/material.dart';
 import 'package:icons_plus/icons_plus.dart';
-import 'package:toolbox/core/extension/context/locale.dart';
-import 'package:toolbox/core/extension/listx.dart';
-import 'package:toolbox/data/model/app/version_related.dart';
-import 'package:toolbox/data/res/store.dart';
+import 'package:server_box/core/extension/context/locale.dart';
+import 'package:server_box/data/res/store.dart';
 
-enum ServerDetailCards implements VersionRelated {
+enum ServerDetailCards {
   about(Icons.info),
   cpu(Icons.memory),
   mem(Bootstrap.memory),
@@ -20,7 +19,6 @@ enum ServerDetailCards implements VersionRelated {
   custom(Icons.code, sinceBuild: 825),
   ;
 
-  @override
   final int? sinceBuild;
 
   final IconData icon;
@@ -33,7 +31,7 @@ enum ServerDetailCards implements VersionRelated {
   static final names = values.map((e) => e.name).toList();
 
   String get toStr => switch (this) {
-        about => l10n.about,
+        about => libL10n.about,
         cpu => 'CPU',
         mem => 'RAM',
         swap => 'Swap',

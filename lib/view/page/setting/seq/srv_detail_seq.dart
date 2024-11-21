@@ -1,13 +1,8 @@
+import 'package:fl_lib/fl_lib.dart';
 import 'package:flutter/material.dart';
-import 'package:toolbox/core/extension/context/locale.dart';
-import 'package:toolbox/core/extension/context/snackbar.dart';
-import 'package:toolbox/data/model/app/server_detail_card.dart';
-import 'package:toolbox/data/res/store.dart';
-import 'package:toolbox/view/widget/val_builder.dart';
-
-import '../../../../core/extension/order.dart';
-import '../../../widget/appbar.dart';
-import '../../../widget/cardx.dart';
+import 'package:server_box/core/extension/context/locale.dart';
+import 'package:server_box/data/model/app/server_detail_card.dart';
+import 'package:server_box/data/res/store.dart';
 
 class ServerDetailOrderPage extends StatefulWidget {
   const ServerDetailOrderPage({super.key});
@@ -22,9 +17,7 @@ class _ServerDetailOrderPageState extends State<ServerDetailOrderPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: CustomAppBar(
-        title: Text(l10n.serverDetailOrder),
-      ),
+      appBar: CustomAppBar(title: Text(l10n.serverDetailOrder)),
       body: _buildBody(),
     );
   }
@@ -57,7 +50,7 @@ class _ServerDetailOrderPageState extends State<ServerDetailOrderPage> {
           itemCount: allKeys.length,
           onReorder: (o, n) {
             if (o >= keys.length || n >= keys.length) {
-              context.showSnackBar(l10n.disabled);
+              context.showSnackBar(libL10n.disabled);
               return;
             }
             keys.moveByItem(o, n, property: prop);

@@ -1,47 +1,37 @@
 import 'package:extended_image/extended_image.dart';
 import 'package:fl_chart/fl_chart.dart';
+import 'package:fl_lib/fl_lib.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_markdown/flutter_markdown.dart';
 import 'package:icons_plus/icons_plus.dart';
-import 'package:provider/provider.dart';
-import 'package:toolbox/core/extension/context/common.dart';
-import 'package:toolbox/core/extension/context/dialog.dart';
-import 'package:toolbox/core/extension/context/locale.dart';
-import 'package:toolbox/core/extension/listx.dart';
-import 'package:toolbox/data/model/app/server_detail_card.dart';
-import 'package:toolbox/data/model/app/shell_func.dart';
-import 'package:toolbox/data/model/server/battery.dart';
-import 'package:toolbox/data/model/server/cpu.dart';
-import 'package:toolbox/data/model/server/disk.dart';
-import 'package:toolbox/data/model/server/dist.dart';
-import 'package:toolbox/data/model/server/net_speed.dart';
-import 'package:toolbox/data/model/server/nvdia.dart';
-import 'package:toolbox/data/model/server/sensors.dart';
-import 'package:toolbox/data/model/server/server_private_info.dart';
-import 'package:toolbox/data/model/server/system.dart';
-import 'package:toolbox/data/res/store.dart';
-import 'package:toolbox/view/widget/expand_tile.dart';
-import 'package:toolbox/view/widget/kv_row.dart';
-import 'package:toolbox/view/widget/server_func_btns.dart';
-import 'package:toolbox/view/widget/val_builder.dart';
+import 'package:server_box/core/extension/context/locale.dart';
+import 'package:server_box/data/model/app/server_detail_card.dart';
+import 'package:server_box/data/model/app/shell_func.dart';
+import 'package:server_box/data/model/server/battery.dart';
+import 'package:server_box/data/model/server/cpu.dart';
+import 'package:server_box/data/model/server/disk.dart';
+import 'package:server_box/data/model/server/dist.dart';
+import 'package:server_box/data/model/server/net_speed.dart';
+import 'package:server_box/data/model/server/nvdia.dart';
+import 'package:server_box/data/model/server/sensors.dart';
+import 'package:server_box/data/model/server/server_private_info.dart';
+import 'package:server_box/data/model/server/system.dart';
+import 'package:server_box/data/res/store.dart';
+import 'package:server_box/view/page/server/edit.dart';
+import 'package:server_box/view/widget/server_func_btns.dart';
 
-import '../../../../core/extension/numx.dart';
-import '../../../../core/route.dart';
-import '../../../../data/model/server/server.dart';
-import '../../../../data/provider/server.dart';
-import '../../../../data/res/color.dart';
-import '../../../../data/res/ui.dart';
-import '../../../widget/appbar.dart';
-import '../../../widget/cardx.dart';
+import 'package:server_box/core/route.dart';
+import 'package:server_box/data/model/server/server.dart';
 
 part 'misc.dart';
 
 class ServerDetailPage extends StatefulWidget {
   const ServerDetailPage({super.key, required this.spi});
 
-  final ServerPrivateInfo spi;
+  final Spi spi;
 
   @override
-  _ServerDetailPageState createState() => _ServerDetailPageState();
+  State<ServerDetailPage> createState() => _ServerDetailPageState();
 }
 
 class _ServerDetailPageState extends State<ServerDetailPage>
@@ -67,9 +57,16 @@ class _ServerDetailPageState extends State<ServerDetailPage>
   late MediaQueryData _media;
   final List<String> _cardsOrder = [];
 
+  final _settings = Stores.setting;
   final _netSortType = ValueNotifier(_NetSortType.device);
-  late final _collapse = Stores.setting.collapseUIDefault.fetch();
-  late final _textFactor = TextScaler.linear(Stores.setting.textFactor.fetch());
+  late final _collapse = _settings.collapseUIDefault.fetch();
+  late final _textFactor = TextScaler.linear(_settings.textFactor.fetch());
+
+  @override
+  void dispose() {
+    super.dispose();
+    _netSortType.dispose();
+  }
 
   @override
   void didChangeDependencies() {
@@ -80,39 +77,34 @@ class _ServerDetailPageState extends State<ServerDetailPage>
   @override
   void initState() {
     super.initState();
-    final order = Stores.setting.detailCardOrder.fetch();
+    final order = _settings.detailCardOrder.fetch();
     order.removeWhere((e) => !ServerDetailCards.names.contains(e));
     _cardsOrder.addAll(order);
   }
 
   @override
   Widget build(BuildContext context) {
-    return Consumer<ServerProvider>(builder: (_, provider, __) {
-      final s = widget.spi.server;
-      if (s == null) {
-        return Scaffold(
-          body: Center(
-            child: Text(l10n.noClient),
-          ),
-        );
-      }
-      return _buildMainPage(s);
-    });
+    final s = widget.spi.server;
+    if (s == null) {
+      return Scaffold(
+        appBar: const CustomAppBar(),
+        body: Center(child: Text(libL10n.empty)),
+      );
+    }
+    return s.listenVal(_buildMainPage);
   }
 
   Widget _buildMainPage(Server si) {
-    final buildFuncs = !Stores.setting.moveOutServerTabFuncBtns.fetch();
-    final logoUrl = si.spi.custom?.logoUrl;
-    final buildLogo = logoUrl != null;
+    final buildFuncs = !Stores.setting.moveServerFuncs.fetch();
+    final logo = _buildLogo(si);
     final children = [
-      if (buildLogo)
-        _buildLogo(logoUrl, si.status.more[StatusCmdType.sys]?.dist),
-      if (buildFuncs) ServerFuncBtns(spi: widget.spi),
+      logo,
+      if (buildFuncs) ServerFuncBtns(spi: si.spi),
     ];
     for (final card in _cardsOrder) {
       final buildFunc = _cardBuildMap[card];
       if (buildFunc != null) {
-        children.add(buildFunc(si.status));
+        children.add(buildFunc(si));
       }
     }
     return Scaffold(
@@ -130,12 +122,17 @@ class _ServerDetailPageState extends State<ServerDetailPage>
 
   CustomAppBar _buildAppBar(Server si) {
     return CustomAppBar(
-      title: Text(si.spi.name, style: UIs.text18),
+      title: Text(si.spi.name),
       actions: [
+        QrShareBtn(
+          data: si.spi.toJsonString(),
+          tip: si.spi.name,
+          tip2: '${l10n.server} ~ ServerBox',
+        ),
         IconButton(
           icon: const Icon(Icons.edit),
           onPressed: () async {
-            final delete = await AppRoute.serverEdit(spi: si.spi).go(context);
+            final delete = await ServerEditPage.route.go(context, args: si.spi);
             if (delete == true) {
               context.pop();
             }
@@ -145,10 +142,17 @@ class _ServerDetailPageState extends State<ServerDetailPage>
     );
   }
 
-  Widget _buildLogo(String logoUrl, Dist? dist) {
-    if (dist != null) {
-      logoUrl = logoUrl.replaceFirst('{DIST}', dist.name);
-    }
+  Widget _buildLogo(Server si) {
+    var logoUrl = si.spi.custom?.logoUrl ??
+        _settings.serverLogoUrl.fetch().selfIfNotNullEmpty;
+    if (logoUrl == null) return UIs.placeholder;
+
+    final dist = si.status.more[StatusCmdType.sys]?.dist;
+    if (dist == null) return UIs.placeholder;
+
+    logoUrl = logoUrl
+        .replaceFirst('{DIST}', dist.name)
+        .replaceFirst('{BRIGHT}', context.isDark ? 'dark' : 'light');
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 13),
       child: ExtendedImage.network(
@@ -159,12 +163,13 @@ class _ServerDetailPageState extends State<ServerDetailPage>
     );
   }
 
-  Widget _buildAbout(ServerStatus ss) {
+  Widget _buildAbout(Server si) {
+    final ss = si.status;
     return CardX(
       child: ExpandTile(
         leading: const Icon(MingCute.information_fill, size: 20),
         initiallyExpanded: _getInitExpand(ss.more.entries.length),
-        title: Text(l10n.about),
+        title: Text(libL10n.about),
         childrenPadding: const EdgeInsets.symmetric(
           horizontal: 17,
           vertical: 11,
@@ -187,7 +192,8 @@ class _ServerDetailPageState extends State<ServerDetailPage>
     );
   }
 
-  Widget _buildCPUView(ServerStatus ss) {
+  Widget _buildCPUView(Server si) {
+    final ss = si.status;
     final percent = ss.cpu.usedPercent(coreIdx: 0).toInt();
     final details = [
       _buildDetailPercent(ss.cpu.user, 'user'),
@@ -201,6 +207,29 @@ class _ServerDetailPageState extends State<ServerDetailPage>
         UIs.width13,
         _buildDetailPercent(ss.cpu.iowait, 'io'),
       ]);
+    }
+
+    final List<Widget> children = Stores.setting.cpuViewAsProgress.fetch()
+        ? _buildCPUProgress(ss.cpu)
+        : [
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 17, vertical: 13),
+              child: SizedBox(
+                height: 137,
+                width: _media.size.width - 26 - 34,
+                child: _buildLineChart(
+                  ss.cpu.spots,
+                  //ss.cpu.rangeX,
+                  tooltipPrefix: 'CPU',
+                ),
+              ),
+            ),
+          ];
+
+    if (ss.cpu.brand.isNotEmpty) {
+      children.add(Column(
+        children: ss.cpu.brand.entries.map(_buildCpuModelItem).toList(),
+      ).paddingOnly(top: 13));
     }
 
     return CardX(
@@ -219,25 +248,32 @@ class _ServerDetailPageState extends State<ServerDetailPage>
           mainAxisSize: MainAxisSize.min,
           children: details,
         ),
-        children: Stores.setting.cpuViewAsProgress.fetch()
-            ? _buildCPUProgress(ss.cpu)
-            : [
-                Padding(
-                  padding:
-                      const EdgeInsets.symmetric(horizontal: 17, vertical: 13),
-                  child: SizedBox(
-                    height: 137,
-                    width: _media.size.width - 26 - 34,
-                    child: _buildLineChart(
-                      ss.cpu.spots,
-                      //ss.cpu.rangeX,
-                      tooltipPrefix: 'CPU',
-                    ),
-                  ),
-                ),
-              ],
+        children: children,
       ),
     );
+  }
+
+  Widget _buildCpuModelItem(MapEntry<String, int> e) {
+    final name = e.key
+        .replaceFirst('Intel(R)', '')
+        .replaceFirst('AMD', '')
+        .replaceFirst('with Radeon Graphics', '');
+    final child = Row(
+      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+      children: [
+        SizedBox(
+          width: _media.size.width * .7,
+          child: Text(
+            name,
+            style: UIs.text13,
+            overflow: TextOverflow.ellipsis,
+            maxLines: 1,
+          ),
+        ),
+        Text('x ${e.value}', style: UIs.text13Grey),
+      ],
+    );
+    return child.paddingSymmetric(horizontal: 17);
   }
 
   Widget _buildDetailPercent(double percent, String timeType) {
@@ -316,12 +352,13 @@ class _ServerDetailPageState extends State<ServerDetailPage>
     return LinearProgressIndicator(
       value: percentWithinOne,
       minHeight: 7,
-      backgroundColor: DynamicColors.progress.resolve(context),
-      color: primaryColor,
+      backgroundColor: UIs.halfAlpha,
+      color: UIs.primaryColor,
     );
   }
 
-  Widget _buildMemView(ServerStatus ss) {
+  Widget _buildMemView(Server si) {
+    final ss = si.status;
     final free = ss.mem.free / ss.mem.total * 100;
     final avail = ss.mem.availPercent * 100;
     final used = ss.mem.usedPercent * 100;
@@ -368,7 +405,8 @@ class _ServerDetailPageState extends State<ServerDetailPage>
     );
   }
 
-  Widget _buildSwapView(ServerStatus ss) {
+  Widget _buildSwapView(Server si) {
+    final ss = si.status;
     if (ss.swap.total == 0) return UIs.placeholder;
     final used = ss.swap.usedPercent * 100;
     final cached = ss.swap.cached / ss.swap.total * 100;
@@ -403,7 +441,8 @@ class _ServerDetailPageState extends State<ServerDetailPage>
     );
   }
 
-  Widget _buildGpuView(ServerStatus ss) {
+  Widget _buildGpuView(Server si) {
+    final ss = si.status;
     if (ss.nvidia == null || ss.nvidia?.isEmpty == true) return UIs.placeholder;
     final children = ss.nvidia?.map((e) => _buildGpuItem(e)).toList() ?? [];
     return CardX(
@@ -428,7 +467,7 @@ class _ServerDetailPageState extends State<ServerDetailPage>
         textAlign: TextAlign.center,
       ),
       subtitle: Text(
-        '${item.power} - ${item.fanSpeed} RPM\n${mem.used} / ${mem.total} ${mem.unit}',
+        '${item.power} - FAN ${item.fanSpeed}%\n${mem.used} / ${mem.total} ${mem.unit}',
         style: UIs.text12Grey,
         textScaler: _textFactor,
       ),
@@ -446,7 +485,7 @@ class _ServerDetailPageState extends State<ServerDetailPage>
                 return processes.length * 47.0;
               }();
               context.showRoundDialog(
-                title: Text(item.name),
+                title: item.name,
                 child: SizedBox(
                   width: double.maxFinite,
                   height: height,
@@ -459,7 +498,7 @@ class _ServerDetailPageState extends State<ServerDetailPage>
                 actions: [
                   TextButton(
                     onPressed: () => context.pop(),
-                    child: Text(l10n.close),
+                    child: Text(libL10n.close),
                   )
                 ],
               );
@@ -488,10 +527,8 @@ class _ServerDetailPageState extends State<ServerDetailPage>
       trailing: InkWell(
         onTap: () {
           context.showRoundDialog(
-            title: SizedBox(
-              width: 377,
-              child: Text('${process.pid}', maxLines: 1),
-            ),
+            title: '${process.pid}',
+            titleMaxLines: 1,
             child: Column(
               mainAxisSize: MainAxisSize.min,
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -505,7 +542,7 @@ class _ServerDetailPageState extends State<ServerDetailPage>
             actions: [
               TextButton(
                 onPressed: () => context.pop(),
-                child: Text(l10n.close),
+                child: Text(libL10n.close),
               )
             ],
           );
@@ -515,7 +552,8 @@ class _ServerDetailPageState extends State<ServerDetailPage>
     );
   }
 
-  Widget _buildDiskView(ServerStatus ss) {
+  Widget _buildDiskView(Server si) {
+    final ss = si.status;
     final children = List.generate(
         ss.disk.length, (idx) => _buildDiskItem(ss.disk[idx], ss));
     return CardX(
@@ -567,8 +605,8 @@ class _ServerDetailPageState extends State<ServerDetailPage>
                 CircularProgressIndicator(
                   value: disk.usedPercent / 100,
                   strokeWidth: 5,
-                  backgroundColor: DynamicColors.progress.resolve(context),
-                  color: primaryColor,
+                  backgroundColor: UIs.halfAlpha,
+                  color: UIs.primaryColor,
                 ),
                 Text('${disk.usedPercent}%', style: UIs.text12Grey)
               ],
@@ -579,21 +617,14 @@ class _ServerDetailPageState extends State<ServerDetailPage>
     );
   }
 
-  Widget _buildNetView(ServerStatus ss) {
+  Widget _buildNetView(Server si) {
+    final ss = si.status;
     final ns = ss.netSpeed;
     final children = <Widget>[];
-    if (ns.devices.isEmpty) {
-      children.add(Center(
-        child: Text(
-          l10n.noInterface,
-          style: UIs.text13Grey,
-        ),
-      ));
-    } else {
-      final devices = ns.devices;
-      devices.sort(_netSortType.value.getSortFunc(ns));
-      children.addAll(devices.map((e) => _buildNetSpeedItem(ns, e)));
-    }
+    final devices = ns.devices;
+    devices.sort(_netSortType.value.getSortFunc(ns));
+    children.addAll(devices.map((e) => _buildNetSpeedItem(ns, e)));
+
     return CardX(
       child: ExpandTile(
         leading: Icon(ServerDetailCards.net.icon, size: 17),
@@ -670,14 +701,15 @@ class _ServerDetailPageState extends State<ServerDetailPage>
     );
   }
 
-  Widget _buildTemperature(ServerStatus ss) {
+  Widget _buildTemperature(Server si) {
+    final ss = si.status;
     if (ss.temps.isEmpty) {
       return UIs.placeholder;
     }
     return CardX(
       child: ExpandTile(
         title: Text(l10n.temperature),
-        leading: const Icon(Icons.ac_unit, size: 17),
+        leading: const Icon(Icons.ac_unit, size: 20),
         initiallyExpanded: _getInitExpand(ss.temps.devices.length),
         childrenPadding: const EdgeInsets.only(bottom: 7),
         children: ss.temps.devices
@@ -693,14 +725,20 @@ class _ServerDetailPageState extends State<ServerDetailPage>
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
-          Text(key, style: UIs.text15),
+          Text(key, style: UIs.text15).paddingSymmetric(horizontal: 5).tap(
+            onTap: () {
+              Pfs.copy(key);
+              context.showSnackBar('${libL10n.copy} ${libL10n.success}');
+            },
+          ),
           Text('${val?.toStringAsFixed(1)}°C', style: UIs.text13Grey),
         ],
       ),
     );
   }
 
-  Widget _buildBatteries(ServerStatus ss) {
+  Widget _buildBatteries(Server si) {
+    final ss = si.status;
     if (ss.batteries.isEmpty) {
       return UIs.placeholder;
     }
@@ -741,7 +779,8 @@ class _ServerDetailPageState extends State<ServerDetailPage>
     );
   }
 
-  Widget _buildSensors(ServerStatus ss) {
+  Widget _buildSensors(Server si) {
+    final ss = si.status;
     if (ss.sensors.isEmpty) return UIs.placeholder;
     return CardX(
       child: ExpandTile(
@@ -755,52 +794,70 @@ class _ServerDetailPageState extends State<ServerDetailPage>
   }
 
   Widget _buildSensorItem(SensorItem si) {
-    if (si.props.isEmpty) return UIs.placeholder;
-    return ListTile(
-      title: Text(si.device, style: UIs.text15),
-      subtitle: Column(
-        children: si.props.keys
-            .map((e) => _buildSensorDetailItem(e, si.props[e]))
-            .toList(),
+    if (si.summary == null) {
+      return Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 17, vertical: 7),
+        child: Text(si.device),
+      );
+    }
+    return InkWell(
+      onTap: () {
+        context.showRoundDialog(
+          title: si.device,
+          child: SingleChildScrollView(
+            child: SimpleMarkdown(
+              data: si.toMarkdown,
+              styleSheet: MarkdownStyleSheet(
+                tableBorder: TableBorder.all(color: Colors.grey),
+                tableHead: const TextStyle(fontWeight: FontWeight.bold),
+              ),
+            ),
+          ),
+        );
+      },
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 17, vertical: 7),
+        child: Row(
+          crossAxisAlignment: CrossAxisAlignment.center,
+          children: [
+            Expanded(
+                child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Row(
+                  children: [
+                    Text(si.device, style: UIs.text15Bold),
+                    UIs.width7,
+                    Text('(${si.adapter.raw})', style: UIs.text13Grey),
+                  ],
+                ),
+                Text(si.summary ?? '', style: UIs.text13Grey),
+              ],
+            )),
+            UIs.width7,
+            const Icon(Icons.keyboard_arrow_right, color: Colors.grey),
+          ],
+        ),
       ),
     );
   }
 
-  Widget _buildSensorDetailItem(String key, SensorTemp? st) {
-    if (st == null) return UIs.placeholder;
-    final text = () {
-      final current = st.current?.toStringAsFixed(1);
-      final max = st.max?.toStringAsFixed(1);
-      final min = st.min?.toStringAsFixed(1);
-      final currentText = current == null ? '' : '$current°C';
-      final maxText = max == null ? '' : ' | ${l10n.max}:$max';
-      final minText = min == null ? '' : ' | ${l10n.min}:$min';
-      return '$currentText$maxText$minText';
-    }();
-    return Row(
-      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-      children: [
-        Text(key, style: UIs.text13),
-        Text(text, style: UIs.text13Grey),
-      ],
-    );
-  }
-
-  Widget _buildPve(_) {
-    final addr = widget.spi.custom?.pveAddr;
-    if (addr == null) return UIs.placeholder;
+  Widget _buildPve(Server si) {
+    final addr = si.spi.custom?.pveAddr;
+    if (addr == null || addr.isEmpty) return UIs.placeholder;
     return CardX(
       child: ListTile(
         title: const Text('PVE'),
-        subtitle: Text(addr, style: UIs.textGrey),
         leading: const Icon(FontAwesome.server_solid, size: 17),
         trailing: const Icon(Icons.chevron_right),
-        onTap: () => AppRoute.pve(spi: widget.spi).go(context),
+        onTap: () => AppRoutes.pve(spi: si.spi).go(context),
       ),
     );
   }
 
-  Widget _buildCustom(ServerStatus ss) {
+  Widget _buildCustom(Server si) {
+    final ss = si.status;
     if (ss.customCmds.isEmpty) return UIs.placeholder;
     return CardX(
       child: ExpandTile(
@@ -823,14 +880,14 @@ class _ServerDetailPageState extends State<ServerDetailPage>
           return GestureDetector(
             onTap: () {
               context.showRoundDialog(
-                title: Text(cmd.key),
+                title: cmd.key,
                 child: SingleChildScrollView(
                   child: Text(cmd.value, style: UIs.text13Grey),
                 ),
                 actions: [
                   TextButton(
                     onPressed: () => context.pop(),
-                    child: Text(l10n.close),
+                    child: Text(libL10n.close),
                   ),
                 ],
               );
@@ -864,6 +921,6 @@ class _ServerDetailPageState extends State<ServerDetailPage>
 
   bool _getInitExpand(int len, [int? max]) {
     if (!_collapse) return true;
-    return len <= (max ?? 3);
+    return len > 0 && len <= (max ?? 3);
   }
 }
